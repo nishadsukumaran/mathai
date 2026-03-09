@@ -34,7 +34,9 @@
     "tsconfig-paths": "^4.2.0",
     "@types/express": "^4.17.21",
     "@types/cors": "^2.8.17",
-    "@types/morgan": "^1.9.9"
+    "@types/morgan": "^1.9.9",
+    "postcss": "^8.4.0",
+    "autoprefixer": "^10.4.0"
   },
   "dependencies": {
     "@prisma/client": "^5.8.0",
