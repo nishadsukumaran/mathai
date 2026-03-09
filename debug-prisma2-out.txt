@@ -1,0 +1,2 @@
+Prisma schema loaded from database\schema\schema.prisma
+Exit: 1 

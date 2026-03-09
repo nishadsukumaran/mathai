@@ -1,0 +1,8 @@
+Prisma schema loaded from database\schema\schema.prisma
+Datasource "db": PostgreSQL database "postgres", schema "public" at "aws-1-ap-south-1.pooler.supabase.com:5432"
+
+No migration found in prisma/migrations
+
+
+No pending migrations to apply.
+Exit: 0 

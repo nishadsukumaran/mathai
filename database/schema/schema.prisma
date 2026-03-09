@@ -1,0 +1,623 @@
+// ─── MathAI Prisma Schema ─────────────────────────────────────────────────────
+//
+// Database:  PostgreSQL ≥ 15
+// ORM:       Prisma v5
+//
+// DESIGN NOTES
+// ─────────────────────────────────────────────────────────────────────────────
+//   • All IDs use cuid() — collision-resistant, URL-safe, lexicographically
+//     sortable within a second window. Prefer cuid over uuid for readability
+//     in logs and URLs.
+//
+//   • Timestamps follow @default(now()) / @updatedAt convention throughout.
+//     All times are stored as UTC; the application layer localises for display.
+//
+//   • Enums are defined in Prisma AND mirrored in types/index.ts.
+//     Any change here must be reflected there (and vice-versa).
+//
+//   • Json fields are used only for genuinely schemaless blobs
+//     (question rendering config, visual plan payloads). Prefer typed columns
+//     for anything queried or filtered on.
+//
+//   • Cascade rules are explicit on every relation.
+//     Default: parent delete → child delete (Cascade) for owned data,
+//     Restrict for reference data that should never disappear silently.
+//
+//   • Indexes cover every FK and every column used in WHERE / ORDER BY
+//     clauses in the application query patterns.
+//
+//   • Schema is designed to support future Parent and Teacher dashboards:
+//     User.role is already extensible; FK columns are ready.
+// ─────────────────────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ENUMS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Who this account belongs to. Drives UI routing and permission checks.
+/// parent and teacher roles are reserved for future dashboard builds.
+enum UserRole {
+  student
+  parent
+  teacher
+  admin
+}
+
+/// Curriculum grade bands K through Grade 8.
+enum Grade {
+  K
+  G1
+  G2
+  G3
+  G4
+  G5
+  G6
+  G7
+  G8
+}
+
+/// Top-level mathematical strands that group topics.
+enum Strand {
+  Numbers
+  Operations
+  Fractions
+  Decimals
+  Geometry
+  Measurement
+  Algebra
+  WordProblems
+  DataAndProbability
+}
+
+/// Question and lesson difficulty levels.
+enum Difficulty {
+  beginner
+  intermediate
+  advanced
+  challenge
+}
+
+/// How proficient a student is at a given topic.
+enum MasteryLevel {
+  not_started
+  emerging
+  developing
+  mastered
+  extended
+}
+
+/// Controls AI tutor behaviour and hint availability for a session.
+enum PracticeMode {
+  guided
+  practice
+  challenge
+  review
+}
+
+/// Supported question formats.
+enum QuestionType {
+  multiple_choice
+  fill_in_blank
+  true_false
+  word_problem
+  drag_and_drop
+}
+
+/// Reasons XP can be awarded — used for analytics and audit trail.
+enum XPReason {
+  correct_answer
+  retry_success
+  daily_login
+  lesson_complete
+  challenge_complete
+  streak_bonus
+  badge_earned
+  quest_complete
+}
+
+/// Groupings for badge display and filtering.
+enum BadgeCategory {
+  accuracy
+  streak
+  speed
+  persistence
+  exploration
+}
+
+/// Quest types determine refresh cadence and display grouping.
+enum QuestType {
+  daily
+  weekly
+}
+
+/// Student learning pace — drives AI tutor pacing and hint thresholds.
+enum LearningPace {
+  slow
+  standard
+  fast
+}
+
+/// Quest completion lifecycle.
+enum QuestStatus {
+  active
+  completed
+  expired
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// USER & IDENTITY
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Central identity record — one row per human.
+/// Role determines which related records exist:
+///   student  → StudentProfile, TopicProgress, QuestionAttempts, ...
+///   parent   → future ParentProfile (children FK)
+///   teacher  → future TeacherProfile (class FK)
+///   admin    → no extra profile
+///
+/// Auth credentials live separately (NextAuth adapter creates Account/Session
+/// tables alongside this model; see NextAuth Prisma adapter docs).
+model User {
+  id         String   @id @default(cuid())
+  email      String   @unique
+  name       String
+  role       UserRole @default(student)
+  avatarUrl  String?
+
+  /// Populated for student accounts; null for parents, teachers, admins.
+  gradeLevel Grade?
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  studentProfile   StudentProfile?
+  streak           Streak?
+  xpEvents         XPEvent[]
+  studentBadges    StudentBadge[]
+  questProgress    StudentQuestProgress[]
+  practiceSessions PracticeSession[]
+  questionAttempts QuestionAttempt[]
+  topicProgress    TopicProgress[]
+
+  @@index([role])
+  @@index([gradeLevel])
+  @@map("users")
+}
+
+/// Extended learning metadata for student users.
+/// Kept separate from User so teacher/parent rows stay lean,
+/// and so this table can be queried independently by the AI pipeline.
+model StudentProfile {
+  id              String       @id @default(cuid())
+  userId          String       @unique
+
+  /// AI-tutor pacing setting; adjusts hint frequency and content density.
+  learningPace    LearningPace @default(standard)
+
+  /// Running confidence score 0–100, blended from self-report and accuracy.
+  confidenceLevel Int          @default(50)
+
+  /// Gamification level, derived from totalXp. Denormalised for fast reads.
+  currentLevel    Int          @default(1)
+
+  /// Cumulative XP across all time. Source of truth for level calculation.
+  totalXp         Int          @default(0)
+
+  /// Active consecutive-day streak. Denormalised from Streak for read perf.
+  streakCount     Int          @default(0)
+
+  /// UI theme key selected by the student ("space" | "ocean" | "forest" | ...).
+  preferredTheme  String       @default("space")
+
+  updatedAt       DateTime     @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("student_profiles")
+}
+
+/// Daily login streak tracking with shield (freeze) support.
+/// Separate from StudentProfile so streak logic can be updated atomically
+/// without touching the profile write path.
+model Streak {
+  id             String    @id @default(cuid())
+  userId         String    @unique
+  currentStreak  Int       @default(0)
+  longestStreak  Int       @default(0)
+  lastActiveDate DateTime?
+
+  /// When true, the next missed day does NOT break the streak.
+  /// Consumed automatically by the StreakEngine on next login.
+  hasShield      Boolean   @default(false)
+
+  updatedAt      DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("streaks")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CURRICULUM
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Top-level grouping of topics by mathematical strand.
+/// Strands correspond to national curriculum domains
+/// (e.g. "Number & Operations", "Geometry", "Data & Probability").
+/// sortOrder controls display ordering in the curriculum browser.
+model CurriculumStrand {
+  id          String  @id @default(cuid())
+  slug        String  @unique   // machine-readable key e.g. "numbers"
+  name        String            // display name e.g. "Number Sense"
+  description String
+  iconEmoji   String?
+  sortOrder   Int     @default(0)
+
+  topics Topic[]
+
+  @@index([sortOrder])
+  @@map("curriculum_strands")
+}
+
+/// A discrete unit of study within a strand, tied to one grade band.
+/// Topics are the primary mastery unit — XP, badges, and progress
+/// are tracked at topic granularity.
+model Topic {
+  id          String  @id @default(cuid())
+  strandId    String
+  slug        String  @unique
+  name        String
+  description String
+
+  /// The grade band where this topic is primarily taught.
+  gradeBand   Grade
+
+  /// Baseline difficulty; individual lessons and practice sets can override.
+  difficulty  Difficulty @default(beginner)
+
+  /// Array of topic IDs that must be mastered before this topic unlocks.
+  prerequisites String[]
+
+  /// Accuracy fraction (0–1) required to flip isMastered = true.
+  masteryThreshold Float @default(0.8)
+
+  /// Rough total learning time across all lessons in minutes.
+  estimatedMinutes Int @default(30)
+
+  iconEmoji String?
+
+  /// Display position within the strand.
+  sortOrder Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  strand           CurriculumStrand  @relation(fields: [strandId], references: [id])
+  lessons          Lesson[]
+  practiceSets     PracticeSet[]
+  topicProgress    TopicProgress[]
+  questionAttempts QuestionAttempt[]
+
+  @@index([strandId])
+  @@index([gradeBand, difficulty])
+  @@map("topics")
+}
+
+/// A focused instructional unit within a topic.
+/// Lessons are the smallest curriculum atom a student works through.
+/// The AI tutor uses contentSummary as context when generating hints.
+model Lesson {
+  id        String @id @default(cuid())
+  topicId   String
+
+  /// Human-readable lesson name shown in the UI.
+  title     String
+
+  /// One-sentence learning goal ("Students will be able to…").
+  objective String
+
+  /// Brief prose summary of the lesson content (used by AI tutor for context).
+  /// Aim for 2–4 sentences — concise enough to fit in a prompt context window.
+  contentSummary String
+
+  /// 1-indexed position of this lesson within its parent topic.
+  orderIndex Int @default(1)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  topic        Topic           @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  practiceSets PracticeSet[]
+  sessions     PracticeSession[]
+
+  @@index([topicId, orderIndex])
+  @@map("lessons")
+}
+
+/// A named, reusable collection of questions for a specific topic + lesson.
+/// PracticeSets are what students work through in a session.
+/// One PracticeSet can have many Sessions (students re-attempt).
+model PracticeSet {
+  id    String @id @default(cuid())
+
+  /// Every PracticeSet must belong to a topic.
+  topicId  String
+
+  /// lessonId is optional — topic-level review sets span all lessons.
+  lessonId String?
+
+  title     String
+  mode      PracticeMode @default(practice)
+  difficulty Difficulty   @default(intermediate)
+
+  /// Target number of questions to serve per session.
+  /// Actual count may vary if the question bank is smaller.
+  questionCount Int @default(10)
+
+  createdAt DateTime @default(now())
+
+  topic    Topic    @relation(fields: [topicId], references: [id])
+  lesson   Lesson?  @relation(fields: [lessonId], references: [id])
+  sessions PracticeSession[]
+
+  @@index([topicId])
+  @@index([lessonId])
+  @@map("practice_sets")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SESSIONS & ATTEMPTS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// A single sitting at a PracticeSet.
+/// Opened when a student taps "Start Practice", closed on submit or timeout.
+/// Summary stats are computed on close and stored here for fast dashboard reads.
+model PracticeSession {
+  id            String       @id @default(cuid())
+  userId        String
+  practiceSetId String
+
+  /// Denormalised from practiceSet.lessonId for easy lesson-level filtering.
+  lessonId      String?
+
+  mode          PracticeMode
+  startedAt     DateTime     @default(now())
+  completedAt   DateTime?
+
+  /// XP awarded when the session was closed.
+  xpEarned      Int          @default(0)
+
+  /// Percent correct, 0–100, computed at session close.
+  accuracyPercent Float      @default(0)
+
+  /// Total questions served in this session.
+  questionsCount  Int        @default(0)
+
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  practiceSet PracticeSet   @relation(fields: [practiceSetId], references: [id])
+  lesson      Lesson?       @relation(fields: [lessonId], references: [id])
+  attempts    QuestionAttempt[]
+
+  @@index([userId, completedAt])
+  @@index([practiceSetId])
+  @@map("practice_sessions")
+}
+
+/// One student response to one question within a session.
+/// This is the atomic analytics unit — every mastery score, confidence
+/// calculation, and misconception report is derived from this table.
+model QuestionAttempt {
+  id String @id @default(cuid())
+
+  sessionId     String
+  userId        String  // denormalised to avoid joins on hot analytics queries
+  topicId       String  // denormalised for topic-level roll-ups
+  practiceSetId String  // denormalised for set-level analytics
+
+  /// Snapshot of the rendered question text at answer time.
+  /// Stored so historical analytics are immune to question edits.
+  questionText  String
+
+  studentAnswer String
+  correctAnswer String
+  isCorrect     Boolean
+
+  /// Hints requested before the student committed an answer.
+  hintsUsed     Int     @default(0)
+
+  /// Whether the student opened the full explanation panel.
+  explanationUsed Boolean @default(false)
+
+  /// Student self-reported confidence before seeing the question (scale 1–5).
+  confidenceBefore Int?
+
+  /// Student self-reported confidence after answering (scale 1–5).
+  confidenceAfter  Int?
+
+  timeSpentSeconds Int
+
+  /// AI-detected misconception label e.g. "place_value_confusion".
+  /// Null if no misconception was detected or the AI call was skipped.
+  misconceptionTag String?
+
+  createdAt DateTime @default(now())
+
+  session  PracticeSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic    Topic           @relation(fields: [topicId], references: [id])
+
+  @@index([sessionId])
+  @@index([userId, topicId])
+  @@index([topicId, isCorrect])
+  @@index([misconceptionTag])
+  @@map("question_attempts")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PROGRESS & MASTERY
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Aggregate topic-level progress for one student.
+/// Updated after every session by the MasteryEvaluator service.
+/// The curriculum engine reads this to determine what to teach next
+/// and which topics to surface in the weak-areas review queue.
+model TopicProgress {
+  id     String @id @default(cuid())
+  userId  String
+  topicId String
+
+  /// Continuous mastery score 0–1, derived from accuracy over recent sessions.
+  masteryScore Float @default(0)
+
+  /// Rolling accuracy rate across recent sessions (0–1).
+  accuracyRate Float @default(0)
+
+  /// Fraction of lessons in this topic completed (0–1).
+  completionPercent Float @default(0)
+
+  /// True when topic prerequisites are met and the student can access it.
+  isUnlocked Boolean @default(false)
+
+  /// True when masteryScore ≥ topic.masteryThreshold.
+  isMastered Boolean @default(false)
+
+  lastPracticedAt DateTime?
+  updatedAt       DateTime  @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic Topic @relation(fields: [topicId], references: [id])
+
+  @@unique([userId, topicId])
+  @@index([userId, isMastered])
+  @@index([userId, lastPracticedAt])
+  @@map("topic_progress")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GAMIFICATION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Immutable XP ledger — append-only, never deleted, never updated.
+/// Supports auditing, leaderboards, time-series XP charts, and
+/// replay of any student's XP history from scratch.
+model XPEvent {
+  id     String   @id @default(cuid())
+  userId String
+  amount Int
+  reason XPReason
+
+  /// Free-form context payload: session ID, topic slug, badge code, etc.
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("xp_events")
+}
+
+/// Badge catalog — master list of all earnable badges.
+/// Seeded at deploy time; not modified at runtime.
+/// Eligibility logic lives in services/gamification/badges_engine.ts.
+model Badge {
+  id   String @id @default(cuid())
+
+  /// Stable machine-readable key used in application code
+  /// e.g. "badge-streak-7". Must match BADGE_REGISTRY id.
+  code String @unique
+
+  title       String
+  description String
+  iconUrl     String?
+  category    BadgeCategory
+
+  /// XP bonus credited to the student when this badge is first earned.
+  xpReward Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  studentBadges StudentBadge[]
+
+  @@index([category])
+  @@map("badges")
+}
+
+/// Join table: which badges has each student earned, and when.
+model StudentBadge {
+  id        String   @id @default(cuid())
+  userId    String
+  badgeId   String
+  awardedAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeId], references: [id])
+
+  @@unique([userId, badgeId])
+  @@index([userId])
+  @@map("student_badges")
+}
+
+/// Quest template catalog — reusable quest definitions.
+/// New quest instances for each student-day/student-week are created
+/// by the QuestEngine from these templates and stored in StudentQuestProgress.
+model DailyQuest {
+  id          String     @id @default(cuid())
+  title       String
+  description String
+  xpReward    Int
+  questType   QuestType  @default(daily)
+  difficulty  Difficulty @default(intermediate)
+
+  /// Numeric target the student must reach (e.g. 5 for "answer 5 correctly").
+  targetValue Int @default(1)
+
+  /// Machine-readable event key the engine increments progress on.
+  /// e.g. "correct_answers" | "minutes_practiced" | "topics_attempted"
+  trackingKey String
+
+  createdAt DateTime @default(now())
+
+  questProgress StudentQuestProgress[]
+
+  @@index([questType, difficulty])
+  @@map("daily_quests")
+}
+
+/// A specific instance of a DailyQuest assigned to one student for one period.
+/// The QuestEngine creates these at the start of each day (daily) or week (weekly).
+/// Expired rows are retained for analytics; purge after 90 days if storage is a concern.
+model StudentQuestProgress {
+  id      String @id @default(cuid())
+  userId  String
+  questId String
+
+  status QuestStatus @default(active)
+
+  /// Current progress toward targetValue (e.g. 3 of 5 correct answers).
+  progressValue Int @default(0)
+
+  completedAt DateTime?
+
+  /// Quest expires at end-of-day (daily) or end-of-week (weekly).
+  expiresAt DateTime
+
+  createdAt DateTime @default(now())
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quest DailyQuest @relation(fields: [questId], references: [id])
+
+  @@unique([userId, questId, expiresAt])
+  @@index([userId, status])
+  @@index([expiresAt])
+  @@map("student_quest_progress")
+}

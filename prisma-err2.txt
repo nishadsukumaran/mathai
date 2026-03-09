@@ -1,0 +1,442 @@
+2026-03-09T11:35:31.075Z prisma:engines  binaries to download libquery-engine, schema-engine
+2026-03-09T11:35:31.250Z prisma:loadEnv  project root found at C:\Users\NishadSukumaran\.claude\projects\MathAI\package.json
+2026-03-09T11:35:31.279Z prisma:tryLoadEnv  Environment variables not found at null
+2026-03-09T11:35:31.283Z prisma:tryLoadEnv  Environment variables not found at undefined
+2026-03-09T11:35:31.285Z prisma:tryLoadEnv  No Environment variables loaded
+2026-03-09T11:35:31.295Z prisma:getConfig  Using getConfig Wasm
+2026-03-09T11:35:31.322Z prisma:getConfig  config data retrieved without errors in getConfig Wasm
+2026-03-09T11:35:31.443Z prisma:getConfig  Using getConfig Wasm
+2026-03-09T11:35:31.448Z prisma:getConfig  config data retrieved without errors in getConfig Wasm
+2026-03-09T11:35:31.449Z prisma:getDMMF  Using getDmmf Wasm
+2026-03-09T11:35:31.451Z prisma:getDMMF  Using given datamodel
+2026-03-09T11:35:31.589Z prisma:getDMMF  dmmf data retrieved without errors in getDmmf Wasm
+2026-03-09T11:35:31.604Z prisma:generator  prismaCLIDir C:\Users\NishadSukumaran\.claude\projects\MathAI\node_modules\prisma
+2026-03-09T11:35:31.604Z prisma:generator  prismaClientDir C:\Users\NishadSukumaran\.claude\projects\MathAI\node_modules\@prisma\client
+2026-03-09T11:35:31.605Z prisma:generator  baseDir C:\Users\NishadSukumaran\.claude\projects\MathAI\database\schema
+2026-03-09T11:35:31.618Z prisma:generator  typescriptPath C:\Users\NishadSukumaran\.claude\projects\MathAI\node_modules\typescript
+2026-03-09T11:35:31.860Z prisma:GeneratorProcess  prisma:client:generator requiredEngine: libqueryEngine +67ms
+2026-03-09T11:35:31.863Z prisma:getGenerators  neededVersions {
+  "605197351a3c8bdd595af2d2a9bc3025bca48ea2": {
+    "engines": [
+      "libqueryEngine"
+    ],
+    "binaryTargets": [
+      {
+        "fromEnvVar": null,
+        "value": "windows",
+        "native": true
+      }
+    ]
+  }
+}
+2026-03-09T11:35:32.003Z prisma:getGenerators  {
+  generatorBinaryPaths: {
+    libqueryEngine: {
+      windows: 'C:\\Users\\NishadSukumaran\\.claude\\projects\\MathAI\\node_modules\\prisma\\engines\\605197351a3c8bdd595af2d2a9bc3025bca48ea2\\query_engine-windows.dll.node'
+    }
+  }
+}
+2026-03-09T11:35:32.004Z prisma:getDMMF  Using getDmmf Wasm
+2026-03-09T11:35:32.005Z prisma:getDMMF  Using given datamodel
+2026-03-09T11:35:32.060Z prisma:getDMMF  dmmf data retrieved without errors in getDmmf Wasm
+2026-03-09T11:35:32.061Z prisma:getGenerators  generator.manifest.prettyName Prisma Client
+2026-03-09T11:35:32.061Z prisma:getGenerators  options {
+  datamodel: '// ─── MathAI Prisma Schema ─────────────────────────────────────────────────────\n' +
+    '//\n' +
+    '// Database:  PostgreSQL ≥ 15\n' +
+    '// ORM:       Prisma v5\n' +
+    '//\n' +
+    '// DESIGN NOTES\n' +
+    '// ─────────────────────────────────────────────────────────────────────────────\n' +
+    '//   • All IDs use cuid() — collision-resistant, URL-safe, lexicographically\n' +
+    '//     sortable within a second window. Prefer cuid over uuid for readability\n' +
+    '//     in logs and URLs.\n' +
+    '//\n' +
+    '//   • Timestamps follow @default(now()) / @updatedAt convention throughout.\n' +
+    '//     All times are stored as UTC; the application layer localises for display.\n' +
+    '//\n' +
+    '//   • Enums are defined in Prisma AND mirrored in types/index.ts.\n' +
+    '//     Any change here must be reflected there (and vice-versa).\n' +
+    '//\n' +
+    '//   • Json fields are used only for genuinely schemaless blobs\n' +
+    '//     (question rendering config, visual plan payloads). Prefer typed columns\n' +
+    '//     for anything queried or filtered on.\n' +
+    '//\n' +
+    '//   • Cascade rules are explicit on every relation.\n' +
+    '//     Default: parent delete → child delete (Cascade) for owned data,\n' +
+    '//     Restrict for reference data that should never disappear silently.\n' +
+    '//\n' +
+    '//   • Indexes cover every FK and every column used in WHERE / ORDER BY\n' +
+    '//     clauses in the application query patterns.\n' +
+    '//\n' +
+    '//   • Schema is designed to support future Parent and Teacher dashboards:\n' +
+    '//     User.role is already extensible; FK columns are ready.\n' +
+    '// ─────────────────────────────────────────────────────────────────────────────\n' +
+    '\n' +
+    'generator client {\n' +
+    '  provider = "prisma-client-js"\n' +
+    '}\n' +
+    '\n' +
+    'datasource db {\n' +
+    '  provider = "postgresql"\n' +
+    '  url      = env("DATABASE_URL")\n' +
+    '}\n' +
+    '\n' +
+    '// ═══════════════════════════════════════════════════════════════════════════════\n' +
+    '// ENUMS\n' +
+    '// ═══════════════════════════════════════════════════════════════════════════════\n' +
+    '\n' +
+    '/// Who this account belongs to. Drives UI routing and permission checks.\n' +
+    '/// parent and teacher roles are reserved for future dashboard builds.\n' +
+    'enum UserRole {\n' +
+    '  student\n' +
+    '  parent\n' +
+    '  teacher\n' +
+    '  admin\n' +
+    '}\n' +
+    '\n' +
+    '/// Curriculum grade bands K through Grade 8.\n' +
+    'enum Grade {\n' +
+    '  K\n' +
+    '  G1\n' +
+    '  G2\n' +
+    '  G3\n' +
+    '  G4\n' +
+    '  G5\n' +
+    '  G6\n' +
+    '  G7\n' +
+    '  G8\n' +
+    '}\n' +
+    '\n' +
+    '/// Top-level mathematical strands that group topics.\n' +
+    'enum Strand {\n' +
+    '  Numbers\n' +
+    '  Operations\n' +
+    '  Fractions\n' +
+    '  Decimals\n' +
+    '  Geometry\n' +
+    '  Measurement\n' +
+    '  Algebra\n' +
+    '  WordProblems\n' +
+    '  DataAndProbability\n' +
+    '}\n' +
+    '\n' +
+    '/// Question and lesson difficulty levels.\n' +
+    'enum Difficulty {\n' +
+    '  beginner\n' +
+    '  intermediate\n' +
+    '  advanced\n' +
+    '  challenge\n' +
+    '}\n' +
+    '\n' +
+    '/// How proficient a student is at a given topic.\n' +
+    'enum MasteryLevel {\n' +
+    '  not_started\n' +
+    '  emerging\n' +
+    '  developing\n' +
+    '  mastered\n' +
+    '  extended\n' +
+    '}\n' +
+    '\n' +
+    '/// Controls AI tutor behaviour and hint availability for a session.\n' +
+    'enum PracticeMode {\n' +
+    '  guided\n' +
+    '  practice\n' +
+    '  challenge\n' +
+    '  review\n' +
+    '}\n' +
+    '\n' +
+    '/// Supported question formats.\n' +
+    'enum QuestionType {\n' +
+    '  multiple_choice\n' +
+    '  fill_in_blank\n' +
+    '  true_false\n' +
+    '  word_problem\n' +
+    '  drag_and_drop\n' +
+    '}\n' +
+    '\n' +
+    '/// Reasons XP can be awarded — used for analytics and audit trail.\n' +
+    'enum XPReason {\n' +
+    '  correct_answer\n' +
+    '  retry_success\n' +
+    '  daily_login\n' +
+    '  lesson_complete\n' +
+    '  challenge_complete\n' +
+    '  streak_bonus\n' +
+    '  badge_earned\n' +
+    '  quest_complete\n' +
+    '}\n' +
+    '\n' +
+    '/// Groupings for badge display and filtering.\n' +
+    'enum BadgeCategory {\n' +
+    '  accuracy\n' +
+    '  streak\n' +
+    '  speed\n' +
+    '  persistence\n' +
+    '  exploration\n' +
+    '}\n' +
+    '\n' +
+    '/// Quest types determine refresh cadence and display grouping.\n' +
+    'enum QuestType {\n' +
+    '  daily\n' +
+    '  weekly\n' +
+    '}\n' +
+    '\n' +
+    '/// Student learning pace — drives AI tutor pacing and hint thresholds.\n' +
+    'enum LearningPace {\n' +
+    '  slow\n' +
+    '  standard\n' +
+    '  fast\n' +
+    '}\n' +
+    '\n' +
+    '/// Quest completion lifecycle.\n' +
+    'enum QuestStatus {\n' +
+    '  active\n' +
+    '  completed\n' +
+    '  expired\n' +
+    '}\n' +
+    '\n' +
+    '// ═══════════════════════════════════════════════════════════════════════════════\n' +
+    '// USER & IDENTITY\n' +
+    '// ═══════════════════════════════════════════════════════════════════════════════\n' +
+    '\n' +
+    '/// Central identity record — one row per human.\n' +
+    '/// Role determines which related records exist:\n' +
+    '///   student  → StudentProfile, TopicProgress, QuestionAttempts, ...\n' +
+    '///   parent   → future ParentProfile (children FK)\n' +
+    '///   teacher  → future TeacherProfile (class FK)\n' +
+    '///   admin    → no extra profile\n' +
+    '///\n' +
+    '/// Auth credentials live separately (NextAuth adapter creates Account/Session\n' +
+    '/// tables alongside this model; see NextAuth Prisma adapter docs).\n' +
+    'model User {\n' +
+    '  id         String   @id @default(cuid())\n' +
+    '  email      String   @unique\n' +
+    '  name       String\n' +
+    '  role       UserRole @default(student)\n' +
+    '  avatarUrl  String?\n' +
+    '\n' +
+    '  /// Populated for student accounts; null for parents, teachers, admins.\n' +
+    '  gradeLevel Grade?\n' +
+    '\n' +
+    '  createdAt  DateTime @default(now())\n' +
+    '  updatedAt  DateTime @updatedAt\n' +
+    '\n' +
+    '  studentProfile   StudentProfile?\n' +
+    '  streak           Streak?\n' +
+    '  xpEvents         XPEvent[]\n' +
+    '  studentBadges    StudentBadge[]\n' +
+    '  questProgress    StudentQuestProgress[]\n' +
+    '  practiceSessions PracticeSession[]\n' +
+    '  questionAttempts QuestionAttempt[]\n' +
+    '  topicProgress    TopicProgress[]\n' +
+    '\n' +
+    '  @@index([role])\n' +
+    '  @@index([gradeLevel])\n' +
+    '  @@map("users")\n' +
+    '}\n' +
+    '\n' +
+    '/// Extended learning metadata for student users.\n' +
+    '/// Kept separate from User so teacher/parent rows stay lean,\n' +
+    '/// and so this table can be queried independently by the AI pipeline.\n' +
+    'model StudentProfile {\n' +
+    '  id              String       @id @default(cuid())\n' +
+    '  userId          String       @unique\n' +
+    '\n' +
+    '  /// AI-tutor pacing setting; adjusts hint frequency and content density.\n' +
+    '  learningPace    LearningPace @default(standard)\n' +
+    '\n' +
+    '  /// Running confidence score 0–100, blended from self-report and accuracy.\n' +
+    '  confidenceLevel Int          @default(50)\n' +
+    '\n' +
+    '  /// Gamification level, derived from totalXp. Denormalised for fast reads.\n' +
+    '  currentLevel    Int          @default(1)\n' +
+    '\n' +
+    '  /// Cumulative XP across all time. Source of truth for level calculation.\n' +
+    '  totalXp         Int          @default(0)\n' +
+    '\n' +
+    '  /// Active consecutive-day streak. Denormalised from Streak for read perf.\n' +
+    '  streakCount     Int          @default(0)\n' +
+    '\n' +
+    '  /// UI theme key selected by the student ("space" | "ocean" | "forest" | ...).\n' +
+    '  preferredTheme  String       @default("space")\n' +
+    '\n' +
+    '  updatedAt       DateTime     @updatedAt\n' +
+    '\n' +
+    '  user User @relation(fields: [userId], references: [id], onDelete: Cascade)\n' +
+    '\n' +
+    '  @@map("student_profiles")\n' +
+    '}\n' +
+    '\n' +
+    '/// Daily login streak tracking with shield (freeze) support.\n' +
+    '/// Separate from StudentProfile so streak logic can be updated atomically\n' +
+    '/// without touching the profile write path.\n' +
+    'model Streak {\n' +
+    '  id             String    @id @default(cuid())\n' +
+    '  userId         String    @unique\n' +
+    '  currentStreak  Int       @default(0)\n' +
+    '  longestStreak  Int       @default(0)\n' +
+    '  lastActiveDate DateTime?\n' +
+    '\n' +
+    '  /// When true, the next missed day does NOT break the streak.\n' +
+    '  /// Consumed automatically by the StreakEngine on next login.\n' +
+    '  hasShield      Boolean   @default(false)\n' +
+    '\n' +
+    '  updatedAt      DateTime  @updatedAt\n' +
+    '\n' +
+    '  user User @relation(fields: [userId], references: [id], onDelete: Cascade)\n' +
+    '\n' +
+    '  @@map("streaks")\n' +
+    '}\n' +
+    '\n' +
+    '// ═══════════════════════════════════════════════════════════════════════════════\n' +
+    '// CURRICULUM\n' +
+    '// ═══════════════════════════════════════════════════════════════════════════════\n' +
+    '\n' +
+    '/// Top-level grouping of topics by mathematical strand.\n' +
+    '/// Strands correspond to national curriculum domains\n' +
+    '/// (e.g. "Number & Operations", "Geometry", "Data & Probability").\n' +
+    '/// sortOrder controls display ordering in the curriculum browser.\n' +
+    'model CurriculumStrand {\n' +
+    '  id          String  @id @default(cuid())\n' +
+    '  slug        String  @unique   // machine-readable key e.g. "numbers"\n' +
+    '  name        String            // display name e.g. "Number Sense"\n' +
+    '  description String\n' +
+    '  iconEmoji   String?\n' +
+    '  sortOrder   Int     @default(0)\n' +
+    '\n' +
+    '  topics Topic[]\n' +
+    '\n' +
+    '  @@index([sortOrder])\n' +
+    '  @@map("curriculum_strands")\n' +
+    '}\n' +
+    '\n' +
+    '/// A discrete unit of study within a strand, tied to one grade band.\n' +
+    '/// Topics are the primary mastery unit — XP, badges, and progress\n' +
+    '/// are tracked at topic granularity.\n' +
+    'model Topic {\n' +
+    '  id          String  @id @default(cuid())\n' +
+    '  strandId    String\n' +
+    '  slug        String  @unique\n' +
+    '  name        String\n' +
+    '  description String\n' +
+    '\n' +
+    '  /// The grade band where this topic is primarily taught.\n' +
+    '  gradeBand   Grade\n' +
+    '\n' +
+    '  /// Baseline difficulty; individual lessons and practice sets can override.\n' +
+    '  difficulty  Difficulty @default(beginner)\n' +
+    '\n' +
+    '  /// Array of topic IDs that must be mastered before this topic unlocks.\n' +
+    '  prerequisites String[]\n' +
+    '\n' +
+    '  /// Accuracy fraction (0–1) required to flip isMastered = true.\n' +
+    '  masteryThreshold Float @default(0.8)\n' +
+    '\n' +
+    '  /// Rough total learning time across all lessons in minutes.\n' +
+    '  estimatedMinutes Int @default(30)\n' +
+    '\n' +
+    '  iconEmoji String?\n' +
+    '\n' +
+    '  /// Display position within the strand.\n' +
+    '  sortOrder Int @default(0)\n' +
+    '\n' +
+    '  createdAt DateTime @default(now())\n' +
+    '  updatedAt DateTime @updatedAt\n' +
+    '\n' +
+    '  strand           CurriculumStrand  @relation(fields: [strandId], references: [id])\n' +
+    '  lessons          Lesson[]\n' +
+    '  practiceSets     PracticeSet[]\n' +
+    '  topicProgress    TopicProgress[]\n' +
+    '  questionAttempts QuestionAttempt[]\n' +
+    '\n' +
+    '  @@index([strandId])\n' +
+    '  @@index([gradeBand, difficulty])\n' +
+    '  @@map("topics")\n' +
+    '}\n' +
+    '\n' +
+    '/// A focused instructional unit within a topic.\n' +
+    '/// Lessons are the smallest curriculum atom a student works through.\n' +
+    '/// The AI tutor uses contentSummary as context when generating hints.\n' +
+    'model Lesson {\n' +
+    '  id        String @id @default(cuid())\n' +
+    '  topicId   String\n' +
+    '\n' +
+    '  /// Human-readable lesson name shown in the UI.\n' +
+    '  title     String\n' +
+    '\n' +
+    '  /// One-sentence learning goal ("Students will be able to…").\n' +
+    '  objective String\n' +
+    '\n' +
+    '  /// Brief prose summary of the lesson content (used by AI tutor for context).\n' +
+    '  /// Aim for 2–4 sentences — concise enough to fit in a prompt context window.\n' +
+    '  contentSummary String\n' +
+    '\n' +
+    '  /// 1-indexed position of this lesson within its parent topic.\n' +
+    '  orderIndex Int @default(1)\n' +
+    '\n' +
+    '  createdAt  DateTime @default(now())\n' +
+    '  updatedAt  DateTime @updatedAt\n' +
+    '\n' +
+    '  topic        Topic           @relation(fields: [topicId], references: [id], onDelete: Cascade)\n' +
+    '  practiceSets PracticeSet[]\n' +
+    '  sessions     PracticeSession[]\n' +
+    '\n' +
+    '  @@index([topicId, orderIndex])\n' +
+    '  @@map("lessons")\n' +
+    '}\n' +
+    '\n' +
+    '/// A named, reusable collection of questions for a specific topic + lesson.\n' +
+    '/// PracticeSets are what students work through in a session.\n' +
+    '/// One PracticeSet can have many Sessions (students re-attempt).\n' +
+    'model PracticeSet {\n' +
+    '  id    String @id @default(cuid())\n' +
+    '\n' +
+    '  /// Every PracticeSet must belong to a topic.\n' +
+    ' '... 8742 more characters,
+  datasources: [
+    {
+      name: 'db',
+      provider: 'postgresql',
+      activeProvider: 'postgresql',
+      url: [Object],
+      schemas: []
+    }
+  ],
+  generator: {
+    name: 'client',
+    provider: { fromEnvVar: null, value: 'prisma-client-js' },
+    output: {
+      value: 'C:\\Users\\NishadSukumaran\\.claude\\projects\\MathAI\\node_modules\\@prisma\\client',
+      fromEnvVar: null
+    },
+    config: {},
+    binaryTargets: [ [Object] ],
+    previewFeatures: []
+  },
+  dmmf: {
+    datamodel: { enums: [Array], models: [Array], types: [] },
+    schema: {
+      inputObjectTypes: [Object],
+      outputObjectTypes: [Object],
+      enumTypes: [Object],
+      fieldRefTypes: [Object]
+    },
+    mappings: { modelOperations: [Array], otherOperations: [Object] }
+  },
+  otherGenerators: [],
+  schemaPath: 'C:\\Users\\NishadSukumaran\\.claude\\projects\\MathAI\\database\\schema\\schema.prisma',
+  version: '0a83d8541752d7582de2ebc1ece46519ce72a848',
+  postinstall: false,
+  noEngine: false,
+  binaryPaths: {
+    libqueryEngine: {
+      windows: 'C:\\Users\\NishadSukumaran\\.claude\\projects\\MathAI\\node_modules\\prisma\\engines\\605197351a3c8bdd595af2d2a9bc3025bca48ea2\\query_engine-windows.dll.node'
+    }
+  }
+}
+2026-03-09T11:35:32.069Z prisma:getGenerators  options.generator.binaryTargets [ { fromEnvVar: null, value: 'windows', native: true } ]
+Error: 
+The "path" argument must be of type string. Received undefined
+
+

@@ -1,0 +1,43 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "lib": ["ES2022"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "exactOptionalPropertyTypes": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "dist",
+    "baseUrl": ".",
+    "paths": {
+      "@/ai/*": ["ai/*"],
+      "@/api/*": ["api/*"],
+      "@/curriculum/*": ["curriculum/*"],
+      "@/services/*": ["services/*"],
+      "@/database/*": ["database/*"],
+      "@/types": ["types/index"],
+      "@/types/*": ["types/*"]
+    }
+  },
+  "ts-node": {
+    "require": ["tsconfig-paths/register"],
+    "transpileOnly": true
+  },
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "apps/web/.next",
+    "apps/web/node_modules",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ]
+}
