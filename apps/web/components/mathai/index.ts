@@ -3,22 +3,6 @@
  *
  * Barrel export for MathAI domain-specific UI components.
  *
- * COMPONENT OVERVIEW:
- *
- * ┌──────────────────┬─────────────────────────────────────────────────────────┐
- * │ Component        │ Description                                             │
- * ├──────────────────┼─────────────────────────────────────────────────────────┤
- * │ XPBar            │ XP progress bar. compact prop for top bar inline use.   │
- * │ StreakCounter    │ Flame icon + streak count. compact prop for top bar.    │
- * │ QuestCard        │ Daily quest card with progress bar and XP chip.         │
- * │ BadgeChip        │ Compact circular badge for shelf / reward displays.     │
- * │ BadgeCard        │ Full badge card with description (progress page).       │
- * │ LockedBadge      │ Greyed placeholder for unearned badges.                 │
- * │ MasteryRing      │ SVG circular ring colour-coded by mastery level.        │
- * │ TopicCard        │ Curriculum grid card with mastery ring + lock overlay.  │
- * │ LessonRow        │ Lesson list row with state icon, XP chip, CTA button.  │
- * └──────────────────┴─────────────────────────────────────────────────────────┘
- *
  * All components:
  *   - Accept a className prop for layout overrides
  *   - Are typed against @mathai/shared-types via @/types
@@ -33,3 +17,19 @@ export { BadgeChip, BadgeCard, LockedBadge }      from "./badge";
 export { MasteryRing }                            from "./mastery-ring";
 export { TopicCard }                              from "./topic-card";
 export { LessonRow }                              from "./lesson-row";
+
+// ── Wave 1 additions ─────────────────────────────────────────────────────────
+export { AskCard }                                from "./ask-card";
+export { AskPanel }                               from "./ask-panel";
+export { ProfileModal, MOCK_PROFILE }             from "./profile-modal";
+export { PracticeMenuView, MOCK_PRACTICE_MENU }   from "./practice-menu";
+
+// Visual diagram renderers (also available from @/components/mathai/visual)
+export {
+  NumberLine,
+  FractionBar,
+  ArrayDiagram,
+  BarModel,
+  PlaceValueChart,
+  VisualRenderer,
+}                                                 from "./visual";

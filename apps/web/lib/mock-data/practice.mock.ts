@@ -131,8 +131,10 @@ export const MOCK_HINT_2: TutorResponse = {
   visualPlan: {
     diagramType: "fraction_bar",
     data: {
-      fractions: ["1/3", "1/2"],
-      targetDenominator: 6,
+      fractions: [
+        { numerator: 1, denominator: 3, label: "1/3" },
+        { numerator: 1, denominator: 2, label: "1/2" },
+      ],
     },
   },
 };
@@ -146,9 +148,12 @@ export const MOCK_NEXT_STEP: TutorResponse = {
   visualPlan: {
     diagramType: "fraction_bar",
     data: {
-      fractions: ["1/3", "1/2"],
-      equivalent: ["2/6", "3/6"],
-      result: "5/6",
+      fractions: [
+        { numerator: 1, denominator: 3, label: "1/3" },
+        { numerator: 1, denominator: 2, label: "1/2" },
+        { numerator: 2, denominator: 6, label: "2/6", color: "#10b981" },
+        { numerator: 3, denominator: 6, label: "3/6", color: "#f59e0b" },
+      ],
     },
   },
 };
@@ -192,9 +197,12 @@ export const MOCK_EXPLANATION_FULL: TutorResponse = {
   visualPlan: {
     diagramType: "fraction_bar",
     data: {
-      fractions: ["1/3", "1/2"],
-      equivalent: ["2/6", "3/6"],
-      result: "5/6",
+      fractions: [
+        { numerator: 1, denominator: 3, label: "1/3" },
+        { numerator: 1, denominator: 2, label: "1/2" },
+        { numerator: 2, denominator: 6, label: "2/6", color: "#10b981" },
+        { numerator: 3, denominator: 6, label: "3/6", color: "#f59e0b" },
+      ],
     },
   },
 };
