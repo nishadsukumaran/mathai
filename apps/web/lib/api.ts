@@ -40,9 +40,14 @@ export async function apiFetch<T>(
   path: string,
   options?: RequestInit
 ): Promise<T | null> {
+  const url = `${API_BASE}${path}`;
   try {
-    const res = await fetch(`${API_BASE}${path}`, {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10_000); // 10s — Render free tier cold start
+
+    const res = await fetch(url, {
       ...options,
+      signal: controller.signal,
       headers: {
         Authorization: getAuthHeader(),
         "Content-Type": "application/json",
@@ -50,10 +55,22 @@ export async function apiFetch<T>(
       },
       cache: "no-store",
     });
-    if (!res.ok) return null;
+
+    clearTimeout(timeout);
+
+    if (!res.ok) {
+      console.error(`[apiFetch] ${res.status} ${res.statusText} — ${url}`);
+      return null;
+    }
+
     const json = (await res.json()) as { success: boolean; data: T };
+    if (!json.success) {
+      console.error(`[apiFetch] API returned success=false — ${url}`);
+    }
     return json.success ? json.data : null;
-  } catch {
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`[apiFetch] fetch failed — ${url} — ${message}`);
     return null;
   }
 }
