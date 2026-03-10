@@ -21,8 +21,9 @@ export const API_BASE =
  * In production this is the raw NextAuth JWE session token from the cookie.
  * In dev without a session it falls back to "dev-stub" (accepted by the stub middleware).
  */
-export function getAuthHeader(): string {
-  const cookieStore = cookies();
+export async function getAuthHeader(): Promise<string> {
+  // Next.js 15: cookies() is async
+  const cookieStore = await cookies();
 
   // NextAuth stores the session token in one of these cookies depending on HTTPS
   const sessionToken =
@@ -49,7 +50,7 @@ export async function apiFetch<T>(
       ...options,
       signal: controller.signal,
       headers: {
-        Authorization: getAuthHeader(),
+        Authorization: await getAuthHeader(),
         "Content-Type": "application/json",
         ...(options?.headers ?? {}),
       },
