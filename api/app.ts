@@ -21,9 +21,11 @@ const app = express();
 app.use(helmet());
 
 // ─── CORS — accept Vercel frontend + localhost dev ─────────────────────────
+// CORS_ORIGIN may be a comma-separated list of allowed origins, e.g.:
+//   https://mathai.aiops.ae,https://mathai.vercel.app
 const ALLOWED_ORIGINS: string[] = [
-  process.env.CORS_ORIGIN ?? "",
-  process.env.NEXT_PUBLIC_APP_URL ?? "",
+  ...(process.env.CORS_ORIGIN ?? "").split(",").map((o) => o.trim()),
+  ...(process.env.NEXT_PUBLIC_APP_URL ?? "").split(",").map((o) => o.trim()),
   "http://localhost:3000",
 ].filter(Boolean);
 
