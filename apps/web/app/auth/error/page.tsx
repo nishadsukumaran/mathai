@@ -32,7 +32,7 @@ export default function AuthErrorPage() {
     },
   };
 
-  const info = (error && errorInfo[error]) ?? errorInfo["Default"]!;
+  const info = (error && errorInfo[error]) || errorInfo["Default"]!;
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-100 via-purple-50 to-pink-100 p-4">
