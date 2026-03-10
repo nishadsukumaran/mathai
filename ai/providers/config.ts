@@ -39,11 +39,14 @@ export function createProvider(override?: ProviderName): AIProvider {
         delayMs: parseInt(process.env["MOCK_AI_DELAY_MS"] ?? "0", 10) || 0,
       });
 
-    default: {
-      const _exhaustive: never = name;
-      console.warn(`[ai/providers] Unknown provider "${_exhaustive as string}" — falling back to mock`);
+    case "openai":
+      // TODO: implement OpenAI provider
+      console.warn(`[ai/providers] OpenAI provider not yet implemented — falling back to mock`);
       return new MockProvider();
-    }
+
+    default:
+      console.warn(`[ai/providers] Unknown provider "${name}" — falling back to mock`);
+      return new MockProvider();
   }
 }
 

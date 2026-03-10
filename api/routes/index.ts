@@ -20,6 +20,7 @@
 
 import { Router } from "express";
 import { authMiddleware } from "../middlewares/auth.middleware";
+import { prisma } from "../lib/prisma";
 import practiceRoutes     from "./practice.routes";
 import curriculumRoutes   from "./curriculum.routes";
 import progressRoutes     from "./progress.routes";
@@ -30,12 +31,22 @@ import questRoutes        from "./quest.routes";
 const router = Router();
 
 // ── Health check (no auth) ────────────────────────────────────────────────────
-router.get("/health", (_req, res) => {
-  res.json({
-    success: true,
+router.get("/health", async (_req, res) => {
+  let dbOk = false;
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    dbOk = true;
+  } catch { /* db unreachable */ }
+
+  const status = dbOk ? "ok" : "degraded";
+  const code   = dbOk ? 200 : 503;
+
+  res.status(code).json({
+    success: dbOk,
     data: {
-      status:    "ok",
-      version:   process.env["npm_package_version"] ?? "0.0.1",
+      status,
+      db:        dbOk ? "connected" : "unreachable",
+      version:   process.env["npm_package_version"] ?? "0.1.0",
       env:       process.env["NODE_ENV"] ?? "development",
       uptime:    Math.round(process.uptime()),
       timestamp: new Date().toISOString(),

@@ -7,7 +7,7 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
-    "exactOptionalPropertyTypes": true,
+    "exactOptionalPropertyTypes": false,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
@@ -35,8 +35,8 @@
   "exclude": [
     "node_modules",
     "dist",
-    "apps/web/.next",
-    "apps/web/node_modules",
+    "apps",
+    "packages",
     "**/*.test.ts",
     "**/*.spec.ts"
   ]

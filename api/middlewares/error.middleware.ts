@@ -25,7 +25,7 @@ import { fail } from "../lib/response";
 export class AppError extends Error {
   constructor(
     public readonly code: string,
-    public readonly message: string,
+    public override readonly message: string,
     public readonly statusCode: number = 500,
     public readonly details?: unknown
   ) {

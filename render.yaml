@@ -1,0 +1,27 @@
+# render.yaml — Render Blueprint for MathAI Express API
+# Docs: https://docs.render.com/blueprint-spec
+#
+# DEPLOY STEPS:
+# 1. Push this repo to GitHub
+# 2. In Render dashboard: New → Blueprint → connect repo → select render.yaml
+# 3. Set the 3 env vars marked sync: false in the Render dashboard
+# 4. Deploy
+
+services:
+  - type: web
+    name: mathai-api
+    runtime: node
+    region: oregon
+    plan: free
+    buildCommand: npm run render:build
+    startCommand: npm run render:start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false              # Set in Render dashboard — your Postgres connection string
+      - key: NEXTAUTH_SECRET
+        sync: false              # Must match the Vercel env var exactly
+      - key: CORS_ORIGIN
+        sync: false              # Your Vercel URL, e.g. https://mathai-xxx.vercel.app

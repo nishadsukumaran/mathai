@@ -426,6 +426,7 @@ export interface LevelThreshold {
   level: number;
   xpRequired: number;
   title: string;        // "Math Seedling", "Math Explorer", …
+  label?: string;       // Short display label
   badgeUrl?: string;
 }
 
@@ -487,7 +488,7 @@ export interface ExplanationStep {
 
 /** Instructions for the frontend to render a visual math aid. */
 export interface VisualPlanPayload {
-  diagramType: "number_line" | "array" | "bar_model" | "fraction_bar" | "place_value_chart" | "coordinate_grid" | "none";
+  diagramType: "number_line" | "array" | "bar_model" | "fraction_bar" | "place_value_chart" | "coordinate_grid" | "area_model" | "graph" | "table" | "none";
   data:        Record<string, unknown>;
   caption:     string;
 }
@@ -631,6 +632,23 @@ export interface SubmissionResult {
   sessionComplete?:  boolean;
   masteryUpdate?:    { topicId: string; newLevel: MasteryLevel; levelChanged: boolean };
   questUpdate?:      { questId: string; title: string; completed: boolean; xpReward: number };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SESSION CONTEXT — used by AI tutor sub-engines
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** Runtime context about the current practice session, consumed by tutor engines. */
+export interface SessionContext {
+  sessionId:      string;
+  userId:         string;
+  topicId:        string;
+  grade:          Grade;
+  difficulty:     Difficulty;
+  attemptCount:   number;   // attempts on current question
+  hintsUsedSoFar: number;   // total hints used in session
+  questionsAnswered: number;
+  accuracySoFar:  number;   // 0–1
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

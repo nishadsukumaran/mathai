@@ -138,7 +138,7 @@ export const MOCK_STREAKS: Streak[] = [
     userId:         "student-stub-001",
     currentStreak:  0,
     longestStreak:  0,
-    lastActiveDate: null,
+    lastActiveDate: undefined,
     hasShield:      false,
     updatedAt:      new Date(),
   },

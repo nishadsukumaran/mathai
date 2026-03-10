@@ -19,9 +19,21 @@ const app = express();
 
 // ─── Security ──────────────────────────────────────────────────────────────
 app.use(helmet());
+
+// ─── CORS — accept Vercel frontend + localhost dev ─────────────────────────
+const ALLOWED_ORIGINS: string[] = [
+  process.env.CORS_ORIGIN ?? "",
+  process.env.NEXT_PUBLIC_APP_URL ?? "",
+  "http://localhost:3000",
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
+    origin(origin, cb) {
+      // Allow requests with no origin (curl, health checks, server-to-server)
+      if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+      cb(new Error(`CORS: origin ${origin} not allowed`));
+    },
     credentials: true,
   })
 );
