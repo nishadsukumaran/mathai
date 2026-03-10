@@ -8,7 +8,7 @@
     "packages/*"
   ],
   "scripts": {
-    "postinstall": "prisma generate --schema=database/schema/schema.prisma",
+    "postinstall": "npx prisma generate --schema=database/schema/schema.prisma || echo 'prisma generate skipped (will run in render:build)'",
     "dev": "turbo run dev",
     "dev:api": "npx tsx --watch api/server.ts",
     "build": "turbo run build",
@@ -61,7 +61,7 @@
     "tsconfig-paths": "^4.2.0"
   },
   "engines": {
-    "node": ">=20.0.0",
+    "node": "20.x",
     "npm": ">=10.0.0"
   },
   "prisma": {
