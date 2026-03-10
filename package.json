@@ -56,6 +56,6 @@
   },
   "prisma": {
     "schema": "database/schema/schema.prisma",
-    "seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' database/seed.ts"
+    "seed": "npx tsx database/seed.ts"
   }
 }
