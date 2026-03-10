@@ -6,6 +6,8 @@
  * Auth error page — shown when NextAuth encounters an error.
  */
 
+export const dynamic = "force-dynamic";
+
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
