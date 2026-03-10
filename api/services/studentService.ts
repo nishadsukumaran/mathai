@@ -1,67 +1,51 @@
 /**
  * @module api/services/studentService
  *
- * Handles student identity and profile retrieval.
- * All reads go through api/mock/data until Prisma is wired.
- * Replacing each function with a Prisma query requires zero changes
- * to the controller or route layers.
+ * Student identity and profile retrieval — backed by Prisma.
  */
 
-import {
-  User,
-  StudentProfile,
-  StudentWithProfile,
-  MasteryLevel,
-  TopicProgress,
-} from "@/types";
-import {
-  findUser,
-  findProfile,
-  findStreak,
-  findTopicProgress,
-} from "../mock/data";
+import { MasteryLevel, TopicProgress } from "@/types";
+import { prisma } from "../lib/prisma";
 import { NotFoundError } from "../middlewares/error.middleware";
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
-/**
- * Returns a User record by ID. Throws NotFoundError if missing.
- */
-export async function getStudentById(studentId: string): Promise<User> {
-  const user = findUser(studentId);
+export async function getStudentById(studentId: string) {
+  const user = await prisma.user.findUnique({ where: { id: studentId } });
   if (!user) throw new NotFoundError("Student", studentId);
   return user;
 }
 
-/**
- * Returns a StudentProfile by userId. Throws NotFoundError if missing.
- */
-export async function getProfileByUserId(userId: string): Promise<StudentProfile> {
-  const profile = findProfile(userId);
-  if (!profile) throw new NotFoundError("StudentProfile", userId);
-  return profile;
-}
-
-/**
- * Returns a fully-enriched StudentWithProfile for the given userId.
- * Computes masteryMap, weakAreas, and strongAreas from TopicProgress records.
- *
- * TODO: Replace findUser + findProfile + findTopicProgress with a single
- * Prisma query that includes student_profiles and topic_progress relations.
- */
-export async function getStudentWithProfile(userId: string): Promise<StudentWithProfile> {
-  const user = findUser(userId);
+export async function getStudentWithProfile(userId: string) {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw new NotFoundError("Student", userId);
 
-  const profile = findProfile(userId);
-  if (!profile) throw new NotFoundError("StudentProfile", userId);
+  // Upsert profile — new users get defaults on first dashboard load
+  const profile = await prisma.studentProfile.upsert({
+    where:  { userId },
+    create: { userId },
+    update: {},
+  });
 
-  const topicProgressList: TopicProgress[] = findTopicProgress(userId);
+  const topicProgressRows = await prisma.topicProgress.findMany({
+    where: { userId },
+  });
 
-  // Build mastery map from topic progress rows
+  const topicProgressList: TopicProgress[] = topicProgressRows.map((tp) => ({
+    id:                tp.id,
+    userId:            tp.userId,
+    topicId:           tp.topicId,
+    masteryScore:      tp.masteryScore,
+    isMastered:        tp.isMastered,
+    completionPercent: tp.completionPercent,
+    attemptCount:      tp.attemptCount,
+    correctCount:      tp.correctCount,
+    lastPracticedAt:   tp.lastPracticedAt ?? undefined,
+    updatedAt:         tp.updatedAt,
+  }));
+
   const masteryMap = buildMasteryMap(topicProgressList);
 
-  // Classify topics
   const weakAreas = topicProgressList
     .filter((tp) => !tp.isMastered && tp.completionPercent > 0)
     .sort((a, b) => a.masteryScore - b.masteryScore)
@@ -72,49 +56,56 @@ export async function getStudentWithProfile(userId: string): Promise<StudentWith
     .map((tp) => tp.topicId);
 
   return {
-    ...user,
-    profile,
+    id:        user.id,
+    email:     user.email,
+    name:      user.name,
+    role:      user.role,
+    grade:     user.gradeLevel ?? undefined,
+    avatarUrl: user.avatarUrl ?? undefined,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+    profile: {
+      id:              profile.id,
+      userId:          profile.userId,
+      totalXp:         profile.totalXp,
+      currentLevel:    profile.currentLevel,
+      streakCount:     profile.streakCount,
+      confidenceLevel: profile.confidenceLevel,
+      learningPace:    profile.learningPace,
+      preferredTheme:  profile.preferredTheme,
+      updatedAt:       profile.updatedAt,
+    },
     masteryMap,
     weakAreas,
     strongAreas,
   };
 }
 
-/**
- * Returns streak data for a student, or a zeroed-out default if not found.
- */
 export async function getStreakForStudent(userId: string) {
-  return findStreak(userId) ?? {
-    id: `streak-${userId}`,
+  const streak = await prisma.streak.findUnique({ where: { userId } });
+  return streak ?? {
+    id:             `streak-${userId}`,
     userId,
-    currentStreak: 0,
-    longestStreak: 0,
+    currentStreak:  0,
+    longestStreak:  0,
     lastActiveDate: undefined,
-    hasShield: false,
-    updatedAt: new Date(),
+    hasShield:      false,
+    updatedAt:      new Date(),
   };
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function buildMasteryMap(
-  topicProgressList: TopicProgress[]
-): Record<string, MasteryLevel> {
+function buildMasteryMap(list: TopicProgress[]): Record<string, MasteryLevel> {
   const map: Record<string, MasteryLevel> = {};
-
-  for (const tp of topicProgressList) {
+  for (const tp of list) {
     if (tp.isMastered) {
-      map[tp.topicId] = tp.masteryScore >= 0.95
-        ? MasteryLevel.Extended
-        : MasteryLevel.Mastered;
+      map[tp.topicId] = tp.masteryScore >= 0.95 ? MasteryLevel.Extended : MasteryLevel.Mastered;
     } else if (tp.completionPercent > 0) {
-      map[tp.topicId] = tp.masteryScore >= 0.5
-        ? MasteryLevel.Developing
-        : MasteryLevel.Emerging;
+      map[tp.topicId] = tp.masteryScore >= 0.5 ? MasteryLevel.Developing : MasteryLevel.Emerging;
     } else {
       map[tp.topicId] = MasteryLevel.NotStarted;
     }
   }
-
   return map;
 }

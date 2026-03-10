@@ -1,114 +1,93 @@
 /**
  * @module api/services/questService
  *
- * Manages daily/weekly quest retrieval and progress updates.
- * Generates fresh quests if none exist for the current day.
+ * Daily quest retrieval and progress — backed by Prisma.
+ * Generates fresh quest assignments from DailyQuest templates if none exist for today.
  */
 
-import {
-  StudentQuestProgress,
-  QuestStatus,
-  DailyQuest,
-  QuestType,
-  Difficulty,
-} from "@/types";
-import { findStudentQuests, MOCK_QUESTS } from "../mock/data";
-import { questEngine } from "../../services/gamification/quest_engine";
-import { NotFoundError } from "../middlewares/error.middleware";
+import { StudentQuestProgress, QuestStatus } from "@/types";
+import { prisma } from "../lib/prisma";
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
-/**
- * Returns today's active quests for a student.
- * If no quests exist for today, generates fresh ones.
- *
- * TODO: Replace with Prisma query + upsert logic:
- *   1. Check student_quest_progress WHERE userId=$1 AND expiresAt > NOW()
- *   2. If none, call questEngine.generateDailyQuests() and persist
- */
-export async function getDailyQuests(
-  userId: string
-): Promise<StudentQuestProgress[]> {
-  const existing = findStudentQuests(userId);
-  const today = new Date();
+export async function getDailyQuests(userId: string): Promise<StudentQuestProgress[]> {
+  const now     = new Date();
+  const today   = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const tomorrow = new Date(today.getTime() + 86_400_000);
 
-  // Filter to quests that haven't expired
-  const activeToday = existing.filter(
-    (q) => q.status === QuestStatus.Active && q.expiresAt > today
-  );
+  // Active quests that expire in the future
+  const existing = await prisma.studentQuestProgress.findMany({
+    where: {
+      userId,
+      expiresAt: { gt: now },
+      status:    "active",
+    },
+    include: { quest: true },
+  });
 
-  if (activeToday.length > 0) {
-    return activeToday;
+  if (existing.length > 0) {
+    return existing.map(mapQuestProgress);
   }
 
-  // No active quests — generate fresh ones (in-memory for now)
-  const freshQuests = generateFreshQuests(userId);
-  return freshQuests;
-}
+  // No active quests — assign 3 random templates for today
+  const templates = await prisma.dailyQuest.findMany({
+    where:   { questType: "daily" },
+    take:    20,
+  });
 
-/**
- * Returns all quest progress records (including completed and expired).
- */
-export async function getAllQuestProgress(
-  userId: string
-): Promise<StudentQuestProgress[]> {
-  return findStudentQuests(userId);
-}
+  if (templates.length === 0) return [];
 
-/**
- * Updates quest progress after a practice event.
- *
- * @param userId   - student ID
- * @param metric   - the event metric (e.g., "correct_answers")
- * @param amount   - how much to increment
- *
- * Returns a list of quests that were just completed.
- */
-export async function updateQuestProgress(
-  userId: string,
-  metric: string,
-  amount: number
-): Promise<StudentQuestProgress[]> {
-  // TODO: Implement with Prisma:
-  //   1. Find active quests matching the metric
-  //   2. Increment progressValue
-  //   3. If progressValue >= quest.targetValue → mark complete, award XP
-  //   4. Return newly completed quests
+  // Pick 3 shuffled templates
+  const picks = [...templates].sort(() => Math.random() - 0.5).slice(0, 3);
 
-  const quests = findStudentQuests(userId).filter(
-    (q) => q.status === QuestStatus.Active && q.quest?.trackingKey === metric
+  const created = await prisma.$transaction(
+    picks.map((quest) =>
+      prisma.studentQuestProgress.create({
+        data: {
+          userId,
+          questId:   quest.id,
+          status:    "active",
+          expiresAt: tomorrow,
+        },
+        include: { quest: true },
+      })
+    )
   );
 
-  const justCompleted: StudentQuestProgress[] = [];
-
-  for (const q of quests) {
-    if (!q.quest) continue;
-    const newValue = Math.min(q.progressValue + amount, q.quest.targetValue);
-    if (newValue >= q.quest.targetValue && q.status === QuestStatus.Active) {
-      justCompleted.push({ ...q, progressValue: newValue, status: QuestStatus.Completed, completedAt: new Date() });
-    }
-  }
-
-  return justCompleted;
+  return created.map(mapQuestProgress);
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+export async function getAllQuestProgress(userId: string): Promise<StudentQuestProgress[]> {
+  const rows = await prisma.studentQuestProgress.findMany({
+    where:   { userId },
+    include: { quest: true },
+    orderBy: { createdAt: "desc" },
+  });
+  return rows.map(mapQuestProgress);
+}
 
-function generateFreshQuests(userId: string): StudentQuestProgress[] {
-  // Pick 3 random quest templates from MOCK_QUESTS
-  const midnight = new Date();
-  midnight.setHours(23, 59, 59, 999);
+// ─── Mapper ───────────────────────────────────────────────────────────────────
 
-  const shuffled = [...MOCK_QUESTS].sort(() => Math.random() - 0.5).slice(0, 3);
-
-  return shuffled.map((quest, i) => ({
-    id:            `sqp-generated-${userId}-${i}`,
-    userId,
-    questId:       quest.id,
-    quest,
-    status:        QuestStatus.Active,
-    progressValue: 0,
-    expiresAt:     midnight,
-    createdAt:     new Date(),
-  }));
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapQuestProgress(row: any): StudentQuestProgress {
+  return {
+    id:            row.id,
+    userId:        row.userId,
+    questId:       row.questId,
+    status:        row.status as QuestStatus,
+    progressValue: row.progressValue,
+    expiresAt:     row.expiresAt,
+    completedAt:   row.completedAt ?? undefined,
+    createdAt:     row.createdAt,
+    quest: row.quest ? {
+      id:           row.quest.id,
+      title:        row.quest.title,
+      description:  row.quest.description,
+      questType:    row.quest.questType,
+      targetValue:  row.quest.targetValue,
+      trackingKey:  row.quest.trackingKey,
+      xpReward:     row.quest.xpReward,
+      difficulty:   row.quest.difficulty,
+    } : undefined,
+  };
 }

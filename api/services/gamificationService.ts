@@ -1,85 +1,80 @@
 /**
  * @module api/services/gamificationService
  *
- * Assembles the gamification dashboard by combining data from the
- * XP engine, streak engine, badge registry, and quest engine.
- *
- * This is a read service — it never mutates state.
- * Mutations (awarding XP, updating streaks) happen in practiceService
- * after answer submission.
+ * Assembles the gamification dashboard — backed by Prisma.
  */
 
-import {
-  GamificationDashboard,
-  EarnedBadge,
-  StudentQuestProgress,
-  QuestStatus,
-} from "@/types";
-import {
-  findProfile,
-  findStreak,
-  findEarnedBadges,
-  findStudentQuests,
-} from "../mock/data";
+import { GamificationDashboard, EarnedBadge } from "@/types";
+import { prisma } from "../lib/prisma";
 import { xpEngine } from "../../services/gamification/xp_engine";
 import { NotFoundError } from "../middlewares/error.middleware";
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
-/**
- * Returns the full gamification dashboard for a student.
- */
-export async function getGamificationDashboard(
-  userId: string
-): Promise<GamificationDashboard> {
-  const profile = findProfile(userId);
-  if (!profile) throw new NotFoundError("StudentProfile", userId);
+export async function getGamificationDashboard(userId: string): Promise<GamificationDashboard> {
+  // Upsert profile so new users get defaults
+  const profile = await prisma.studentProfile.upsert({
+    where:  { userId },
+    create: { userId },
+    update: {},
+  });
 
-  const streak = findStreak(userId);
-  const earnedBadges = findEarnedBadges(userId);
-  const questProgress = findStudentQuests(userId);
+  const streak = await prisma.streak.findUnique({ where: { userId } });
 
-  const totalXp = profile.totalXp;
-  const levelInfo = xpEngine.getLevelForXP(totalXp);
+  const studentBadges = await prisma.studentBadge.findMany({
+    where:   { userId },
+    include: { badge: true },
+    orderBy: { awardedAt: "desc" },
+  });
+
+  const totalXp    = profile.totalXp;
+  const levelInfo  = xpEngine.getLevelForXP(totalXp);
   const xpProgress = xpEngine.getLevelProgress(totalXp);
-  const xpToNext = xpEngine.xpToNextLevel(totalXp);
+  const xpToNext   = xpEngine.xpToNextLevel(totalXp);
 
-  // Most recent 3 badges
-  const recentBadges: EarnedBadge[] = [...earnedBadges]
-    .sort((a, b) => b.awardedAt.getTime() - a.awardedAt.getTime())
-    .slice(0, 3);
-
-  // Active quests only
-  const activeQuests: StudentQuestProgress[] = questProgress.filter(
-    (q) => q.status === QuestStatus.Active
-  );
+  const recentBadges: EarnedBadge[] = studentBadges.slice(0, 3).map((sb) => ({
+    id:          sb.id,
+    name:        sb.badge.name,
+    description: sb.badge.description,
+    category:    sb.badge.category,
+    iconUrl:     sb.badge.iconUrl ?? undefined,
+    earnedAt:    sb.awardedAt.toISOString(),
+    xpBonus:     sb.badge.xpBonus,
+  }));
 
   return {
-    xp:             totalXp,
-    level:          levelInfo.level,
-    xpToNextLevel:  xpToNext,
+    xp:              totalXp,
+    level:           levelInfo.level,
+    xpToNextLevel:   xpToNext,
     xpProgress,
-    streak:         streak?.currentStreak ?? 0,
-    hasStreakShield: streak?.hasShield ?? false,
+    streak:          streak?.currentStreak ?? 0,
+    longestStreak:   streak?.longestStreak ?? 0,
+    hasStreakShield:  streak?.hasShield ?? false,
     recentBadges,
-    activeQuests,
+    activeQuests:    [], // populated separately by questService
   };
 }
 
-/**
- * Returns all earned badges for a student, sorted by most recent first.
- */
 export async function getEarnedBadges(userId: string): Promise<EarnedBadge[]> {
-  return [...findEarnedBadges(userId)].sort(
-    (a, b) => b.awardedAt.getTime() - a.awardedAt.getTime()
-  );
+  const rows = await prisma.studentBadge.findMany({
+    where:   { userId },
+    include: { badge: true },
+    orderBy: { awardedAt: "desc" },
+  });
+
+  return rows.map((sb) => ({
+    id:          sb.id,
+    name:        sb.badge.name,
+    description: sb.badge.description,
+    category:    sb.badge.category,
+    iconUrl:     sb.badge.iconUrl ?? undefined,
+    earnedAt:    sb.awardedAt.toISOString(),
+    xpBonus:     sb.badge.xpBonus,
+  }));
 }
 
-/**
- * Returns current XP, level, and progress within the current level.
- */
 export async function getXPSummary(userId: string) {
-  const profile = findProfile(userId);
+  const profile = await prisma.studentProfile.findUnique({ where: { userId } });
   if (!profile) throw new NotFoundError("StudentProfile", userId);
 
   const levelInfo = xpEngine.getLevelForXP(profile.totalXp);
