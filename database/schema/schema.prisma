@@ -167,11 +167,13 @@ enum QuestStatus {
 /// Auth credentials live separately (NextAuth adapter creates Account/Session
 /// tables alongside this model; see NextAuth Prisma adapter docs).
 model User {
-  id         String   @id @default(cuid())
-  email      String   @unique
-  name       String
-  role       UserRole @default(student)
-  avatarUrl  String?
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String
+  hashedPassword String?
+  role           UserRole @default(student)
+  avatarUrl      String?
+  emailVerified  DateTime?
 
   /// Populated for student accounts; null for parents, teachers, admins.
   gradeLevel Grade?
@@ -179,6 +181,8 @@ model User {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  accounts         Account[]
+  sessions         Session[]
   studentProfile   StudentProfile?
   streak           Streak?
   xpEvents         XPEvent[]
@@ -191,6 +195,50 @@ model User {
   @@index([role])
   @@index([gradeLevel])
   @@map("users")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// NEXTAUTH ADAPTER MODELS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
 }
 
 /// Extended learning metadata for student users.
