@@ -6,13 +6,32 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense } from "react";
 import { useSession } from "next-auth/react";
 
 const API_BASE = process.env["NEXT_PUBLIC_API_BASE_URL"] ?? "http://localhost:3001/api";
-const AUTH_HEADER = { "Authorization": "Bearer dev-stub", "Content-Type": "application/json" };
+
+/**
+ * Fetch the real NextAuth JWE session token for use in Express API Bearer auth.
+ * Falls back to dev-stub (only works locally when NODE_ENV=development on the API).
+ */
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  try {
+    console.log("[Practice] fetching session token from /api/auth/token");
+    const res = await fetch("/api/auth/token");
+    if (res.ok) {
+      const { token } = await res.json() as { token: string };
+      console.log("[Practice] got token, length:", token?.length ?? 0);
+      return { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" };
+    }
+    console.warn("[Practice] /api/auth/token returned", res.status, "— falling back to dev-stub");
+  } catch (e) {
+    console.error("[Practice] failed to fetch token:", e);
+  }
+  return { "Authorization": "Bearer dev-stub", "Content-Type": "application/json" };
+}
 
 type Question = {
   id: string;
@@ -59,28 +78,40 @@ function PracticeContent() {
   const [xpAnim,     setXpAnim]     = useState<number | null>(null);
   const [hintsUsed,  setHintsUsed]  = useState(0);
   const [started,    setStarted]    = useState(false);
+  // Ref-based guard: prevents the useEffect from re-triggering startSession
+  // after a failure (the old code had `loading` as a dep which caused infinite retry)
+  const hasAttemptedRef = useRef(false);
 
   const currentQ = session
     ? session.questions[session.currentIndex]
     : null;
 
   const startSession = useCallback(async () => {
+    console.log("[Practice] startSession called — topicId:", topicId, "API_BASE:", API_BASE);
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/practice/start`, {
+      const headers = await getAuthHeaders();
+      const url = `${API_BASE}/practice/start`;
+      console.log("[Practice] POST", url);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => {
+        console.warn("[Practice] request timed out after 30s");
+        controller.abort();
+      }, 30_000);
+      const res = await fetch(url, {
         method: "POST",
-        headers: AUTH_HEADER,
-        body: JSON.stringify({
-          practiceSetId: `set-${topicId}`,
-          topicId,
-          mode,
-          questionCount: 5,
-        }),
+        headers,
+        signal: controller.signal,
+        body: JSON.stringify({ practiceSetId: `set-${topicId}`, topicId, mode, questionCount: 5 }),
       });
+      clearTimeout(timeout);
+      console.log("[Practice] response status:", res.status);
       const json = await res.json();
+      console.log("[Practice] response body:", JSON.stringify(json).slice(0, 300));
       if (json.success) {
         const s = json.data.session;
+        console.log("[Practice] session started, questions:", s?.questions?.length ?? 0);
         setSession({
           id:           s.id,
           topicId:      s.topicId,
@@ -91,10 +122,15 @@ function PracticeContent() {
         });
         setStarted(true);
       } else {
+        console.error("[Practice] API returned success=false:", json.error);
         setError(json.error?.message ?? "Failed to start session");
       }
     } catch (e) {
-      setError("Could not connect to the API server. Make sure run-api.bat is running.");
+      const msg = e instanceof Error && e.name === "AbortError"
+        ? "Request timed out — the server may be warming up (cold start). Please try again in a few seconds."
+        : "Could not connect to the server. Please try again.";
+      console.error("[Practice] fetch error:", e);
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -106,9 +142,10 @@ function PracticeContent() {
     setResult(null);
     setHint(null);
     try {
+      const headers = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/practice/submit`, {
         method: "POST",
-        headers: AUTH_HEADER,
+        headers,
         body: JSON.stringify({
           sessionId:        session.id,
           questionId:       currentQ.id,
@@ -147,9 +184,10 @@ function PracticeContent() {
     if (!session || !currentQ) return;
     setLoading(true);
     try {
+      const headers = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/practice/hint`, {
         method: "POST",
-        headers: AUTH_HEADER,
+        headers,
         body: JSON.stringify({
           sessionId:      session.id,
           questionId:     currentQ.id,
@@ -171,12 +209,15 @@ function PracticeContent() {
     }
   }, [session, currentQ, hintsUsed]);
 
-  // Auto-start when topicId is available
+  // Auto-start ONCE — ref guard prevents infinite retry on auth failure
+  // Bug was: `loading` in deps caused effect to re-fire after each failed attempt
   useEffect(() => {
-    if (topicId && !started && !loading) {
+    if (topicId && !hasAttemptedRef.current) {
+      console.log("[Practice] component mounted — triggering startSession");
+      hasAttemptedRef.current = true;
       void startSession();
     }
-  }, [topicId, started, loading, startSession]);
+  }, [topicId, startSession]);
 
   // Redirect to sign-in if not authenticated
   useEffect(() => {
