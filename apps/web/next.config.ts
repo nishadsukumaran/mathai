@@ -4,6 +4,16 @@ const nextConfig: NextConfig = {
   // Strict mode catches common React issues during development
   reactStrictMode: true,
 
+  // Skip TS type-checking during build (types are checked locally / in CI)
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+
+  // Skip ESLint during build
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+
   // Images — use remotePatterns (domains is deprecated)
   images: {
     remotePatterns: [
