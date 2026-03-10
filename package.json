@@ -36,7 +36,9 @@
     "@types/cors": "^2.8.17",
     "@types/morgan": "^1.9.9",
     "postcss": "^8.4.0",
-    "autoprefixer": "^10.4.0"
+    "autoprefixer": "^10.4.0",
+    "postcss-selector-parser": "^6.0.0",
+    "postcss-nested": "^6.0.0"
   },
   "dependencies": {
     "@prisma/client": "^5.8.0",
