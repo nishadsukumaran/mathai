@@ -33,13 +33,19 @@ export async function getGamificationDashboard(userId: string): Promise<Gamifica
   const xpToNext   = xpEngine.xpToNextLevel(totalXp);
 
   const recentBadges: EarnedBadge[] = studentBadges.slice(0, 3).map((sb) => ({
-    id:          sb.id,
-    name:        sb.badge.name,
+    // Badge fields
+    id:          sb.badge.id,
+    code:        sb.badge.code,
+    title:       sb.badge.title,
     description: sb.badge.description,
-    category:    sb.badge.category,
     iconUrl:     sb.badge.iconUrl ?? undefined,
-    earnedAt:    sb.awardedAt.toISOString(),
-    xpBonus:     sb.badge.xpBonus,
+    category:    sb.badge.category,
+    xpReward:    sb.badge.xpReward,
+    createdAt:   sb.badge.createdAt,
+    // EarnedBadge fields
+    userId:      sb.userId,
+    badgeId:     sb.badgeId,
+    awardedAt:   sb.awardedAt,
   }));
 
   return {
@@ -63,13 +69,19 @@ export async function getEarnedBadges(userId: string): Promise<EarnedBadge[]> {
   });
 
   return rows.map((sb) => ({
-    id:          sb.id,
-    name:        sb.badge.name,
+    // Badge fields
+    id:          sb.badge.id,
+    code:        sb.badge.code,
+    title:       sb.badge.title,
     description: sb.badge.description,
-    category:    sb.badge.category,
     iconUrl:     sb.badge.iconUrl ?? undefined,
-    earnedAt:    sb.awardedAt.toISOString(),
-    xpBonus:     sb.badge.xpBonus,
+    category:    sb.badge.category,
+    xpReward:    sb.badge.xpReward,
+    createdAt:   sb.badge.createdAt,
+    // EarnedBadge fields
+    userId:      sb.userId,
+    badgeId:     sb.badgeId,
+    awardedAt:   sb.awardedAt,
   }));
 }
 

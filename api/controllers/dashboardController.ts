@@ -29,7 +29,7 @@ export async function getDashboard(req: Request, res: Response, next: NextFuncti
       student: {
         id:         student.id,
         name:       student.name,
-        grade:      student.gradeLevel,
+        grade:      student.grade,
         avatarUrl:  student.avatarUrl,
         weakAreas:  student.weakAreas.slice(0, 3),
         strongAreas: student.strongAreas.slice(0, 3),

@@ -88,6 +88,7 @@ function mapQuestProgress(row: any): StudentQuestProgress {
       trackingKey:  row.quest.trackingKey,
       xpReward:     row.quest.xpReward,
       difficulty:   row.quest.difficulty,
+      createdAt:    row.quest.createdAt,
     } : undefined,
   };
 }

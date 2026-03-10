@@ -67,10 +67,10 @@ export async function getTopicProgressList(
     userId:            tp.userId,
     topicId:           tp.topicId,
     masteryScore:      tp.masteryScore,
-    isMastered:        tp.isMastered,
+    accuracyRate:      tp.accuracyRate,
     completionPercent: tp.completionPercent,
-    attemptCount:      tp.attemptCount,
-    correctCount:      tp.correctCount,
+    isUnlocked:        tp.isUnlocked,
+    isMastered:        tp.isMastered,
     lastPracticedAt:   tp.lastPracticedAt ?? undefined,
     updatedAt:         tp.updatedAt,
   }));

@@ -24,10 +24,7 @@ import {
   TutorHelpRequest,
   TutorHelpResponse,
 } from "@/types";
-import {
-  findProfile,
-  findTopicProgress,
-} from "../mock/data";
+import { prisma } from "../lib/prisma";
 import { xpEngine } from "../../services/gamification/xp_engine";
 import { practiceGenerator } from "../../curriculum/practice_generator";
 import { masteryEvaluator } from "../../curriculum/mastery_evaluator";
@@ -148,7 +145,7 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
   session.responses.push(response);
 
   // 5. XP
-  const profile = findProfile(session.userId);
+  const profile = await prisma.studentProfile.findUnique({ where: { userId: session.userId } });
   const currentXp = profile?.totalXp ?? 0;
 
   const { amount: xpEarned, reason: _xpReason } = practiceGenerator.calculateQuestionXP({
@@ -178,9 +175,9 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
   // 8. Mastery update on session completion
   let masteryUpdate: SubmissionResult["masteryUpdate"];
   if (sessionComplete) {
-    const topicProgress = findTopicProgress(session.userId).find(
-      (tp) => tp.topicId === session.topicId
-    );
+    const topicProgress = await prisma.topicProgress.findFirst({
+      where: { userId: session.userId, topicId: session.topicId },
+    });
     const previousLevel = topicProgress
       ? scoreToMasteryLevel(topicProgress.masteryScore)
       : MasteryLevel.NotStarted;

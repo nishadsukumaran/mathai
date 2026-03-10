@@ -73,7 +73,7 @@ export async function getCurriculumTree(params: {
             updatedAt:        t.updatedAt,
             progress:         progressMap[t.id],
             masteryLevel:     progressMap[t.id]
-              ? getMasteryLevel(progressMap[t.id])
+              ? getMasteryLevel(progressMap[t.id]!)
               : MasteryLevel.NotStarted,
             lessonCount:      5, // estimated; TODO: join lessons count
             isUnlocked:       isTopicUnlocked(t, progressMap),
@@ -90,7 +90,7 @@ export async function getCurriculumTree(params: {
       const topics = strandEntry.topics.map((t) => ({
         ...t,
         progress:     progressMap[t.id],
-        masteryLevel: progressMap[t.id] ? getMasteryLevel(progressMap[t.id]) : MasteryLevel.NotStarted,
+        masteryLevel: progressMap[t.id] ? getMasteryLevel(progressMap[t.id]!) : MasteryLevel.NotStarted,
         lessonCount:  5,
         isUnlocked:   isTopicUnlocked(t, progressMap),
       }));
@@ -117,7 +117,8 @@ export async function getTopicDetail(
   const dbTopic = await prisma.topic.findUnique({ where: { id: topicId } }).catch(() => null)
     ?? await prisma.topic.findUnique({ where: { slug: topicId } }).catch(() => null);
 
-  const topic = dbTopic ? normalizePrismaTopic(dbTopic) : (getTopicById(topicId) ? normalizeTopic(getTopicById(topicId) as Record<string, unknown>) : null);
+  const staticTopic = getTopicById(topicId);
+  const topic = dbTopic ? normalizePrismaTopic(dbTopic) : (staticTopic ? normalizeTopic(staticTopic as unknown as Record<string, unknown>) : null);
   if (!topic) throw new NotFoundError("Topic", topicId);
 
   if (!userId) return { ...topic, isUnlocked: true };
@@ -163,8 +164,8 @@ export async function getWeakAreas(userId: string): Promise<AdaptiveRecommendati
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function buildProgressMap(rows: Array<{
-  topicId: string; masteryScore: number; isMastered: boolean;
-  completionPercent: number; attemptCount: number; correctCount: number;
+  topicId: string; masteryScore: number; accuracyRate: number; isMastered: boolean;
+  completionPercent: number; isUnlocked: boolean;
   lastPracticedAt: Date | null; updatedAt: Date; id: string; userId: string;
 }>): Record<string, TopicProgress> {
   const map: Record<string, TopicProgress> = {};
@@ -174,10 +175,10 @@ function buildProgressMap(rows: Array<{
       userId:            tp.userId,
       topicId:           tp.topicId,
       masteryScore:      tp.masteryScore,
-      isMastered:        tp.isMastered,
+      accuracyRate:      tp.accuracyRate,
       completionPercent: tp.completionPercent,
-      attemptCount:      tp.attemptCount,
-      correctCount:      tp.correctCount,
+      isUnlocked:        tp.isUnlocked,
+      isMastered:        tp.isMastered,
       lastPracticedAt:   tp.lastPracticedAt ?? undefined,
       updatedAt:         tp.updatedAt,
     };
