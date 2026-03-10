@@ -9,11 +9,6 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
 
-  // Skip ESLint during build
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-
   // Images — use remotePatterns (domains is deprecated)
   images: {
     remotePatterns: [
