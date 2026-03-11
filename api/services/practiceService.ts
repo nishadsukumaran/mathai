@@ -241,6 +241,22 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
   // 6. Level-up detection
   const levelUp = xpEngine.detectLevelUp(currentXp, xpEarned);
 
+  // 6b. Persist XP to DB so progress pages reflect actual totals
+  if (xpEarned > 0) {
+    await prisma.studentProfile.upsert({
+      where:  { userId: session.userId },
+      create: {
+        userId:       session.userId,
+        totalXp:      xpEarned,
+        currentLevel: levelUp?.level ?? 1,
+      },
+      update: {
+        totalXp:      { increment: xpEarned },
+        ...(levelUp && { currentLevel: levelUp.level }),
+      },
+    }).catch((e) => console.warn("[practiceService] XP persist failed:", e));
+  }
+
   // 7. Advance question index
   if (isCorrect || attemptCount >= 3) {
     session.currentIndex = Math.min(session.currentIndex + 1, session.questions.length);
@@ -283,6 +299,37 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
       newLevel:     evaluation.newLevel,
       levelChanged: evaluation.levelChanged,
     };
+
+    // 8b. Persist mastery + topic progress to DB
+    const sessionAccuracy  = session.accuracyPercent / 100;
+    const prevMasteryScore = topicProgress?.masteryScore ?? 0;
+    // EWMA blend: weight recent sessions at 30%, historical at 70%
+    const newMasteryScore  = topicProgress
+      ? prevMasteryScore * 0.7 + sessionAccuracy * 0.3
+      : sessionAccuracy;
+    const newIsMastered    = newMasteryScore >= 0.8;
+    const newCompletionPct = Math.min((topicProgress?.completionPercent ?? 0) + 0.2, 1.0);
+
+    await prisma.topicProgress.upsert({
+      where:  { userId_topicId: { userId: session.userId, topicId: session.topicId } },
+      create: {
+        userId:            session.userId,
+        topicId:           session.topicId,
+        masteryScore:      newMasteryScore,
+        accuracyRate:      sessionAccuracy,
+        completionPercent: 0.2,
+        isMastered:        newIsMastered,
+        isUnlocked:        true,
+        lastPracticedAt:   new Date(),
+      },
+      update: {
+        masteryScore:      newMasteryScore,
+        accuracyRate:      sessionAccuracy,
+        completionPercent: newCompletionPct,
+        isMastered:        newIsMastered,
+        lastPracticedAt:   new Date(),
+      },
+    }).catch((e) => console.warn("[practiceService] Mastery persist failed:", e));
 
     // 8a. Memory: update lesson progress + profile counters + refresh snapshot (fire-and-forget)
     const totalHints = session.responses.reduce((sum, r) => sum + (r.hintsUsed ?? 0), 0);

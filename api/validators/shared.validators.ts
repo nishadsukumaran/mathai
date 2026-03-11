@@ -84,16 +84,18 @@ export const GetHintSchema = z.object({
   currentAnswer:  z.string().optional(),
   hintsUsedSoFar: z.number().int().min(0).default(0),
   topicId:        z.string().min(1),
-  grade:          GradeSchema,
+  // grade is read from the auth token server-side; client may omit it
+  grade:          GradeSchema.optional(),
 });
 export type GetHintInput = z.infer<typeof GetHintSchema>;
 
 export const GetExplanationSchema = z.object({
-  sessionId:      z.string().min(1),
-  questionId:     z.string().min(1),
-  questionText:   z.string().min(1),
+  sessionId:       z.string().min(1),
+  questionId:      z.string().min(1),
+  questionText:    z.string().min(1),
   studentQuestion: z.string().max(500).default(""),
-  topicId:        z.string().min(1),
-  grade:          GradeSchema,
+  topicId:         z.string().min(1),
+  // grade is read from the auth token server-side; client may omit it
+  grade:           GradeSchema.optional(),
 });
 export type GetExplanationInput = z.infer<typeof GetExplanationSchema>;

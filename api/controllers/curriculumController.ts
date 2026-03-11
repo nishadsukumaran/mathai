@@ -19,6 +19,8 @@ import {
   getWeakAreas,
 } from "../services/curriculumService";
 import { send } from "../lib/response";
+import { prisma } from "../lib/prisma";
+import { Grade } from "@/types";
 
 /** GET /api/curriculum */
 export async function getCurriculum(req: Request, res: Response, next: NextFunction) {
@@ -26,9 +28,20 @@ export async function getCurriculum(req: Request, res: Response, next: NextFunct
     const query   = CurriculumQuerySchema.parse(req.query);
     const userId  = req.student?.id ?? "";          // from auth middleware
 
+    // If no grade filter supplied, fall back to the student's own grade so the
+    // curriculum shown is relevant to their profile setting.
+    let effectiveGrade = query.grade as Grade | undefined;
+    if (!effectiveGrade && userId) {
+      const user = await prisma.user.findUnique({
+        where:  { id: userId },
+        select: { gradeLevel: true },
+      });
+      if (user?.gradeLevel) effectiveGrade = user.gradeLevel as Grade;
+    }
+
     const tree = await getCurriculumTree({
       userId,
-      grade:  query.grade as any,
+      grade:  effectiveGrade as any,
       strand: query.strand as any,
     });
 
