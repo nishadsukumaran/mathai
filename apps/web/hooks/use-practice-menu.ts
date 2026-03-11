@@ -1,11 +1,16 @@
 /**
  * @module apps/web/hooks/use-practice-menu
  *
- * Client-side hook for fetching the personalized practice menu.
- * Wraps GET /api/practice/menu.
+ * Client-side hook for fetching the personalised, AI-generated practice menu.
+ * Wraps GET /api/practice/menu via React Query.
  *
- * Returns all 5 sections from the API. Views can slice/filter as needed.
- * Gracefully returns null on fetch failure (section simply won't render).
+ * Caching strategy:
+ *   - staleTime: 4 hours — the menu is freshly generated on login and cached
+ *     for the session so it doesn't re-call the AI on every navigation.
+ *   - gcTime: 24 hours — keeps the cached result in memory across page transitions.
+ *   - Invalidated automatically when a practice session completes via
+ *     invalidateAfterSession() in query-keys.ts, which triggers a fresh
+ *     AI-generated menu based on the newly updated topic progress.
  *
  * USAGE:
  *   const { menu, loading } = usePracticeMenu();
@@ -14,36 +19,25 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
-import { clientGet }            from "@/lib/clientApi";
-import type { PracticeMenu }    from "@mathai/shared-types";
-
-interface PracticeMenuState {
-  menu:    PracticeMenu | null;
-  loading: boolean;
-  error:   string | null;
-}
+import { useQuery }         from "@tanstack/react-query";
+import { clientGet }        from "@/lib/clientApi";
+import { queryKeys }        from "@/lib/query-keys";
+import type { PracticeMenu } from "@mathai/shared-types";
 
 export function usePracticeMenu() {
-  const [state, setState] = useState<PracticeMenuState>({
-    menu:    null,
-    loading: true,
-    error:   null,
+  const { data, isLoading, isError } = useQuery<PracticeMenu | null>({
+    queryKey: queryKeys.practiceMenu,
+    queryFn:  () => clientGet<PracticeMenu>("/practice/menu"),
+    // Treat as fresh for 4 hours — avoids redundant AI calls on page navigation.
+    // Menu is force-regenerated after topic completion via cache invalidation.
+    staleTime: 4 * 60 * 60 * 1000,
+    gcTime:    24 * 60 * 60 * 1000,
+    retry:     1,
   });
 
-  useEffect(() => {
-    let cancelled = false;
-    void clientGet<PracticeMenu>("/practice/menu").then((data) => {
-      if (!cancelled) {
-        setState({
-          menu:    data,
-          loading: false,
-          error:   data ? null : "Could not load practice menu",
-        });
-      }
-    });
-    return () => { cancelled = true; };
-  }, []);
-
-  return state;
+  return {
+    menu:    data ?? null,
+    loading: isLoading,
+    error:   isError ? "Could not load practice menu" : null,
+  };
 }

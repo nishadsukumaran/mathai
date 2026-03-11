@@ -21,8 +21,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter }                                 from "next/navigation";
 import { useSession }                                from "next-auth/react";
+import { useQueryClient }                            from "@tanstack/react-query";
 
 import PracticeView from "@/components/mathai/practice/PracticeView";
+import { queryKeys }   from "@/lib/query-keys";
 import type { PracticeQuestionItem, SubmitResultView } from "@/types/contracts";
 
 const API_BASE = process.env["NEXT_PUBLIC_API_BASE_URL"] ?? "http://localhost:3001/api";
@@ -61,6 +63,7 @@ export default function PracticeContainer({ topicId, mode }: Props) {
   const router               = useRouter();
   const { status }           = useSession();
   const hasAttemptedRef      = useRef(false);
+  const queryClient          = useQueryClient();
 
   const [session,   setSession]   = useState<SessionState | null>(null);
   const [answer,    setAnswer]    = useState("");
@@ -150,6 +153,11 @@ export default function PracticeContainer({ topicId, mode }: Props) {
         if (r.isCorrect) {
           setXpAnim(r.xpEarned);
           setTimeout(() => setXpAnim(null), 2000);
+        }
+        // When the session finishes, invalidate the practice menu so the next
+        // dashboard visit re-generates AI recommendations based on updated progress.
+        if (r.sessionComplete) {
+          void queryClient.invalidateQueries({ queryKey: queryKeys.practiceMenu });
         }
       } else {
         // API returned success:false — surface the error so the spinner clears

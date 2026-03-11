@@ -135,9 +135,9 @@ export async function getPracticeMenu(userId: string): Promise<PracticeMenu> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const topicModel = (prisma as any).topic;
     if (topicModel) {
-      gradeTopics     = await topicModel.findMany({ where: { grade },     select: { id: true, name: true }, take: 20 });
-      if (prevG) prevGradeTopics = await topicModel.findMany({ where: { grade: prevG }, select: { id: true, name: true }, take: 10 });
-      if (nextG) nextGradeTopics = await topicModel.findMany({ where: { grade: nextG }, select: { id: true, name: true }, take: 10 });
+      gradeTopics     = await topicModel.findMany({ where: { gradeBand: grade },     select: { id: true, name: true }, take: 20 });
+      if (prevG) prevGradeTopics = await topicModel.findMany({ where: { gradeBand: prevG }, select: { id: true, name: true }, take: 10 });
+      if (nextG) nextGradeTopics = await topicModel.findMany({ where: { gradeBand: nextG }, select: { id: true, name: true }, take: 10 });
     }
   } catch { /* curriculum not seeded — fall through to allProgress-based sections */ }
 

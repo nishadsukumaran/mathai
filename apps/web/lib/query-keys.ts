@@ -66,6 +66,10 @@ export const queryKeys = {
     session: (sessionId: string) =>
       [ROOT, "practice", "session", sessionId] as const,
   },
+
+  // ── Practice menu (personalised AI-generated practice recommendations) ────────
+  // GET /api/practice/menu — user-scoped via auth token, no explicit ID needed
+  practiceMenu: [ROOT, "practice-menu"] as const,
 } as const;
 
 // ─── Mutation keys (for useMutation's mutationKey, e.g. for DevTools) ─────────
@@ -93,4 +97,6 @@ export function invalidateAfterSession(
   queryClient.invalidateQueries({ queryKey: queryKeys.progress.all(studentId) });
   queryClient.invalidateQueries({ queryKey: queryKeys.dailyQuests(studentId) });
   queryClient.invalidateQueries({ queryKey: queryKeys.curriculum.weakAreas(studentId) });
+  // Regenerate the AI practice menu so recommendations reflect the completed topic
+  queryClient.invalidateQueries({ queryKey: queryKeys.practiceMenu });
 }
