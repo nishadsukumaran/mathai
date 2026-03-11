@@ -60,7 +60,8 @@
     "morgan": "^1.10.0",
     "tsconfig-paths": "^4.2.0",
     "tsx": "^4.7.0",
-    "zod": "^3.22.0"
+    "zod": "^3.22.0",
+    "@ai-sdk/gateway": "^3.0.66"
   },
   "engines": {
     "node": "20.x",

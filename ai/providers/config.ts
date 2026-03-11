@@ -6,7 +6,13 @@
  * ENVIRONMENT VARIABLES:
  *   AI_PROVIDER=vercel_gateway → VercelGatewayProvider (production — all calls through Vercel AI Gateway)
  *   AI_PROVIDER=mock           → MockProvider (default, no API key needed)
- *   AI_PROVIDER=anthropic      → AnthropicProvider (direct Anthropic, legacy)
+ *   AI_PROVIDER=anthropic      → AnthropicProvider (direct Anthropic, legacy — not recommended)
+ *
+ *   When AI_PROVIDER=vercel_gateway, also set:
+ *     AI_GATEWAY_API_KEY=<key>          (required on non-Vercel hosts; get from Vercel AI → Gateway → Auth)
+ *     AI_GATEWAY_BASE_URL=<url>         (optional; default: https://ai-gateway.vercel.sh/v1/ai)
+ *     AI_MODEL_DEFAULT=anthropic/claude-haiku-4.5     (optional; fast model for questions/hints)
+ *     AI_MODEL_EXPLANATION=anthropic/claude-sonnet-4.5 (optional; rich model for explanations)
  *
  * ADDING A NEW PROVIDER:
  *   1. Create ai/providers/openai.ts implementing AIProvider
