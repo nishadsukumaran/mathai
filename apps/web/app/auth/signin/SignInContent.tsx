@@ -66,7 +66,7 @@ export default function SignInContent() {
 
         {/* Error message */}
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">
+          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 rounded-2xl px-4 py-3 text-sm">
             {ERROR_MESSAGES[error] || ERROR_MESSAGES["Default"]}
           </div>
         )}
@@ -83,22 +83,30 @@ export default function SignInContent() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-indigo-500 outline-none transition"
+              className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:border-indigo-500 outline-none transition"
               placeholder="you@example.com"
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                Password
+              </label>
+              <Link
+                href="/auth/forgot-password"
+                className="text-xs text-indigo-500 hover:text-indigo-700 font-medium hover:underline"
+              >
+                Forgot password?
+              </Link>
+            </div>
             <input
               id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-indigo-500 outline-none transition"
+              className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:border-indigo-500 outline-none transition"
               placeholder="Your password"
             />
           </div>
@@ -106,7 +114,7 @@ export default function SignInContent() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-60 transition"
+            className="w-full bg-indigo-600 text-white py-3 rounded-2xl font-bold hover:bg-indigo-700 disabled:opacity-60 transition"
           >
             {loading ? "Signing in..." : "Sign In"}
           </button>
@@ -127,7 +135,7 @@ export default function SignInContent() {
                   key={provider.id}
                   onClick={() => signIn(provider.id, { callbackUrl })}
                   disabled={loading}
-                  className="w-full flex items-center justify-center gap-3 px-6 py-3 border-2 border-gray-200 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 hover:border-indigo-300 transition disabled:opacity-60"
+                  className="w-full flex items-center justify-center gap-3 px-6 py-3 border-2 border-gray-200 rounded-2xl text-gray-700 font-semibold hover:bg-gray-50 hover:border-indigo-300 transition disabled:opacity-60"
                 >
                   {provider.id === "google" && (
                     <svg className="w-5 h-5" viewBox="0 0 24 24">

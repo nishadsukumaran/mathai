@@ -128,9 +128,12 @@ export default function PracticeContainer({ topicId, mode }: Props) {
     setHint(null);
     try {
       const headers = await getAuthHeaders();
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15_000);
       const res = await fetch(`${API_BASE}/practice/submit`, {
         method: "POST",
         headers,
+        signal: controller.signal,
         body: JSON.stringify({
           sessionId:        session.id,
           questionId:       currentQ.id,
@@ -139,6 +142,7 @@ export default function PracticeContainer({ topicId, mode }: Props) {
           hintsUsed,
         }),
       });
+      clearTimeout(timeout);
       const json = await res.json();
       if (json.success) {
         const r = json.data as SubmitResultView;
@@ -147,9 +151,17 @@ export default function PracticeContainer({ topicId, mode }: Props) {
           setXpAnim(r.xpEarned);
           setTimeout(() => setXpAnim(null), 2000);
         }
+      } else {
+        // API returned success:false — surface the error so the spinner clears
+        setError(json.error?.message ?? "Could not submit your answer. Please try again.");
       }
-    } catch {
-      setError("Network error submitting answer.");
+    } catch (e) {
+      const isTimeout = e instanceof Error && e.name === "AbortError";
+      setError(
+        isTimeout
+          ? "Request timed out — please try again."
+          : "Network error submitting answer."
+      );
     } finally {
       setLoading(false);
     }
@@ -176,9 +188,12 @@ export default function PracticeContainer({ topicId, mode }: Props) {
     setLoading(true);
     try {
       const headers = await getAuthHeaders();
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15_000);
       const res = await fetch(`${API_BASE}/practice/hint`, {
         method: "POST",
         headers,
+        signal: controller.signal,
         body: JSON.stringify({
           sessionId:      session.id,
           questionId:     currentQ.id,
@@ -187,6 +202,7 @@ export default function PracticeContainer({ topicId, mode }: Props) {
           hintsUsedSoFar: hintsUsed,
         }),
       });
+      clearTimeout(timeout);
       const json = await res.json();
       if (json.success) {
         setHint(json.data.content?.text ?? "Think carefully about what you know!");

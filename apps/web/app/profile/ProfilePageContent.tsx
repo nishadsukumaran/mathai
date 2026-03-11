@@ -45,8 +45,10 @@ const STYLE_OPTIONS: { value: ExplanationStyle; label: string; icon: string }[] 
 ];
 
 export default function ProfilePageContent() {
-  const { profile, loading, saving, save, error: saveError } = useProfile();
+  const { profile, loading, saving, save, error: profileError } = useProfile();
   const { update: updateSession } = useSession();
+  // Separate save-error from load-error so we can block the form on load failure
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const [name,       setName]       = useState("");
   const [grade,      setGrade]      = useState<Grade>("G4");
@@ -70,6 +72,7 @@ export default function ProfilePageContent() {
   }, [profile]);
 
   async function handleSave() {
+    setSaveError(null);
     const updated = await save({
       name:                      name.trim() || undefined,
       grade,
@@ -83,6 +86,8 @@ export default function ProfilePageContent() {
       await updateSession({ grade });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
+    } else {
+      setSaveError("Could not save your profile. Please try again.");
     }
   }
 
@@ -90,6 +95,28 @@ export default function ProfilePageContent() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin text-4xl">⏳</div>
+      </div>
+    );
+  }
+
+  // Profile failed to load — show error and block the form so the user
+  // can't accidentally overwrite their real data with empty defaults.
+  if (profileError && !profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+        <div className="text-center max-w-sm p-8 bg-white rounded-3xl shadow-md border border-red-100">
+          <p className="text-4xl mb-4">⚠️</p>
+          <h2 className="text-xl font-black text-gray-800 mb-2">Could not load your profile</h2>
+          <p className="text-gray-500 text-sm mb-6">
+            Please check your connection and try again. Your existing settings are safe.
+          </p>
+          <a
+            href="/profile"
+            className="inline-block bg-indigo-600 text-white font-bold px-6 py-3 rounded-2xl hover:bg-indigo-700 transition"
+          >
+            Retry
+          </a>
+        </div>
       </div>
     );
   }

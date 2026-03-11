@@ -60,7 +60,7 @@ export default function ProgressView({ data }: Props) {
         </div>
 
         {/* ── Stats cards ──────────────────────────────────────────────── */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-emerald-100 text-center">
             <p className="text-3xl font-black text-emerald-500">{masteredTopics}</p>
             <p className="text-xs text-slate-500 mt-1">Topics mastered</p>
@@ -115,7 +115,7 @@ export default function ProgressView({ data }: Props) {
                   </div>
                   <Link
                     href={`/practice?topicId=${area.topicId}`}
-                    className="rounded-xl bg-indigo-600 text-white px-4 py-2 text-sm font-bold hover:bg-indigo-700 transition shrink-0"
+                    className="rounded-2xl bg-indigo-600 text-white px-4 py-2 text-sm font-bold hover:bg-indigo-700 transition shrink-0"
                   >
                     Practice →
                   </Link>

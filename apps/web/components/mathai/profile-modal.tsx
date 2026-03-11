@@ -74,15 +74,26 @@ export function ProfileModal({
 
   const [pace,       setPace]       = useState<LearningPace>(data.learningPace);
   const [style,      setStyle]      = useState<ExplanationStyle>(data.preferredExplanationStyle);
-  const [confidence, setConfidence] = useState<number>(data.confidenceLevel);
+  // DB stores confidenceLevel on a 0–100 EWMA scale; UI slider is 1–5.
+  // Map and clamp the raw value so the slider initialises correctly.
+  const rawConf = data.confidenceLevel ?? 60;
+  const [confidence, setConfidence] = useState<number>(
+    Math.max(1, Math.min(5, Math.round(rawConf / 20))),
+  );
   const [saving,     setSaving]     = useState(false);
+  const [saved,      setSaved]      = useState(false);
+  const [saveError,  setSaveError]  = useState<string | null>(null);
 
   async function handleSave() {
     if (!onSave) { onClose(); return; }
     setSaving(true);
+    setSaveError(null);
     try {
       await onSave({ learningPace: pace, preferredExplanationStyle: style, confidenceLevel: confidence });
-      onClose();
+      setSaved(true);
+      setTimeout(() => { setSaved(false); onClose(); }, 1200);
+    } catch {
+      setSaveError("Could not save. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -207,20 +218,30 @@ export function ProfileModal({
         </div>
 
         {/* Footer */}
-        <div className="px-6 pb-6 pt-2 flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 py-3 rounded-2xl border-2 border-gray-200 text-gray-600 font-bold text-sm hover:bg-gray-50 transition"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving || loading}
-            className="flex-1 py-3 rounded-2xl bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-700 disabled:opacity-50 transition"
-          >
-            {saving ? "Saving…" : "Save ✓"}
-          </button>
+        <div className="px-6 pb-6 pt-2 space-y-3">
+          {saveError && (
+            <p className="text-xs text-red-600 font-semibold text-center">⚠️ {saveError}</p>
+          )}
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="flex-1 py-3 rounded-2xl border-2 border-gray-200 text-gray-600 font-bold text-sm hover:bg-gray-50 transition"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving || loading || saved}
+              className={cn(
+                "flex-1 py-3 rounded-2xl font-bold text-sm transition",
+                saved
+                  ? "bg-emerald-500 text-white"
+                  : "bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50",
+              )}
+            >
+              {saving ? "Saving…" : saved ? "✓ Saved!" : "Save"}
+            </button>
+          </div>
         </div>
 
       </div>

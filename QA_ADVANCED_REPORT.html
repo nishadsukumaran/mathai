@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Advanced QA Audit — MathAI</title>
+<style>
+  :root {
+    --indigo: #4f46e5;
+    --indigo-light: #e0e7ff;
+    --purple: #7c3aed;
+    --red: #dc2626;
+    --red-light: #fef2f2;
+    --amber: #d97706;
+    --amber-light: #fffbeb;
+    --green: #16a34a;
+    --green-light: #f0fdf4;
+    --slate: #64748b;
+    --slate-light: #f8fafc;
+    --gray-border: #e2e8f0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #1e293b;
+    background: #f8fafc;
+  }
+  .page-wrap { max-width: 960px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  /* ── Header ──────────────────────────────────── */
+  .report-header {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    border-radius: 20px;
+    padding: 36px 40px;
+    color: white;
+    margin-bottom: 40px;
+    position: relative;
+    overflow: hidden;
+  }
+  .report-header::after {
+    content: "🔬";
+    font-size: 120px;
+    position: absolute;
+    right: -10px;
+    top: -20px;
+    opacity: 0.12;
+  }
+  .report-header h1 { font-size: 28px; font-weight: 900; margin-bottom: 6px; }
+  .report-header .meta { opacity: 0.8; font-size: 13px; margin-top: 8px; }
+  .report-header .meta span { margin-right: 20px; }
+
+  /* ── Verdict banner ──────────────────────────── */
+  .verdict {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: white;
+    border-radius: 16px;
+    padding: 24px 28px;
+    margin-bottom: 40px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    border-left: 6px solid #d97706;
+  }
+  .verdict.go { border-left-color: #16a34a; }
+  .verdict-icon { font-size: 40px; }
+  .verdict-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--slate); margin-bottom: 2px; }
+  .verdict-title { font-size: 22px; font-weight: 900; color: #1e293b; }
+  .verdict-sub { font-size: 13px; color: var(--slate); margin-top: 3px; }
+  .score-pill {
+    margin-left: auto;
+    text-align: center;
+    min-width: 90px;
+  }
+  .score-num { font-size: 42px; font-weight: 900; color: var(--indigo); line-height: 1; }
+  .score-den { font-size: 13px; color: var(--slate); font-weight: 600; }
+
+  /* ── Section ──────────────────────────────────── */
+  .section { background: white; border-radius: 16px; margin-bottom: 28px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+  .section-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--gray-border);
+  }
+  .section-head h2 { font-size: 16px; font-weight: 800; color: #1e293b; }
+  .section-icon { font-size: 20px; }
+  .section-count {
+    margin-left: auto;
+    background: var(--indigo-light);
+    color: var(--indigo);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 999px;
+  }
+  .section-body { padding: 0; }
+
+  /* ── Issue row ────────────────────────────────── */
+  .issue {
+    padding: 18px 24px;
+    border-bottom: 1px solid #f1f5f9;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: start;
+  }
+  .issue:last-child { border-bottom: none; }
+  .issue-title { font-weight: 700; font-size: 14px; margin-bottom: 4px; color: #0f172a; }
+  .issue-desc { font-size: 13px; color: var(--slate); line-height: 1.55; }
+  .issue-file { font-family: "SFMono-Regular", Consolas, monospace; font-size: 11px; color: #6366f1; margin-top: 5px; background: var(--indigo-light); padding: 2px 8px; border-radius: 5px; display: inline-block; }
+  .badge {
+    font-size: 10px;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    white-space: nowrap;
+    align-self: start;
+  }
+  .badge-p0 { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+  .badge-p1 { background: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; }
+  .badge-p2 { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+  .badge-p3 { background: var(--indigo-light); color: var(--indigo); border: 1px solid #c7d2fe; }
+  .badge-info { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+
+  /* ── Code block ───────────────────────────────── */
+  pre {
+    background: #1e293b;
+    color: #e2e8f0;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 12px;
+    overflow-x: auto;
+    margin-top: 8px;
+    line-height: 1.7;
+  }
+  .hl { color: #fbbf24; }
+  .cm { color: #64748b; }
+
+  /* ── Score grid ──────────────────────────────── */
+  .score-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 16px;
+    padding: 24px;
+  }
+  .score-card {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid var(--gray-border);
+    text-align: center;
+  }
+  .score-card-num { font-size: 28px; font-weight: 900; color: var(--indigo); }
+  .score-card-label { font-size: 11px; color: var(--slate); font-weight: 600; margin-top: 2px; }
+  .score-card-bar { height: 4px; border-radius: 99px; background: var(--gray-border); margin-top: 8px; overflow: hidden; }
+  .score-card-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, #4f46e5, #7c3aed); }
+
+  /* ── Fix table ───────────────────────────────── */
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--slate); padding: 10px 20px; background: #f8fafc; border-bottom: 1px solid var(--gray-border); }
+  td { padding: 13px 20px; border-bottom: 1px solid #f1f5f9; font-size: 13px; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { font-weight: 600; }
+  td.file { font-family: "SFMono-Regular", Consolas, monospace; font-size: 11px; color: #6366f1; }
+  td.effort { color: var(--amber); font-weight: 700; }
+
+  /* ── Callout ──────────────────────────────────── */
+  .callout {
+    margin: 0 24px 16px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    border-left: 4px solid;
+  }
+  .callout-warn { background: #fffbeb; border-color: var(--amber); color: #92400e; }
+  .callout-info { background: #eff6ff; border-color: #3b82f6; color: #1e40af; }
+
+  /* ── Summary bar ──────────────────────────────── */
+  .summary-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 32px;
+  }
+  .summary-chip {
+    background: white;
+    border-radius: 12px;
+    padding: 14px 20px;
+    flex: 1;
+    min-width: 120px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    text-align: center;
+  }
+  .summary-chip-num { font-size: 28px; font-weight: 900; }
+  .summary-chip-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--slate); margin-top: 2px; }
+  .chip-red .summary-chip-num { color: #dc2626; }
+  .chip-orange .summary-chip-num { color: #ea580c; }
+  .chip-amber .summary-chip-num { color: #d97706; }
+  .chip-indigo .summary-chip-num { color: var(--indigo); }
+  .chip-green .summary-chip-num { color: var(--green); }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <!-- HEADER -->
+  <div class="report-header">
+    <h1>Advanced QA Audit — MathAI</h1>
+    <p style="opacity:.75;margin-top:6px;font-size:14px;">Deep technical + UX audit across all pages, containers, hooks, API routes, and services</p>
+    <div class="meta">
+      <span>📅 2026-03-11</span>
+      <span>🔍 Post Wave 7 (commit 8bf9ad2)</span>
+      <span>📁 ~65 files audited</span>
+    </div>
+  </div>
+
+  <!-- VERDICT -->
+  <div class="verdict">
+    <div class="verdict-icon">⚠️</div>
+    <div>
+      <div class="verdict-label">Release Decision</div>
+      <div class="verdict-title">NEEDS FIXES</div>
+      <div class="verdict-sub">3 critical bugs remain. Foundation is solid — Wave 7 closed the auth/grade holes. A short Wave 8 will clear the blockers.</div>
+    </div>
+    <div class="score-pill">
+      <div class="score-num">7.4</div>
+      <div class="score-den">/ 10</div>
+    </div>
+  </div>
+
+  <!-- SUMMARY CHIPS -->
+  <div class="summary-row">
+    <div class="summary-chip chip-red"><div class="summary-chip-num">3</div><div class="summary-chip-label">Critical</div></div>
+    <div class="summary-chip chip-orange"><div class="summary-chip-num">5</div><div class="summary-chip-label">UX Friction</div></div>
+    <div class="summary-chip chip-amber"><div class="summary-chip-num">5</div><div class="summary-chip-label">Missing States</div></div>
+    <div class="summary-chip chip-indigo"><div class="summary-chip-num">4</div><div class="summary-chip-label">API Issues</div></div>
+    <div class="summary-chip chip-indigo"><div class="summary-chip-num">5</div><div class="summary-chip-label">Inconsistencies</div></div>
+    <div class="summary-chip chip-green"><div class="summary-chip-num">4</div><div class="summary-chip-label">Mobile Issues</div></div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  SECTION 1: CRITICAL BUGS                                            -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-head">
+      <span class="section-icon">🚨</span>
+      <h2>Critical Bugs</h2>
+      <span class="section-count">3 issues</span>
+    </div>
+    <div class="section-body">
+
+      <div class="issue">
+        <div>
+          <div class="issue-title">DATA-02 — Leaderboard page still carries the `user-alice-001` fallback</div>
+          <div class="issue-desc">
+            DATA-01 from Wave 7 fixed the dashboard and progress pages but missed <strong>leaderboard/page.tsx</strong>.
+            Line 52 reads: <code>const userId = … ?? "user-alice-001"</code>.
+            This means an authenticated user with a real session whose <code>session.user.id</code> is somehow undefined
+            will silently call <code>/gamification/dashboard</code> under <code>user-alice-001</code>, showing another user's
+            XP and streak data on their leaderboard header — a real data leak in production.
+          </div>
+          <span class="issue-file">apps/web/app/leaderboard/page.tsx : line 52</span>
+          <pre><span class="cm">// Current (broken)</span>
+const userId = (session.user as &#123; id?: string &#125;).id <span class="hl">?? "user-alice-001"</span>;
+
+<span class="cm">// Fix — mirror the dashboard/progress pattern</span>
+const userId = (session.user as &#123; id?: string &#125;).id;
+if (!userId) redirect("/auth/signin");</pre>
+        </div>
+        <span class="badge badge-p0">P0 — Data Leak</span>
+      </div>
+
+      <div class="issue">
+        <div>
+          <div class="issue-title">PROFILE-03 — Dashboard ProfileModal saves wrong confidence value + doesn't refresh JWT grade</div>
+          <div class="issue-desc">
+            <strong>Two bugs in ProfileModal used from DashboardView:</strong><br><br>
+            <strong>(a) Confidence value mismatch:</strong> The modal initialises state with <code>data.confidenceLevel</code>
+            which is the raw 0–100 EWMA value from the DB. The slider is <code>min=1 max=5</code>, so HTML clamps
+            the display to 5 regardless. If the user doesn't touch the slider and saves, <code>confidenceLevel: 60</code>
+            (or whatever raw value) is sent to the API — instead of the correct 1–5 value. The fix applied in
+            Wave 7 (<code>Math.round(raw / 20)</code>) only made it into <code>ProfilePageContent</code>, not <code>ProfileModal</code>.<br><br>
+            <strong>(b) Grade change doesn't update JWT:</strong> <code>ProfileModal.onSave</code> calls <code>saveProfile(patch)</code>
+            but never calls <code>updateSession(&#123; grade &#125;)</code>. So after a grade change via the dashboard modal,
+            the user's JWT still carries the old grade and every subsequent practice/hint API call uses stale grade data.
+          </div>
+          <span class="issue-file">apps/web/components/mathai/profile-modal.tsx : lines 83, 188</span>
+          <pre><span class="cm">// (a) Confidence — add the same mapping as ProfilePageContent</span>
+const rawConf = data.confidenceLevel ?? 60;
+const [confidence, setConfidence] = useState&lt;number&gt;(
+  <span class="hl">Math.max(1, Math.min(5, Math.round(rawConf / 20)))</span>
+);
+
+<span class="cm">// (b) grade sync — after onSave call updateSession</span>
+<span class="hl">const &#123; update: updateSession &#125; = useSession();</span>
+async function handleSave() &#123;
+  …
+  await onSave(&#123; learningPace: pace, style, confidenceLevel: confidence &#125;);
+  <span class="hl">await updateSession(&#123; grade: data.grade &#125;);</span>  // sync JWT
+  onClose();
+&#125;</pre>
+        </div>
+        <span class="badge badge-p0">P0 — Data Integrity</span>
+      </div>
+
+      <div class="issue">
+        <div>
+          <div class="issue-title">PRACTICE-02 — Navigating to /practice via sidebar starts a Grade 3 multiplication session for all users</div>
+          <div class="issue-desc">
+            <code>PracticePageContent</code> falls back to <code>topicId = "g3-ops-multiplication"</code> when no query param is
+            present. A Grade 8 student clicking "Practice" in the sidebar gets dumped into a G3 multiplication session
+            with no explanation and no way to pick a different topic from that screen.
+            There is no topic-selector landing state — the practice route expects to always be called
+            with a <code>?topicId=</code> from another page, but the nav links directly to <code>/practice</code>.
+          </div>
+          <span class="issue-file">apps/web/app/practice/PracticePageContent.tsx : line 11</span>
+          <pre><span class="cm">// Current (broken)</span>
+const topicId = params.get("topicId") <span class="hl">?? "g3-ops-multiplication"</span>;
+
+<span class="cm">// Fix Option A — redirect to practice menu if no topicId</span>
+const topicId = params.get("topicId");
+if (!topicId) return &lt;PracticeMenuSelector /&gt;; <span class="cm">// topic picker screen</span>
+
+<span class="cm">// Fix Option B (minimal) — redirect to dashboard</span>
+if (!topicId) redirect("/dashboard");</pre>
+        </div>
+        <span class="badge badge-p0">P0 — Wrong Content</span>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  SECTION 2: UX FRICTION POINTS                                       -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-head">
+      <span class="section-icon">😤</span>
+      <h2>UX Friction Points</h2>
+      <span class="section-count">5 issues</span>
+    </div>
+    <div class="section-body">
+
+      <div class="issue">
+        <div>
+          <div class="issue-title">UX-04 — Practice "Session Complete" screen has no exit path</div>
+          <div class="issue-desc">
+            When a student finishes all 5 questions, the only button is "Practice Again" — which reloads the same
+            topic with the same mode. There's no "Go Home", "Try another topic", or "See your progress" option.
+            Students who want to switch topics are stuck pressing browser-back.
+          </div>
+          <span class="issue-file">apps/web/components/mathai/practice/PracticeView.tsx : session complete block</span>
+        </div>
+        <span class="badge badge-p1">P1 — Flow Block</span>
+      </div>
+
+      <div class="issue">
+        <div>
+          <div class="issue-title">UX-05 — No "Forgot password" link on sign-in page</div>
+          <div class="issue-desc">
+            The sign-in form has email + password + submit + "sign up" link, but no password recovery path.
+            Students (who are kids) regularly forget passwords. A parent managing the account has no self-service
+            reset option.
+          </div>
+          <span class="issue-file">apps/web/app/auth/signin/SignInContent.tsx</span>
+        </div>
+        <span class="badge badge-p2">P2 — UX Gap</span>
+      </div>
+
+      <div class="issue">
+        <div>
+          <div class="issue-title">UX-06 — Signup has no "confirm password" field</div>
+          <div class="issue-desc">
+            A typo in the password field during sign-up creates an account the user can't log into. No confirm-password
+            field or show/hide toggle present.
+          </div>
+          <span class="issue-file">apps/web/app/auth/signup/page.tsx</span>
+        </div>
+        <span class="badge badge-p2">P2 — Form Quality</span>
+      </div>
+
+      <div class="issue">
+        <div>
+          <div class="issue-title">UX-07 — No back / exit button on Ask page or Practice page</div>
+          <div class="issue-desc">
+            The <code>/ask</code> page has a sticky header but no back navigation. The <code>/practice</code> page during an active
+            session has no "Exit session" button — the only escape is browser back or sidebar nav (which starts a new
+            session). Both pages feel like dead ends. Particularly noticeable on mobile where gesture-back is unreliable.
+          </div>
+          <span class="issue-file">apps/web/app/ask/AskPageContent.tsx, practice/PracticeView.tsx</span>
+        </div>
+        <span class="badge badge-p2">P2 — Navigation</span>
+      </div>
+
+      <div class="issue">
+        <div>
+          <div class="issue-title">UX-08 — Leaderboard mock data is not prominently disclosed</div>
+          <div class="issue-desc">
+            The leaderboard renders Alice/Marcus/Priya hardcoded mock entries as if they're real. The only disclaimer is
+            a small footnote at the bottom: "Real-time leaderboard coming soon". A student who ranks themselves
+            against these names will be confused. The mock data should either be removed or replaced with a clear
+            "Coming soon" placeholder screen.
+          </div>
+          <span class="issue-file">apps/web/app/leaderboard/page.tsx : MOCK_LEADERBOARD</span>
+        </div>
+        <span class="badge badge-p2">P2 — Data Honesty</span>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  SECTION 3: MISSING UI STATES                                        -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-head">
+      <span class="section-icon">👻</span>
+      <h2>Missing UI States</h2>
+      <span class="section-count">5 issues</span>
+    </div>
+    <div class="section-body">
+
+      <div class="callout callout-warn">
+        <strong>Pattern:</strong> Server containers (DashboardContainer, ProgressContainer) call <code>apiFetch</code> which returns
+        <code>null</code> on any error. Mappers silently substitute default values. The user sees a page with
+        "Hey Explorer!" / 0 XP / no quests — completely indistinguishable from an empty account.
+        There is no way to distinguish "no data yet" from "API is down."
+      </div>
+
+      <div class="issue">
+        <div>
+          <div class="issue-title">STATE-01 — DashboardContainer has no error state</div>
+          <div class="issue-desc">
+            When the Express API returns a 500 or is unreachable, <code>apiFetch</code> returns null and
+            <code>mapDashboardViewData(null, [])</code> produces a full-looking view with placeholder strings.
+            The user sees "Hey Explorer! Grade —" with no retry button, no error banner, and no indication anything went wrong.
+          </div>
+          <span class="issue-file">apps/web/containers/DashboardContainer.tsx</span>
+        </div>
+        <span class="badge badge-p1">P1 — Silent Failure</span>
+      </div>
+
+      <div class="issue">
+        <div>
+          <div class="issue-title">STATE-02 — ProgressContainer has no error state</div>
+          <div class="issue-desc">
+            Same pattern as STATE-01. A null response from <code>/progress/:userId</code> renders a progress page
+            with all zeroes and no curriculum — indistinguishable from a brand-new account.
+          </div>
+          <span class="issue-file">apps/web/containers/ProgressContainer.tsx</span>
+        </div>
+        <span class="badge badge-p1">P1 — Silent Failure</span>
+      </div>
+
+      <div class="issue">
+        <div>
+          <div class="issue-title">STATE-03 — Profile load failure renders empty form silently</div>
+          <div class="issue-desc">
+            <code>useProfile</code> sets <code>error: "Could not load profile"</code> when the API returns null, but
+            <code>ProfilePageContent</code> doesn't render this error. <code>loading</code> flips to false and the form
+            renders with empty defaults (name="", grade="G4"). The user sees a blank settings page and may
+            accidentally save empty data over their real profile.
+          </div>
+          <span class="issue-file">apps/web/app/profile/ProfilePageContent.tsx, hooks/use-profile.ts</span>
+          <pre><span class="cm">// Add after the loading guard in ProfilePageContent</span>
+<span class="hl">if (!loading && !profile && error) &#123;
+  return &lt;ErrorState message="Could not load your profile" onRetry=&#123;refetch&#125; /&gt;;
+&#125;</span></pre>
+        </div>
+        <span class="badge badge-p1">P1 — Data Risk</span>
+      </div>
+
+      <div class="issue">
+        <div>
+          <div class="issue-title">STATE-04 — Practice submitAnswer silent failure on API error response</div>
+          <div class="issue-desc">
+            In <code>PracticeContainer.submitAnswer</code>, when the API returns a non-2xx response,
+            <code>res.json()</code> succeeds (error body is valid JSON) but <code>json.success</code> is false.
+            There is no <code>else</code> branch — <code>setError</code> is never called. The question stays in the
+            "loading" spinner indefinitely. The user has no idea what happened and can't retry.
+          </div>
+          <span class="issue-file">apps/web/containers/PracticeContainer.tsx : submitAnswer</span>
+          <pre><span class="cm">// Current — missing else branch</span>
+if (json.success) &#123; setResult(r); &#125;
+<span class="cm">// no else!</span>
+
+<span class="cm">// Fix</span>
+if (json.success) &#123; setResult(r); &#125;
+<span class="hl">else &#123; setError(json.error?.message ?? "Could not submit answer. Please try again."); &#125;</span></pre>
+        </div>
+        <span class="badge badge-p1">P1 — Broken State</span>
+      </div>
+
+      <div class="issue">
+        <div>
+          <div class="issue-title">STATE-05 — No success confirmation after profile save in ProfileModal</div>
+          <div class="issue-desc">
+            <code>ProfileModal</code> closes immediately after save with no success toast or confirmation.
+            <code>ProfilePageContent</code> correctly shows a green "✓ Saved!" button for 2 seconds — but the modal
+            (accessed from the dashboard) provides no feedback. The user doesn't know if save worked.
+          </div>
+          <span class="issue-file">apps/web/components/mathai/profile-modal.tsx : handleSave</span>
+        </div>
+        <span class="badge badge-p2">P2 — No Feedback</span>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  SECTION 4: API HANDLING ISSUES                                      -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-head">
+      <span class="section-icon">🔌</span>
+      <h2>API Handling Issues</h2>
+      <span class="section-count">4 issues</span>
+    </div>
+    <div class="section-body">
+
+      <div class="issue">
+        <div>
+          <div class="issue-title">API-01 — clientApi.getToken() silently falls back to "dev-stub" on 401</div>
+          <div class="issue-desc">
+            When <code>/api/auth/token</code> returns 401 (user's session has expired mid-session), <code>clientApi.ts</code>
+            catches the non-ok response and returns <code>"Bearer dev-stub"</code>. All subsequent API calls
+            fire with the stub token. The Express API rejects them, callers get null, and pages silently
+            break. There is no UX prompt to re-authenticate.
+          </div>
+          <span class="issue-file">apps/web/lib/clientApi.ts : getToken()</span>
+          <pre><span class="cm">// After a 401, instead of dev-stub, redirect to sign-in</span>
+async function getToken(): Promise&lt;string&gt; &#123;
+  try &#123;
+    const res = await fetch("/api/auth/token");
+    if (res.ok) &#123; … return `Bearer $&#123;token&#125;`; &#125;
+    <span class="hl">if (res.status === 401) &#123;
+      window.location.href = "/auth/signin";
+      return "";   // unreachable
+    &#125;</span>
+  &#125; catch &#123; /* network */ &#125;
+  return "Bearer dev-stub";
+&#125;</pre>
+        </div>
+        <span class="badge badge-p1">P1 — Auth Regression</span>
+      </div>
+
+      <div class="issue">
+        <div>
+          <div class="issue-title">API-02 — PracticeContainer makes raw fetch calls with no timeout on submit/hint</div>
+          <div class="issue-desc">
+            <code>startSession</code> correctly uses an <code>AbortController</code> with a 30s timeout and gives a
+            friendly "server warming up" message. But <code>submitAnswer</code> and <code>getHint</code> have no timeout
+            at all — a slow AI response can leave the student's answer stuck in "Checking…" indefinitely.
+          </div>
+          <span class="issue-file">apps/web/containers/PracticeContainer.tsx : submitAnswer, getHint</span>
+        </div>
+        <span class="badge badge-p2">P2 — Reliability</span>
+      </div>
+
+      <div class="issue">
+        <div>
+          <div class="issue-title">API-03 — useProfile has no refetch/retry mechanism</div>
+          <div class="issue-desc">
+            <code>useProfile</code> fetches on mount with a cancelled-flag pattern, but exposes no <code>refetch</code>
+            callback. If the initial load fails (transient network hiccup), the user must do a full page reload
+            to recover. Compare with React Query hooks (used in <code>useDashboard</code>, <code>useProgress</code>) which
+            have automatic retry and expose <code>refetch</code> for free.
+          </div>
+          <span class="issue-file">apps/web/hooks/use-profile.ts</span>
+        </div>
+        <span class="badge badge-p2">P2 — Reliability</span>
+      </div>
+
+      <div class="issue">
+        <div>
+          <div class="issue-title">API-04 — AskPageContent does not check res.ok before parsing JSON</div>
+          <div class="issue-desc">
+            <code>clientPost&lt;AskMathAIResponse&gt;("/tutor/ask", …)</code> returns null on non-ok responses (handled
+            correctly in clientApi). However, the component sets error only when <code>data</code> is falsy but
+            doesn't distinguish between a network error and a meaningful API error message. The student
+            always sees "MathAI couldn't answer right now" with no additional context.
+          </div>
+          <span class="issue-file">apps/web/app/ask/AskPageContent.tsx : handleSubmit</span>
+        </div>
+        <span class="badge badge-p3">P3 — UX Quality</span>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  SECTION 5: COMPONENT INCONSISTENCIES                                -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-head">
+      <span class="section-icon">🧩</span>
+      <h2>Component Inconsistencies</h2>
+      <span class="section-count">5 issues</span>
+    </div>
+    <div class="section-body">
+
+      <div class="issue">
+        <div>
+          <div class="issue-title">CONSIST-01 — ProfileModal and ProfilePageContent are duplicated settings UIs</div>
+          <div class="issue-desc">
+            Both components implement learning pace selector, explanation style pills, and confidence slider
+            independently. They are now diverging: ProfilePageContent has the name editor and grade picker;
+            ProfileModal does not. ProfilePageContent has the correct confidence mapping; ProfileModal
+            does not (see PROFILE-03). Any future settings field added to one needs to be added to both manually.
+            These should share a <code>&lt;ProfileSettings&gt;</code> sub-component.
+          </div>
+          <span class="issue-file">profile-modal.tsx vs app/profile/ProfilePageContent.tsx</span>
+        </div>
+        <span class="badge badge-p2">P2 — Architecture</span>
+      </div>
+
+      <div class="issue">
+        <div>
+          <div class="issue-title">CONSIST-02 — Two API clients with different auth and error handling strategies</div>
+          <div class="issue-desc">
+            <code>lib/api-client.ts</code> (axios + React Query, used by <code>useDashboard</code>, <code>useProgress</code>,
+            <code>usePracticeSession</code>) and <code>lib/clientApi.ts</code> (native fetch, used by
+            <code>useProfile</code>, <code>usePracticeMenu</code>, and direct calls in containers) coexist.
+            They have different auth header strategies, different error representations, and different retry logic.
+            New developers adding features won't know which to use.
+          </div>
+          <span class="issue-file">lib/api-client.ts vs lib/clientApi.ts</span>
+        </div>
+        <span class="badge badge-p2">P2 — Architecture</span>
+      </div>
+
+      <div class="issue">
+        <div>
+          <div class="issue-title">CONSIST-03 — Three different loading patterns across the app</div>
+          <div class="issue-desc">
+            Full-screen centred spinner (practice session start), inline skeleton shimmer (dashboard recommended section),
+            and button text swap ("…" in Ask card submit). These are used inconsistently for similar situations
+            — all three can appear on the same screen. The app has a shared <code>skeleton.tsx</code> and
+            <code>spinner.tsx</code> in <code>components/ui/</code> that are largely ignored.
+          </div>
+          <span class="issue-file">practice/PracticeView.tsx, dashboard/DashboardView.tsx, ask-card.tsx</span>
+        </div>
+        <span class="badge badge-p3">P3 — Design System</span>
+      </div>
+
+      <div class="issue">
+        <div>
+          <div class="issue-title">CONSIST-04 — Button border radius mix: rounded-xl vs rounded-2xl</div>
+          <div class="issue-desc">
+            Sign-in/sign-up forms use <code>rounded-xl</code> (12px). Dashboard cards, practice buttons, and profile
+            buttons use <code>rounded-2xl</code> (16px). The footer CTAs on the landing page use <code>rounded-2xl</code> and
+            <code>rounded-xl</code> within the same nav row. Not a functional bug, but visually inconsistent
+            enough to notice across pages.
+          </div>
+          <span class="issue-file">app-wide</span>
+        </div>
+        <span class="badge badge-p3">P3 — Visual Polish</span>
+      </div>
+
+      <div class="issue">
+        <div>
+          <div class="issue-title">CONSIST-05 — usePracticeSession hook is unused; PracticeContainer reimplements the same logic</div>
+          <div class="issue-desc">
+            <code>hooks/use-practice-session.ts</code> is a well-architected hook with a full state machine, React Query
+            mutations, cache invalidation, and both hint + explanation support. <code>PracticeContainer</code>
+            ignores it entirely and implements its own raw-fetch session lifecycle with fewer features
+            (no explanation endpoint, no cache invalidation, no typed state machine). The hook and the
+            container are two parallel implementations of the same feature.
+          </div>
+          <span class="issue-file">hooks/use-practice-session.ts vs containers/PracticeContainer.tsx</span>
+        </div>
+        <span class="badge badge-p2">P2 — Dead Code / Risk</span>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  SECTION 6: MOBILE UX PROBLEMS                                       -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-head">
+      <span class="section-icon">📱</span>
+      <h2>Mobile UX Problems</h2>
+      <span class="section-count">4 issues</span>
+    </div>
+    <div class="section-body">
+
+      <div class="issue">
+        <div>
+          <div class="issue-title">MOBILE-01 — XP animation overlaps content on mobile at fixed top-20</div>
+          <div class="issue-desc">
+            The "+N XP! ✨" float is positioned <code>fixed top-20 right-8</code> (80px from top). On mobile, the
+            page content starts at top: 0 (no header bar in practice). The float appears over the question
+            difficulty chip and the first line of the question text, making it hard to read both simultaneously
+            while the animation plays.
+          </div>
+          <span class="issue-file">apps/web/components/mathai/practice/PracticeView.tsx : xpAnim block</span>
+        </div>
+        <span class="badge badge-p2">P2 — Overlap</span>
+      </div>
+
+      <div class="issue">
+        <div>
+          <div class="issue-title">MOBILE-02 — Progress page stats row uses grid-cols-3 with no mobile override</div>
+          <div class="issue-desc">
+            The three stats cards (Topics mastered / Total topics / Lifetime XP) use <code>grid grid-cols-3 gap-4</code>
+            with no responsive breakpoint. On a 320px screen, each card is ~96px wide. The large font
+            numbers (<code>text-3xl font-black</code>) can overflow at 4+ digit XP values. Should be
+            <code>grid-cols-1 sm:grid-cols-3</code> or use <code>grid-cols-3</code> with smaller text on mobile.
+          </div>
+          <span class="issue-file">apps/web/components/mathai/progress/ProgressView.tsx : stats row</span>
+        </div>
+        <span class="badge badge-p2">P2 — Overflow Risk</span>
+      </div>
+
+      <div class="issue">
+        <div>
+          <div class="issue-title">MOBILE-03 — Ask page sticky input bar may be hidden by mobile keyboard</div>
+          <div class="issue-desc">
+            The ask page uses <code>sticky bottom-0</code> with <code>pb-safe</code> for the textarea. When the soft
+            keyboard appears on iOS/Android, the viewport shrinks but the sticky bar does not always
+            scroll into the visible area correctly. The <code>pb-safe</code> class (for safe-area inset) helps
+            with notched phones but doesn't account for the keyboard. This can result in the input
+            bar being hidden behind the keyboard.
+          </div>
+          <span class="issue-file">apps/web/app/ask/AskPageContent.tsx : input bar</span>
+        </div>
+        <span class="badge badge-p2">P2 — Input Accessibility</span>
+      </div>
+
+      <div class="issue">
+        <div>
+          <div class="issue-title">MOBILE-04 — Practice multiple-choice uses grid-cols-2 on all screen sizes</div>
+          <div class="issue-desc">
+            The answer options grid is <code>grid grid-cols-2 gap-3</code> with no responsive variant. Long answer
+            text in options (e.g., "12 divided by 4 equals 3") gets truncated or wraps in awkward ways at
+            narrow widths. On very small screens (320px), each option is ~140px — tight for 2-line option text.
+          </div>
+          <span class="issue-file">apps/web/components/mathai/practice/PracticeView.tsx : multiple_choice grid</span>
+        </div>
+        <span class="badge badge-p3">P3 — Layout</span>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  SECTION 7: RECOMMENDED FIXES (Prioritised Wave 8 Plan)              -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-head">
+      <span class="section-icon">🔧</span>
+      <h2>Recommended Fixes — Wave 8 Plan</h2>
+    </div>
+    <div class="section-body">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Fix</th>
+            <th>File(s)</th>
+            <th>Priority</th>
+            <th>Effort</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>Remove <code>user-alice-001</code> fallback from leaderboard; add auth redirect guard</td>
+            <td class="file">leaderboard/page.tsx</td>
+            <td><span class="badge badge-p0">P0</span></td>
+            <td class="effort">5 min</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>Fix ProfileModal confidence mapping (apply <code>Math.round(raw/20)</code> in useState init)</td>
+            <td class="file">profile-modal.tsx</td>
+            <td><span class="badge badge-p0">P0</span></td>
+            <td class="effort">10 min</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>Add <code>updateSession(&#123; grade &#125;)</code> to ProfileModal handleSave after successful onSave</td>
+            <td class="file">profile-modal.tsx</td>
+            <td><span class="badge badge-p0">P0</span></td>
+            <td class="effort">10 min</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td>Replace hardcoded <code>topicId</code> fallback in PracticePageContent with a redirect to /dashboard or a topic picker</td>
+            <td class="file">app/practice/PracticePageContent.tsx</td>
+            <td><span class="badge badge-p0">P0</span></td>
+            <td class="effort">15 min</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td>Add else-branch in submitAnswer to call setError on json.success === false</td>
+            <td class="file">containers/PracticeContainer.tsx</td>
+            <td><span class="badge badge-p1">P1</span></td>
+            <td class="effort">5 min</td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td>Add "Go Home" + "Pick a topic" buttons to the session-complete screen</td>
+            <td class="file">practice/PracticeView.tsx</td>
+            <td><span class="badge badge-p1">P1</span></td>
+            <td class="effort">15 min</td>
+          </tr>
+          <tr>
+            <td>7</td>
+            <td>Add 401-triggered redirect to sign-in in <code>clientApi.getToken()</code></td>
+            <td class="file">lib/clientApi.ts</td>
+            <td><span class="badge badge-p1">P1</span></td>
+            <td class="effort">10 min</td>
+          </tr>
+          <tr>
+            <td>8</td>
+            <td>Add error banner + retry to DashboardContainer and ProgressContainer when apiFetch returns null</td>
+            <td class="file">containers/DashboardContainer.tsx, ProgressContainer.tsx</td>
+            <td><span class="badge badge-p1">P1</span></td>
+            <td class="effort">30 min</td>
+          </tr>
+          <tr>
+            <td>9</td>
+            <td>Render <code>error</code> from useProfile in ProfilePageContent; block save if profile didn't load</td>
+            <td class="file">app/profile/ProfilePageContent.tsx</td>
+            <td><span class="badge badge-p1">P1</span></td>
+            <td class="effort">10 min</td>
+          </tr>
+          <tr>
+            <td>10</td>
+            <td>Add timeouts (AbortController, 15s) to submitAnswer and getHint in PracticeContainer</td>
+            <td class="file">containers/PracticeContainer.tsx</td>
+            <td><span class="badge badge-p2">P2</span></td>
+            <td class="effort">20 min</td>
+          </tr>
+          <tr>
+            <td>11</td>
+            <td>Replace leaderboard mock data with a clear "Coming Soon" state</td>
+            <td class="file">app/leaderboard/page.tsx, LeaderboardView.tsx</td>
+            <td><span class="badge badge-p2">P2</span></td>
+            <td class="effort">20 min</td>
+          </tr>
+          <tr>
+            <td>12</td>
+            <td>Add "Forgot password?" link to sign-in; add confirm-password field to sign-up</td>
+            <td class="file">auth/signin/SignInContent.tsx, auth/signup/page.tsx</td>
+            <td><span class="badge badge-p2">P2</span></td>
+            <td class="effort">30 min</td>
+          </tr>
+          <tr>
+            <td>13</td>
+            <td>Fix Progress stats row: <code>grid-cols-1 sm:grid-cols-3</code></td>
+            <td class="file">progress/ProgressView.tsx</td>
+            <td><span class="badge badge-p2">P2</span></td>
+            <td class="effort">5 min</td>
+          </tr>
+          <tr>
+            <td>14</td>
+            <td>Move XP animation to <code>fixed top-4 right-4</code> (or below the AppNav on desktop)</td>
+            <td class="file">practice/PracticeView.tsx</td>
+            <td><span class="badge badge-p2">P2</span></td>
+            <td class="effort">5 min</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  SECTION 8: QUICK IMPROVEMENTS (no-code-change wins)                 -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-head">
+      <span class="section-icon">⚡</span>
+      <h2>Quick Improvements</h2>
+    </div>
+    <div class="section-body" style="padding:20px 24px;">
+      <p style="color:var(--slate);font-size:13px;margin-bottom:16px;">Small code changes, high perceived quality improvement:</p>
+      <ol style="padding-left:20px;line-height:2.2;font-size:13px;color:#334155;">
+        <li>Add <code>maxLength=500</code> to the Ask page textarea to prevent runaway input.</li>
+        <li>Show success toast ("Profile saved! ✓") when ProfileModal closes after a successful save.</li>
+        <li>Add a "← Back" link in the Ask page header (just <code>&lt;Link href="/dashboard"&gt;</code>).</li>
+        <li>Practice complete screen — add a secondary "← Dashboard" button next to "Practice Again".</li>
+        <li>Profile name input — add a visible <code>&lt;label&gt;</code> element, not just a placeholder.</li>
+        <li>Replace the <code>usePracticeMenu</code> error string ("Could not load practice menu") with an inline error card inside DashboardView's Recommended Practice section.</li>
+        <li>Progress stats — <code>grid-cols-1 sm:grid-cols-3</code> (one-line fix, prevents number overflow).</li>
+        <li>Sign-up form — add <code>autoComplete="new-password"</code> to password input to prevent browser autofill from pre-populating other users' saved passwords.</li>
+      </ol>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  SECTION 9: QUALITY SCORECARD                                        -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-head">
+      <span class="section-icon">📊</span>
+      <h2>Quality Scorecard</h2>
+    </div>
+    <div class="score-grid">
+      <div class="score-card">
+        <div class="score-card-num">9</div>
+        <div class="score-card-label">Auth & Security</div>
+        <div class="score-card-bar"><div class="score-card-fill" style="width:90%"></div></div>
+      </div>
+      <div class="score-card">
+        <div class="score-card-num">8</div>
+        <div class="score-card-label">Code Architecture</div>
+        <div class="score-card-bar"><div class="score-card-fill" style="width:80%"></div></div>
+      </div>
+      <div class="score-card">
+        <div class="score-card-num">6</div>
+        <div class="score-card-label">Error Handling</div>
+        <div class="score-card-bar"><div class="score-card-fill" style="width:60%"></div></div>
+      </div>
+      <div class="score-card">
+        <div class="score-card-num">7</div>
+        <div class="score-card-label">Navigation Flow</div>
+        <div class="score-card-bar"><div class="score-card-fill" style="width:70%"></div></div>
+      </div>
+      <div class="score-card">
+        <div class="score-card-num">8</div>
+        <div class="score-card-label">Visual Consistency</div>
+        <div class="score-card-bar"><div class="score-card-fill" style="width:80%"></div></div>
+      </div>
+      <div class="score-card">
+        <div class="score-card-num">7</div>
+        <div class="score-card-label">Mobile UX</div>
+        <div class="score-card-bar"><div class="score-card-fill" style="width:70%"></div></div>
+      </div>
+      <div class="score-card">
+        <div class="score-card-num">6</div>
+        <div class="score-card-label">Form Quality</div>
+        <div class="score-card-bar"><div class="score-card-fill" style="width:60%"></div></div>
+      </div>
+      <div class="score-card">
+        <div class="score-card-num">8</div>
+        <div class="score-card-label">Kid UX / Tone</div>
+        <div class="score-card-bar"><div class="score-card-fill" style="width:80%"></div></div>
+      </div>
+    </div>
+    <div style="padding:0 24px 24px;">
+      <div style="background:#f8fafc;border-radius:12px;padding:16px 20px;border:1px solid var(--gray-border);">
+        <p style="font-size:13px;color:var(--slate);line-height:1.7;">
+          <strong style="color:#1e293b;">Overall: 7.4 / 10</strong> — Wave 7 landed the hard stuff: auth token, grade propagation, profile mapping, nav fix, and custom 404.
+          The app is structurally sound. The remaining blockers are concentrated: a missed data-leak in the leaderboard,
+          a regression in the dashboard profile modal (confidence + grade sync), and a UX landmine for anyone clicking
+          "Practice" from the sidebar. These are all sub-30-minute fixes. After a focused Wave 8 (~2–3 hours of coding),
+          this is a solid <strong>GO</strong> for a private beta.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- FINAL VERDICT REPEAT -->
+  <div class="verdict" style="margin-top:8px;">
+    <div class="verdict-icon">⚠️</div>
+    <div>
+      <div class="verdict-label">Release Decision</div>
+      <div class="verdict-title">NEEDS FIXES — Wave 8 (est. ~3 hrs)</div>
+      <div class="verdict-sub">Fix DATA-02, PROFILE-03, PRACTICE-02, STATE-04, API-01 + 9 recommended improvements. Then: GO for private beta.</div>
+    </div>
+    <div class="score-pill">
+      <div class="score-num">7.4</div>
+      <div class="score-den">/ 10</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

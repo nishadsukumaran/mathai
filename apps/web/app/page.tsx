@@ -34,7 +34,7 @@ export default async function HomePage() {
           </Link>
           <Link
             href="/auth/signup"
-            className="text-sm font-bold bg-indigo-600 text-white px-5 py-2 rounded-xl hover:bg-indigo-700 transition"
+            className="text-sm font-bold bg-indigo-600 text-white px-5 py-2 rounded-2xl hover:bg-indigo-700 transition"
           >
             Get Started
           </Link>

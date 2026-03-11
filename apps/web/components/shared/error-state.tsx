@@ -52,7 +52,7 @@ export function ErrorState({ code, message, onRetry, className }: ErrorStateProp
         <button
           onClick={onRetry}
           className={cn(
-            "mt-2 rounded-xl bg-rose-500 px-5 py-2.5 text-sm font-bold text-white",
+            "mt-2 rounded-2xl bg-rose-500 px-5 py-2.5 text-sm font-bold text-white",
             "hover:bg-rose-600 active:scale-95 transition-all duration-150 focus:outline-none",
             "focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2"
           )}

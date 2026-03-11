@@ -124,7 +124,7 @@ export function LessonRow({ lesson, index, onStart, className }: LessonRowProps)
           <button
             onClick={() => onStart(id)}
             className={cn(
-              "rounded-xl px-4 py-2 text-sm font-bold",
+              "rounded-2xl px-4 py-2 text-sm font-bold",
               "transition-all duration-150 active:scale-95",
               "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1",
               buttonClass

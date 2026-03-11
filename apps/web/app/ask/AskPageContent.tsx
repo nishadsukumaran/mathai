@@ -52,23 +52,41 @@ export default function AskPageContent() {
     setQuestion("");
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
 
+    const controller = new AbortController();
+    const timeout    = setTimeout(() => controller.abort(), 20_000);
+
     try {
-      const data = await clientPost<AskMathAIResponse>("/tutor/ask", {
-        question: q,
-        grade,
-      });
+      const data = await clientPost<AskMathAIResponse>(
+        "/tutor/ask",
+        { question: q, grade },
+        { signal: controller.signal },
+      );
+      clearTimeout(timeout);
       setConversation((prev) =>
         prev.map((item) =>
           item.id === id
-            ? { ...item, response: data, error: data ? null : "No response received.", loading: false }
+            ? {
+                ...item,
+                response: data,
+                error:    data ? null : "MathAI couldn't answer right now — please try again.",
+                loading:  false,
+              }
             : item
         )
       );
-    } catch {
+    } catch (e) {
+      clearTimeout(timeout);
+      const isTimeout = e instanceof Error && e.name === "AbortError";
       setConversation((prev) =>
         prev.map((item) =>
           item.id === id
-            ? { ...item, error: "Connection error. Try again!", loading: false }
+            ? {
+                ...item,
+                error:   isTimeout
+                  ? "Request timed out — please try again."
+                  : "Connection error. Check your network and try again.",
+                loading: false,
+              }
             : item
         )
       );
@@ -90,7 +108,10 @@ export default function AskPageContent() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex flex-col">
+    <div
+      className="bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex flex-col"
+      style={{ minHeight: "100dvh" }}
+    >
 
       {/* Header */}
       <header className="sticky top-0 z-10 bg-white/90 backdrop-blur border-b border-indigo-100/60 px-6 py-4">
@@ -178,9 +199,12 @@ export default function AskPageContent() {
         </div>
       </div>
 
-      {/* Input bar */}
-      <div className="sticky bottom-0 bg-white/95 backdrop-blur border-t border-gray-100 shadow-lg pb-safe">
-        <div className="max-w-3xl mx-auto px-4 py-3">
+      {/* Input bar — sticky above keyboard on mobile via env(safe-area-inset-bottom) */}
+      <div
+        className="sticky bottom-0 bg-white/95 backdrop-blur border-t border-gray-100 shadow-lg"
+        style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom))" }}
+      >
+        <div className="max-w-3xl mx-auto px-4 pt-3">
           <div className="flex gap-3 items-end">
             <textarea
               ref={inputRef}

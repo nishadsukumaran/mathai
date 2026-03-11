@@ -54,6 +54,9 @@ export default function LeaderboardView({
         <header className="text-center">
           <h1 className="text-3xl font-black text-gray-800">Leaderboard 🏆</h1>
           <p className="text-sm text-slate-500 mt-1">Top mathematicians this week</p>
+          <span className="inline-flex items-center gap-1.5 mt-3 px-3 py-1 rounded-full bg-amber-100 border border-amber-300 text-amber-700 text-xs font-bold">
+            🔮 Sample data — live rankings coming soon
+          </span>
         </header>
 
         {/* ── Your stats row ───────────────────────────────────────────── */}

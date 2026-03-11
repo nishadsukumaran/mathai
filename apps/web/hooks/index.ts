@@ -14,7 +14,6 @@
  * │ useWeakAreas(id)        │ GET /curriculum/weak-areas/:id   │ /progress    │
  * │ useProgress(id)         │ GET /progress/:id                │ /progress    │
  * │ useDailyQuests(id)      │ GET /daily-quests/:id            │ /dashboard   │
- * │ usePracticeSession(id)  │ POST /practice/* (mutations)     │ /practice    │
  * │ useProfile()            │ GET/PATCH /profile               │ everywhere   │
  * │ usePracticeMenu()       │ GET /practice/menu               │ /dashboard   │
  * └─────────────────────────┴──────────────────────────────────┴──────────────┘
@@ -32,7 +31,6 @@
 export { useDashboard }                           from "./use-dashboard";
 export { useCurriculum, useTopicDetail, useWeakAreas } from "./use-curriculum";
 export { useProgress, useDailyQuests }            from "./use-progress";
-export { usePracticeSession }                     from "./use-practice-session";
 export { useProfile }                             from "./use-profile";
 export { usePracticeMenu }                        from "./use-practice-menu";
 export { useToast, toast }                        from "./use-toast";

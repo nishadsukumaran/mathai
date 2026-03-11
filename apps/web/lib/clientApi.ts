@@ -32,16 +32,28 @@ async function getToken(): Promise<string> {
       const { token } = (await res.json()) as { token: string };
       return `Bearer ${token}`;
     }
+    // Session expired or unauthenticated — redirect to sign-in.
+    if (res.status === 401) {
+      window.location.href = "/auth/signin";
+      return "";
+    }
   } catch {
     // network failure — fall through
   }
+  // Only reach here on network failure (e.g. offline). Keep the dev-stub
+  // so local development without a running session still works.
   return "Bearer dev-stub";
+}
+
+interface ClientFetchOptions {
+  signal?: AbortSignal;
 }
 
 async function clientFetch<T>(
   method: string,
   path: string,
   body?: unknown,
+  options?: ClientFetchOptions,
 ): Promise<T | null> {
   const url = `${API_BASE}${path}`;
   try {
@@ -51,7 +63,8 @@ async function clientFetch<T>(
         Authorization:  await getToken(),
         "Content-Type": "application/json",
       },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body:   body !== undefined ? JSON.stringify(body) : undefined,
+      signal: options?.signal,
     });
 
     if (!res.ok) {
@@ -67,6 +80,6 @@ async function clientFetch<T>(
   }
 }
 
-export const clientGet  = <T>(path: string)              => clientFetch<T>("GET",   path);
-export const clientPost = <T>(path: string, body: unknown) => clientFetch<T>("POST",  path, body);
-export const clientPatch= <T>(path: string, body: unknown) => clientFetch<T>("PATCH", path, body);
+export const clientGet   = <T>(path: string, opts?: ClientFetchOptions)              => clientFetch<T>("GET",   path, undefined, opts);
+export const clientPost  = <T>(path: string, body: unknown, opts?: ClientFetchOptions) => clientFetch<T>("POST",  path, body, opts);
+export const clientPatch = <T>(path: string, body: unknown, opts?: ClientFetchOptions) => clientFetch<T>("PATCH", path, body, opts);

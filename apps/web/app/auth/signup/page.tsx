@@ -18,16 +18,23 @@ const GRADES = [
 ] as const;
 
 export default function SignUpPage() {
-  const [name,     setName]     = useState("");
-  const [email,    setEmail]    = useState("");
-  const [password, setPassword] = useState("");
-  const [grade,    setGrade]    = useState<string>("G4");
-  const [error,    setError]    = useState("");
-  const [loading,  setLoading]  = useState(false);
+  const [name,            setName]            = useState("");
+  const [email,           setEmail]           = useState("");
+  const [password,        setPassword]        = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [grade,           setGrade]           = useState<string>("G4");
+  const [error,           setError]           = useState("");
+  const [loading,         setLoading]         = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -67,7 +74,7 @@ export default function SignUpPage() {
         </div>
 
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">
+          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 rounded-2xl px-4 py-3 text-sm">
             {error}
           </div>
         )}
@@ -83,7 +90,7 @@ export default function SignUpPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-indigo-500 outline-none transition"
+              className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:border-indigo-500 outline-none transition"
               placeholder="Your name"
             />
           </div>
@@ -98,7 +105,7 @@ export default function SignUpPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-indigo-500 outline-none transition"
+              className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:border-indigo-500 outline-none transition"
               placeholder="you@example.com"
             />
           </div>
@@ -114,9 +121,32 @@ export default function SignUpPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
-              className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-indigo-500 outline-none transition"
+              className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:border-indigo-500 outline-none transition"
               placeholder="At least 6 characters"
             />
+          </div>
+
+          <div>
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+              Confirm Password
+            </label>
+            <input
+              id="confirmPassword"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+              minLength={6}
+              className={`w-full border-2 rounded-2xl px-4 py-3 outline-none transition ${
+                confirmPassword && confirmPassword !== password
+                  ? "border-red-400 focus:border-red-500"
+                  : "border-gray-200 focus:border-indigo-500"
+              }`}
+              placeholder="Re-enter your password"
+            />
+            {confirmPassword && confirmPassword !== password && (
+              <p className="text-xs text-red-500 mt-1">Passwords don&apos;t match</p>
+            )}
           </div>
 
           <div>
@@ -130,7 +160,7 @@ export default function SignUpPage() {
                   type="button"
                   onClick={() => setGrade(g.value)}
                   className={[
-                    "py-2 rounded-xl border-2 text-sm font-bold transition",
+                    "py-2 rounded-2xl border-2 text-sm font-bold transition",
                     grade === g.value
                       ? "border-indigo-500 bg-indigo-600 text-white"
                       : "border-gray-200 text-gray-600 hover:border-indigo-300",
@@ -144,8 +174,8 @@ export default function SignUpPage() {
 
           <button
             type="submit"
-            disabled={loading}
-            className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-60 transition mt-2"
+            disabled={loading || (!!confirmPassword && confirmPassword !== password)}
+            className="w-full bg-indigo-600 text-white py-3 rounded-2xl font-bold hover:bg-indigo-700 disabled:opacity-60 transition mt-2"
           >
             {loading ? "Creating account..." : "Create Account"}
           </button>

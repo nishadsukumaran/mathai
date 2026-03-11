@@ -106,7 +106,7 @@ export default function DashboardView({ data }: Props) {
               </div>
               <Link
                 href={`/practice?topicId=${continueLearning.topicId}`}
-                className="shrink-0 bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition text-sm"
+                className="shrink-0 bg-indigo-600 text-white px-5 py-2.5 rounded-2xl font-bold hover:bg-indigo-700 transition text-sm"
               >
                 {continueLearning.ctaLabel}
               </Link>
@@ -116,7 +116,7 @@ export default function DashboardView({ data }: Props) {
               <p className="text-slate-500 mb-3">No topics started yet — let&apos;s go!</p>
               <Link
                 href="/practice"
-                className="inline-block bg-indigo-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-indigo-700 transition text-sm"
+                className="inline-block bg-indigo-600 text-white px-6 py-2 rounded-2xl font-bold hover:bg-indigo-700 transition text-sm"
               >
                 Start your first lesson →
               </Link>

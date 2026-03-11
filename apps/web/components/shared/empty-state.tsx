@@ -59,7 +59,7 @@ function EmptyCTA({ onAction, label }: EmptyActionProps) {
     <button
       onClick={onAction}
       className={cn(
-        "rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white",
+        "rounded-2xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white",
         "hover:bg-indigo-700 active:scale-95 transition-all duration-150",
         "focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2"
       )}
