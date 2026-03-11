@@ -191,6 +191,9 @@ model User {
   practiceSessions PracticeSession[]
   questionAttempts QuestionAttempt[]
   topicProgress    TopicProgress[]
+  lessonProgress   LessonProgress[]
+  mistakePatterns  TopicMistakePattern[]
+  memorySnapshot   StudentMemorySnapshot?
 
   @@index([role])
   @@index([gradeLevel])
@@ -268,6 +271,20 @@ model StudentProfile {
 
   /// How the AI tutor structures explanations for this student.
   preferredExplanationStyle  ExplanationStyle  @default(visual)
+
+  /// Comma-separated interest keywords used to personalise AI-generated questions.
+  /// e.g. "sports,space,animals,cooking"  Set by the student in their profile settings.
+  interests         String    @default("")
+
+  /// Running total of hints requested across all practice sessions.
+  totalHintsUsed    Int       @default(0)
+
+  /// Running total of individual questions attempted across all sessions.
+  totalQuestionsAttempted Int @default(0)
+
+  /// Exponentially weighted moving average of self-reported confidence (0–100).
+  /// Updated after each session using the per-attempt confidenceAfter values.
+  avgConfidenceScore Float    @default(50)
 
   updatedAt       DateTime     @updatedAt
 
@@ -360,11 +377,12 @@ model Topic {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  strand           CurriculumStrand  @relation(fields: [strandId], references: [id])
+  strand           CurriculumStrand    @relation(fields: [strandId], references: [id])
   lessons          Lesson[]
   practiceSets     PracticeSet[]
   topicProgress    TopicProgress[]
   questionAttempts QuestionAttempt[]
+  mistakePatterns  TopicMistakePattern[]
 
   @@index([strandId])
   @@index([gradeBand, difficulty])
@@ -394,9 +412,10 @@ model Lesson {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  topic        Topic           @relation(fields: [topicId], references: [id], onDelete: Cascade)
-  practiceSets PracticeSet[]
-  sessions     PracticeSession[]
+  topic          Topic             @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  practiceSets   PracticeSet[]
+  sessions       PracticeSession[]
+  lessonProgress LessonProgress[]
 
   @@index([topicId, orderIndex])
   @@map("lessons")
@@ -559,6 +578,98 @@ model TopicProgress {
   @@index([userId, isMastered])
   @@index([userId, lastPracticedAt])
   @@map("topic_progress")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// STUDENT LEARNING MEMORY
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Per-student per-lesson completion tracking.
+/// Lets the AI tutor know exactly which lessons a student has worked through
+/// and their score, so recommendations never suggest already-mastered content.
+model LessonProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  lessonId    String
+  topicId     String   // denormalised — avoids join when querying by topic
+
+  isStarted   Boolean  @default(true)
+  isCompleted Boolean  @default(false)
+  completedAt DateTime?
+
+  /// Accuracy fraction 0–1 on the most recent practice of this lesson.
+  lastScore   Float    @default(0)
+
+  /// Total times the student has practiced this lesson.
+  attemptsCount Int    @default(0)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user   User   @relation(fields: [userId],   references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@index([userId, topicId])
+  @@map("lesson_progress")
+}
+
+/// Aggregated misconception/mistake patterns per student per topic.
+/// Updated after every incorrect answer. Drives AI personalisation:
+/// the question generator avoids surface-level questions when a deep
+/// misconception is present, and the tutor explains using targeted language.
+model TopicMistakePattern {
+  id      String @id @default(cuid())
+  userId  String
+  topicId String
+
+  /// Machine-readable tag e.g. "place_value_confusion", "fraction_denominator_error".
+  /// Must match the MisconceptionCategory values set by detectMisconception().
+  tag     String
+
+  /// Cumulative count of times this mistake was detected.
+  count   Int      @default(1)
+
+  /// True when the student has answered 3+ consecutive correct answers
+  /// on this topic without triggering this misconception again.
+  isResolved Boolean  @default(false)
+  resolvedAt DateTime?
+
+  /// When this pattern was most recently triggered.
+  lastSeenAt DateTime @default(now())
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user  User  @relation(fields: [userId],  references: [id], onDelete: Cascade)
+  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, topicId, tag])
+  @@index([userId, isResolved])
+  @@index([topicId, tag])
+  @@map("topic_mistake_patterns")
+}
+
+/// Periodically refreshed AI-readable memory context for a student.
+/// Refreshed at session end and on first daily login. Stale after 2 hours.
+///
+/// Storing a pre-built snapshot means the AI never needs to JOIN 6 tables
+/// on the hot path — it reads one JSON blob and has full context.
+///
+/// Schema of the JSON is defined in ai/services/studentMemoryService.ts.
+model StudentMemorySnapshot {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+
+  /// ISO timestamp of last refresh. Consumer checks if > 2h old before using.
+  refreshedAt DateTime @default(now())
+
+  /// Full memory blob — see MemorySnapshot type in studentMemoryService.ts
+  snapshot    Json
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("student_memory_snapshots")
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

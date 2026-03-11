@@ -27,6 +27,7 @@ import type {
   PracticeMode,
 } from "@mathai/shared-types";
 import { recommendationService } from "../../ai/services/recommendationService";
+import { studentMemoryService }  from "../../ai/services/studentMemoryService";
 
 // ─── Grade progression map ────────────────────────────────────────────────────
 
@@ -272,6 +273,9 @@ export async function getPracticeMenu(userId: string): Promise<PracticeMenu> {
     }
   }
 
+  // ── Load student memory snapshot (non-blocking) ───────────────────────────
+  const memorySnapshot = await studentMemoryService.getSnapshot(userId).catch(() => undefined);
+
   // ── AI enrichment: personalise reasons via Vercel AI Gateway ─────────────────
   // Build candidates from the top items across sections for AI to rank
   const candidates = sections
@@ -299,7 +303,7 @@ export async function getPracticeMenu(userId: string): Promise<PracticeMenu> {
         preferredExplanationStyle: (profile as Record<string, unknown>)["preferredExplanationStyle"] as string ?? "step_by_step",
         recentStreak:              0,
         totalXP:                   profile.totalXp ?? 0,
-      });
+      }, memorySnapshot);
 
       // Merge AI reasons back into sections
       const aiRecoMap = new Map(aiRecos.map((r) => [r.topicId, r]));

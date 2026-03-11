@@ -43,6 +43,9 @@ export interface GenerateQuestionsContext {
     preferredExplanationStyle: string;  // "visual" | "step_by_step" | "story" | "analogy" | "direct"
     recentMistakes?:           string[];
     interestKeywords?:         string[];
+    // From full memory snapshot (when available)
+    activeMisconceptionsForTopic?: string[];  // mistake tags specific to this topic
+    weakTopicNames?:           string[];  // to shape difficulty weighting
   };
 }
 
@@ -95,7 +98,8 @@ function buildPrompt(ctx: GenerateQuestionsContext): string {
 - Learning pace: ${studentContext.learningPace}
 - Confidence: ${studentContext.confidenceLevel}/100 (${studentContext.confidenceLevel < 40 ? "needs encouragement and simpler entry questions" : studentContext.confidenceLevel > 70 ? "ready for a bit of a stretch" : "on track"})
 - Prefers: ${studentContext.preferredExplanationStyle} style
-${studentContext.recentMistakes?.length ? `- Recently struggled with: ${studentContext.recentMistakes.join(", ")} — avoid reinforcing the same error pattern` : ""}
+${studentContext.activeMisconceptionsForTopic?.length ? `- KNOWN MISCONCEPTIONS on this topic: ${studentContext.activeMisconceptionsForTopic.join(", ")} — target these with questions that expose and correct the error` : ""}
+${studentContext.recentMistakes?.length ? `- Recently struggled with (general): ${studentContext.recentMistakes.join(", ")} — vary question framing to build confidence` : ""}
 ${studentContext.interestKeywords?.length ? `- Interests: ${studentContext.interestKeywords.join(", ")} — use these in word problems where natural` : ""}`
     : "";
 

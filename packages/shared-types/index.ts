@@ -504,6 +504,69 @@ export interface PracticeMenu {
   sections:    PracticeMenuSection[];
 }
 
+// ─── Student Learning Memory ──────────────────────────────────────────────────
+
+/** Confidence trend direction derived from recent session history */
+export type ConfidenceTrend = "rising" | "stable" | "falling";
+
+/** A topic the student is performing well on (mastery ≥ 0.75) */
+export interface StrongTopicSummary {
+  topicId:      string;
+  topicName?:   string;
+  masteryScore: number;   // 0–100
+}
+
+/** A topic the student is struggling with (mastery < 0.55, has been attempted) */
+export interface WeakTopicSummary {
+  topicId:      string;
+  topicName?:   string;
+  masteryScore: number;   // 0–100
+  daysSinceLastPractice: number;
+}
+
+/** An active misconception pattern the student has repeatedly shown */
+export interface MistakePatternSummary {
+  topicId:    string;
+  tag:        string;        // e.g. "fraction-comparison", "place-value-tens"
+  count:      number;        // how many times observed
+  lastSeenAt: string;        // ISO datetime
+}
+
+/** A recent practice session in the memory snapshot */
+export interface RecentSessionSummary {
+  sessionId:       string;
+  topicId:         string;
+  accuracyPct:     number;
+  questionsCount:  number;
+  hintsUsed:       number;
+  confidenceAfter: number;
+  practicedAt:     string;   // ISO datetime
+}
+
+/**
+ * Public-facing student memory summary — returned by GET /api/student/memory.
+ * This is a frontend-safe version of the backend's MemorySnapshot.
+ * Sensitive internals (raw DB rows, user IDs) are excluded.
+ */
+export interface StudentMemorySummary {
+  version:                 1;
+  lessonsStarted:          string[];
+  lessonsCompleted:        string[];
+  topicsAttempted:         string[];
+  strongTopics:            StrongTopicSummary[];
+  weakTopics:              WeakTopicSummary[];
+  activeMistakePatterns:   MistakePatternSummary[];
+  hintDependencyByTopic:   Record<string, number>;
+  confidenceTrend:         ConfidenceTrend;
+  avgConfidenceScore:      number;     // 0–100 EWMA rolling average
+  preferredExplanationStyle: string;
+  learningPace:            string;
+  interests:               string[];
+  recentSessions:          RecentSessionSummary[];
+  suggestedFocusTopics:    string[];   // top 3 topics AI recommends practising
+  lastRefreshedAt:         string;     // ISO datetime of snapshot build
+}
+
 // ─── Error codes (known) ──────────────────────────────────────────────────────
 
 export const API_ERROR_CODES = {

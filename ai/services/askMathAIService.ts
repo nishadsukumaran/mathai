@@ -24,6 +24,7 @@
  */
 
 import { callAIModelJSON } from "../ai_client";
+import { studentMemoryService, type MemorySnapshot } from "./studentMemoryService";
 import type { Grade, VisualPlan } from "@mathai/shared-types";
 
 // ─── Input / Output types ──────────────────────────────────────────────────────
@@ -33,8 +34,9 @@ export interface AskMathAIRequest {
   grade:         Grade;
   context?:      string;   // e.g. current topic the student is practicing
   studentName?:  string;   // personalise the response greeting
+  userId?:       string;   // if provided, memory snapshot is loaded and injected
 
-  /** Student profile for tone/style adaptation */
+  /** Student profile for tone/style adaptation (fallback if no userId / snapshot) */
   profile?: {
     confidenceLevel:           number;
     preferredExplanationStyle: "visual" | "step_by_step" | "story" | "analogy" | "direct";
@@ -78,11 +80,11 @@ Principles:
 
 // ─── Prompt builder ───────────────────────────────────────────────────────────
 
-function buildPrompt(req: AskMathAIRequest): string {
+function buildPrompt(req: AskMathAIRequest, memory?: MemorySnapshot): string {
   const gradeNum = req.grade.replace("G", "");
-  const style    = req.profile?.preferredExplanationStyle ?? "step_by_step";
-  const pace     = req.profile?.learningPace ?? "standard";
-  const conf     = req.profile?.confidenceLevel ?? 50;
+  const style    = memory?.preferredExplanationStyle ?? req.profile?.preferredExplanationStyle ?? "step_by_step";
+  const pace     = memory?.learningPace              ?? req.profile?.learningPace ?? "standard";
+  const conf     = memory?.avgConfidenceScore        ?? req.profile?.confidenceLevel ?? 50;
 
   const styleHint = {
     visual:       "Use visual language and a visual plan. Describe what they'd draw or picture.",
@@ -98,15 +100,21 @@ function buildPrompt(req: AskMathAIRequest): string {
     ? "This student is confident — you can go slightly deeper and include 'did you know' extensions."
     : "Match standard Grade level expectations.";
 
+  const interestHint = (memory?.interests ?? []).length > 0
+    ? `Student interests (use these in examples): ${memory!.interests.join(", ")}.`
+    : "";
+
+  const memoryBlock = memory ? `\n\nSTUDENT LEARNING HISTORY:\n${studentMemoryService.formatForPrompt(memory)}` : "";
+
   return `Grade ${gradeNum} student${req.studentName ? ` named ${req.studentName}` : ""} asks:
 
 "${req.question}"
 
 ${req.context ? `They are currently studying: ${req.context}` : ""}
-
+${interestHint}
 Style preference: ${styleHint}
 Pace: ${pace}
-${levelHint}
+${levelHint}${memoryBlock}
 
 Reply with a complete, structured JSON response:
 {
@@ -138,10 +146,18 @@ Return ONLY the JSON object — no markdown, no commentary.`;
 export const askMathAIService = {
   /**
    * Answers a student's freeform math question via Vercel AI Gateway.
+   * Loads the student's full learning memory (if userId provided) and injects
+   * it into the prompt so the AI responds like a teacher who knows this student.
    * Always returns a structured response; never throws to the controller.
    */
   async answer(req: AskMathAIRequest): Promise<AskMathAIResponse> {
-    const prompt = buildPrompt(req);
+    // Load memory snapshot if userId is available (non-blocking on failure)
+    let memory: MemorySnapshot | undefined;
+    if (req.userId) {
+      memory = await studentMemoryService.getSnapshot(req.userId).catch(() => undefined);
+    }
+
+    const prompt = buildPrompt(req, memory);
 
     try {
       const response = await callAIModelJSON<AskMathAIResponse>(prompt, {

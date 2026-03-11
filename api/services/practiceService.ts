@@ -30,6 +30,7 @@ import { practiceGenerator } from "../../curriculum/practice_generator";
 import { masteryEvaluator } from "../../curriculum/mastery_evaluator";
 import { tutorService } from "../../ai/tutor/tutor_service";
 import { questionGeneratorService } from "../../ai/services/questionGeneratorService";
+import { studentMemoryService }    from "../../ai/services/studentMemoryService";
 import { NotFoundError, ValidationError } from "../middlewares/error.middleware";
 
 // ─── In-Memory Session Store ──────────────────────────────────────────────────
@@ -61,8 +62,11 @@ export async function startSession(
 ): Promise<{ session: Omit<ActivePracticeSession, "responses">; firstQuestion: PracticeQuestion }> {
   const { userId, topicId, lessonId, mode, difficulty, questionCount, grade, practiceSetId } = params;
 
-  // ── Step 1: Fetch student profile for AI personalisation ────────────────────
-  const profile = await prisma.studentProfile.findUnique({ where: { userId } }).catch(() => null);
+  // ── Step 1: Fetch student profile + memory snapshot in parallel ──────────────
+  const [profile, memorySnapshot] = await Promise.all([
+    prisma.studentProfile.findUnique({ where: { userId } }).catch(() => null),
+    studentMemoryService.getSnapshot(userId).catch(() => null),
+  ]);
   const topicName = topicId.replace(/^g\d+-/, "").replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
   // ── Step 2: AI-first question generation via Vercel AI Gateway ──────────────
@@ -71,6 +75,16 @@ export async function startSession(
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const profileAny = profile as any;
+
+    // Extract topic-specific misconceptions from the memory snapshot
+    const topicMisconceptions = memorySnapshot?.activeMistakePatterns
+      .filter((p) => p.topicId === topicId)
+      .map((p) => p.tag) ?? [];
+
+    const recentMistakeTags = memorySnapshot?.activeMistakePatterns
+      .slice(0, 5)
+      .map((p) => p.tag) ?? [];
+
     const aiQuestions = await questionGeneratorService.generate({
       topicId,
       topicName,
@@ -78,11 +92,14 @@ export async function startSession(
       difficulty:    difficulty ?? Difficulty.Intermediate,
       mode: mode as import("@mathai/shared-types").PracticeMode,
       questionCount: questionCount ?? 10,
-      studentContext: profile ? {
-        learningPace:              String(profileAny.learningPace ?? "standard"),
-        confidenceLevel:           Number(profile.confidenceLevel ?? 50),
-        preferredExplanationStyle: String(profileAny.preferredExplanationStyle ?? "step_by_step"),
-      } : undefined,
+      studentContext: {
+        learningPace:              memorySnapshot?.learningPace ?? String(profileAny?.learningPace ?? "standard"),
+        confidenceLevel:           memorySnapshot?.avgConfidenceScore ?? Number(profile?.confidenceLevel ?? 50),
+        preferredExplanationStyle: memorySnapshot?.preferredExplanationStyle ?? String(profileAny?.preferredExplanationStyle ?? "step_by_step"),
+        recentMistakes:            recentMistakeTags,
+        interestKeywords:          memorySnapshot?.interests ?? [],
+        activeMisconceptionsForTopic: topicMisconceptions,
+      },
     });
 
     // Map AI questions to PracticeQuestion shape (correctAnswer is held server-side)
@@ -139,6 +156,12 @@ export async function startSession(
 
   ACTIVE_SESSIONS.set(sessionId, session);
 
+  // Mark lesson started in memory (fire-and-forget)
+  if (lessonId) {
+    studentMemoryService.markLessonStarted(userId, lessonId, topicId)
+      .catch((e) => console.warn("[practiceService] markLessonStarted failed:", e));
+  }
+
   const firstQuestion = questions[0];
   if (!firstQuestion) throw new ValidationError("Practice set has no questions for this topic");
 
@@ -191,6 +214,17 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
     misconceptionTag,
   };
   session.responses.push(response);
+
+  // 4a. Memory: record mistake pattern (fire-and-forget)
+  if (!isCorrect && misconceptionTag && (misconceptionTag as string) !== "None" && (misconceptionTag as string) !== "none") {
+    studentMemoryService.recordMistake(session.userId, session.topicId, misconceptionTag)
+      .catch((e) => console.warn("[practiceService] recordMistake failed:", e));
+  }
+  // 4b. Memory: check if patterns resolved after a correct answer
+  if (isCorrect) {
+    studentMemoryService.checkAndResolvePatterns(session.userId, session.topicId)
+      .catch((e) => console.warn("[practiceService] checkAndResolvePatterns failed:", e));
+  }
 
   // 5. XP
   const profile = await prisma.studentProfile.findUnique({ where: { userId: session.userId } });
@@ -249,6 +283,30 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
       newLevel:     evaluation.newLevel,
       levelChanged: evaluation.levelChanged,
     };
+
+    // 8a. Memory: update lesson progress + profile counters + refresh snapshot (fire-and-forget)
+    const totalHints = session.responses.reduce((sum, r) => sum + (r.hintsUsed ?? 0), 0);
+    const confidenceAfterValues = session.responses
+      .map((r) => params.confidenceBefore ?? 50)
+      .filter((v) => v > 0);
+    const avgConf = confidenceAfterValues.length > 0
+      ? confidenceAfterValues.reduce((a, b) => a + b, 0) / confidenceAfterValues.length
+      : undefined;
+
+    Promise.allSettled([
+      session.lessonId
+        ? studentMemoryService.markLessonProgress(
+            session.userId, session.lessonId, session.topicId,
+            session.accuracyPercent / 100
+          )
+        : Promise.resolve(),
+      studentMemoryService.updateProfileCounters(session.userId, {
+        questionsAttempted: session.responses.length,
+        hintsUsed:          totalHints,
+        avgConfidenceAfter: avgConf,
+      }),
+      studentMemoryService.refreshSnapshot(session.userId),
+    ]).catch((e) => console.warn("[practiceService] Memory update failed:", e));
   }
 
   // 9. Encouragement

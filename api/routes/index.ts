@@ -20,6 +20,9 @@
  *   PATCH /api/profile               ← NEW
  *   GET  /api/practice/menu          ← NEW
  *   POST /api/tutor/ask              ← NEW
+ *   GET  /api/student/memory         ← Wave 5
+ *   POST /api/student/memory/refresh ← Wave 5
+ *   PATCH /api/student/interests     ← Wave 5
  */
 
 import { Router } from "express";
@@ -34,6 +37,7 @@ import questRoutes        from "./quest.routes";
 import profileRoutes      from "./profile.routes";
 import practiceMenuRoutes from "./practiceMenu.routes";
 import tutorRoutes        from "./tutor.routes";
+import studentRoutes      from "./student.routes";
 
 const router = Router();
 
@@ -73,5 +77,6 @@ router.use("/gamification",   gamificationRoutes);
 router.use("/daily-quests",   questRoutes);
 router.use("/profile",        profileRoutes);       // GET+PATCH /profile
 router.use("/tutor",          tutorRoutes);          // POST /tutor/ask
+router.use("/student",        studentRoutes);         // GET /student/memory, POST /student/memory/refresh, PATCH /student/interests
 
 export default router;

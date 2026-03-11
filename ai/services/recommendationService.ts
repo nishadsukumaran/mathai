@@ -18,6 +18,7 @@
  */
 
 import { callAIModelJSON } from "../ai_client";
+import type { MemorySnapshot } from "./studentMemoryService";
 import type { Grade, MasteryLevel, PracticeMode } from "@mathai/shared-types";
 
 // ─── Input types ──────────────────────────────────────────────────────────────
@@ -69,11 +70,22 @@ export const recommendationService = {
    */
   async enrich(
     candidates: RecommendationCandidate[],
-    student: StudentRecommendationContext
+    student: StudentRecommendationContext,
+    memory?: MemorySnapshot
   ): Promise<AIRecommendation[]> {
     if (candidates.length === 0) return [];
 
     const gradeNum = student.grade.replace("G", "");
+
+    // Build memory context block from the full snapshot when available
+    const memoryBlock = memory && (memory.activeMistakePatterns.length > 0 || memory.weakTopics.length > 0)
+      ? `\nDetailed student learning history:
+${memory.activeMistakePatterns.length > 0 ? `- Active misconceptions: ${memory.activeMistakePatterns.slice(0, 5).map((p) => `${p.topicName}:${p.tag}(×${p.count})`).join(", ")}` : ""}
+${memory.weakTopics.length > 0 ? `- Weak areas: ${memory.weakTopics.slice(0, 4).map((t) => `${t.topicName}(${Math.round(t.masteryScore * 100)}%)`).join(", ")}` : ""}
+${memory.strongTopics.length > 0 ? `- Strong areas: ${memory.strongTopics.slice(0, 3).map((t) => t.topicName).join(", ")}` : ""}
+${memory.confidenceTrend !== "stable" ? `- Confidence trend: ${memory.confidenceTrend}` : ""}
+${memory.interests.length > 0 ? `- Interests: ${memory.interests.join(", ")}` : ""}`
+      : "";
 
     const prompt = `You are helping a Grade ${gradeNum} student decide what to practice next.
 
@@ -82,7 +94,7 @@ Student profile:
 - Confidence level: ${student.confidenceLevel}/100
 - Current streak: ${student.recentStreak} days
 - Total XP earned: ${student.totalXP}
-- Preferred style: ${student.preferredExplanationStyle}
+- Preferred style: ${student.preferredExplanationStyle}${memoryBlock}
 
 Here are their top topic candidates with progress data:
 ${candidates.map((c, i) => `
@@ -93,7 +105,8 @@ ${i + 1}. ${c.topicName} (topicId: "${c.topicId}")
    - Section: ${c.sectionHint.replace("_", " ")}
 `).join("")}
 
-For each topic, provide a personalised recommendation. Return ONLY a valid JSON array:
+For each topic, provide a personalised recommendation that references the student's SPECIFIC history.
+Return ONLY a valid JSON array:
 [
   {
     "topicId": "...",
@@ -104,7 +117,7 @@ For each topic, provide a personalised recommendation. Return ONLY a valid JSON 
   }
 ]
 
-Rank by priority (1 = most important to practice now). Consider: low mastery, recent mistakes, time since last practice, and the student's confidence level.`;
+Rank by priority (1 = most important to practice now). Consider: low mastery, active misconceptions, time since last practice, and the student's confidence trend.`;
 
     const recommendations = await callAIModelJSON<AIRecommendation[]>(prompt, {
       system:      SYSTEM_PROMPT,

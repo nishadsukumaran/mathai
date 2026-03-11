@@ -49,6 +49,7 @@ router.post("/ask", async (req: Request, res: Response, next: NextFunction) => {
       grade:       grade as Grade,
       context,
       studentName,
+      userId,       // injects full learning memory into the AI prompt
       profile: profile ? {
         confidenceLevel:           profile.confidenceLevel           ?? 50,
         preferredExplanationStyle: (profile.preferredExplanationStyle ?? "step_by_step") as ExplanationStyle,
