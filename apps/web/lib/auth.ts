@@ -41,6 +41,9 @@ providers.push(
 
       if (!isValid) return null;
 
+      // Block disabled accounts at sign-in
+      if (!user.isActive) return null;
+
       return {
         id: user.id,
         email: user.email,
@@ -82,22 +85,32 @@ export const authOptions: NextAuthOptions = {
         session.user = {
           ...session.user,
           // @ts-ignore — extend session type
-          id:    token.sub,
-          grade: (token["grade"] as string | undefined) ?? "G4",
+          id:       token.sub,
+          grade:    (token["grade"]    as string  | undefined) ?? "G4",
+          role:     (token["role"]     as string  | undefined) ?? "student",
+          isActive: (token["isActive"] as boolean | undefined) ?? true,
         };
       }
       return session;
     },
     jwt: async ({ token, user, trigger, session: updateSession }) => {
       if (user) {
-        // Initial sign-in: embed the student's gradeLevel into the JWT so
-        // the Express API auth middleware can read it without a DB call.
+        // Initial sign-in: embed gradeLevel, role, and isActive into the JWT
+        // so the Express API can enforce role-based access without a DB call.
         token.sub = user.id;
         const dbUser = await prisma.user.findUnique({
           where:  { id: user.id },
-          select: { gradeLevel: true },
+          select: { gradeLevel: true, role: true, isActive: true },
         });
-        token["grade"] = dbUser?.gradeLevel ?? "G4";
+        token["grade"]    = dbUser?.gradeLevel ?? "G4";
+        token["role"]     = dbUser?.role       ?? "student";
+        token["isActive"] = dbUser?.isActive   ?? true;
+
+        // Update lastLoginAt on every sign-in
+        await prisma.user.update({
+          where: { id: user.id },
+          data:  { lastLoginAt: new Date() },
+        }).catch(() => { /* non-critical — don't block login */ });
       }
 
       // Handle client-side session.update({ grade: "G5" }) calls —

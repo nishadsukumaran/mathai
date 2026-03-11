@@ -38,6 +38,7 @@ import profileRoutes      from "./profile.routes";
 import practiceMenuRoutes from "./practiceMenu.routes";
 import tutorRoutes        from "./tutor.routes";
 import studentRoutes      from "./student.routes";
+import adminRoutes        from "./admin.routes";
 
 const router = Router();
 
@@ -78,5 +79,6 @@ router.use("/daily-quests",   questRoutes);
 router.use("/profile",        profileRoutes);       // GET+PATCH /profile
 router.use("/tutor",          tutorRoutes);          // POST /tutor/ask
 router.use("/student",        studentRoutes);         // GET /student/memory, POST /student/memory/refresh, PATCH /student/interests
+router.use("/admin",          adminRoutes);           // admin-only; requireAdmin runs inside admin.routes.ts
 
 export default router;

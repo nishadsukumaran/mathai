@@ -17,9 +17,10 @@ import { jwtDecrypt } from "jose";
 import hkdf from "@panva/hkdf";
 
 export interface AuthenticatedStudent {
-  id: string;
+  id:    string;
   grade: string;
-  roles: string[];
+  role:  string;   // primary role: "student" | "admin" | "teacher" | "parent"
+  roles: string[]; // kept for backward compat — mirrors [role]
 }
 
 // Extend Express Request to include student
@@ -80,8 +81,9 @@ export async function authMiddleware(
       const studentId =
         (req.params["studentId"] as string | undefined) ?? "user-alice-001";
       req.student = {
-        id: studentId,
+        id:    studentId,
         grade: "G4",
+        role:  "student",
         roles: ["student"],
       };
       return next();
@@ -99,10 +101,13 @@ export async function authMiddleware(
       throw new UnauthorizedError();
     }
 
+    const role = (payload["role"] as string | undefined) ?? "student";
+
     req.student = {
-      id: userId,
+      id:    userId,
       grade: (payload["grade"] as string | undefined) ?? "G4",
-      roles: (payload["roles"] as string[] | undefined) ?? ["student"],
+      role,
+      roles: [role],
     };
 
     next();

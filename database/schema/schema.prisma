@@ -178,6 +178,14 @@ model User {
   /// Populated for student accounts; null for parents, teachers, admins.
   gradeLevel Grade?
 
+  /// Soft-disable: when false the account is blocked at sign-in and API layers.
+  isActive       Boolean   @default(true)
+  disabledAt     DateTime?
+  disabledReason String?
+
+  /// Updated on every successful sign-in by the auth callback.
+  lastLoginAt    DateTime?
+
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -197,6 +205,7 @@ model User {
 
   @@index([role])
   @@index([gradeLevel])
+  @@index([isActive])
   @@map("users")
 }
 
