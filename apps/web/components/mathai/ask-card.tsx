@@ -9,10 +9,11 @@
 
 "use client";
 
-import { useState, useRef } from "react";
-import { cn }               from "@/lib/utils";
-import { AskPanel }         from "./ask-panel";
-import type { Grade }       from "@/types";
+import { useState, useRef }  from "react";
+import { cn }                from "@/lib/utils";
+import { AskPanel }          from "./ask-panel";
+import { clientPost }        from "@/lib/clientApi";
+import type { Grade, TutorResponse, HelpMode } from "@/types";
 
 interface AskCardProps {
   grade:     Grade;
@@ -31,23 +32,34 @@ export function AskCard({ grade, className }: AskCardProps) {
   const [question,   setQuestion]   = useState("");
   const [submitted,  setSubmitted]  = useState("");
   const [panelOpen,  setPanelOpen]  = useState(false);
+  const [response,   setResponse]   = useState<TutorResponse | null>(null);
+  const [loading,    setLoading]    = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Cycle placeholder text to show students what they can ask
   const [placeholderIdx] = useState(
     () => Math.floor(Math.random() * PLACEHOLDER_HINTS.length)
   );
 
-  function handleSubmit() {
+  async function handleSubmit(overrideMode?: HelpMode) {
     const q = question.trim();
     if (!q) return;
     setSubmitted(q);
+    setResponse(null);
+    setLoading(true);
     setPanelOpen(true);
     setQuestion("");
+
+    const data = await clientPost<TutorResponse>("/tutor/ask", {
+      question: q,
+      helpMode: overrideMode ?? "teach_concept",
+      grade,
+    });
+    setResponse(data);
+    setLoading(false);
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter") handleSubmit();
+    if (e.key === "Enter") void handleSubmit();
   }
 
   return (
@@ -86,7 +98,7 @@ export function AskCard({ grade, className }: AskCardProps) {
             )}
           />
           <button
-            onClick={handleSubmit}
+            onClick={() => void handleSubmit()}
             disabled={!question.trim()}
             className={cn(
               "px-4 py-2.5 rounded-2xl font-black text-sm transition",
@@ -127,6 +139,8 @@ export function AskCard({ grade, className }: AskCardProps) {
           <AskPanel
             question={submitted}
             grade={grade}
+            response={response}
+            loading={loading}
             onClose={() => setPanelOpen(false)}
           />
         </>

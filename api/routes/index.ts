@@ -16,6 +16,10 @@
  *   POST /api/practice/submit
  *   POST /api/practice/hint
  *   POST /api/practice/explanation
+ *   GET  /api/profile                ← NEW
+ *   PATCH /api/profile               ← NEW
+ *   GET  /api/practice/menu          ← NEW
+ *   POST /api/tutor/ask              ← NEW
  */
 
 import { Router } from "express";
@@ -27,6 +31,9 @@ import progressRoutes     from "./progress.routes";
 import gamificationRoutes from "./gamification.routes";
 import dashboardRoutes    from "./dashboard.routes";
 import questRoutes        from "./quest.routes";
+import profileRoutes      from "./profile.routes";
+import practiceMenuRoutes from "./practiceMenu.routes";
+import tutorRoutes        from "./tutor.routes";
 
 const router = Router();
 
@@ -59,9 +66,12 @@ router.use(authMiddleware);
 
 router.use("/dashboard",      dashboardRoutes);
 router.use("/practice",       practiceRoutes);
+router.use("/practice",       practiceMenuRoutes);  // GET /practice/menu
 router.use("/curriculum",     curriculumRoutes);
 router.use("/progress",       progressRoutes);
 router.use("/gamification",   gamificationRoutes);
 router.use("/daily-quests",   questRoutes);
+router.use("/profile",        profileRoutes);       // GET+PATCH /profile
+router.use("/tutor",          tutorRoutes);          // POST /tutor/ask
 
 export default router;

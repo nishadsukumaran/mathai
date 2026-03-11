@@ -26,9 +26,9 @@ import {
   BadgeChip,
   TopicCard,
 }                      from "@/components/mathai";
-import { AskCard }     from "@/components/mathai/ask-card";
-import { ProfileModal, MOCK_PROFILE } from "@/components/mathai/profile-modal";
-import { PracticeMenuView } from "@/components/mathai/practice-menu";
+import { AskCard }                  from "@/components/mathai/ask-card";
+import { ProfileModalConnected }    from "@/components/mathai/profile-modal-connected";
+import { PracticeMenuConnected }    from "@/components/mathai/practice-menu-connected";
 import type {
   XPStatus,
   StreakStatus,
@@ -140,8 +140,8 @@ export default function DashboardView({
               See All →
             </Link>
           </div>
-          {/* Wave 1: shows mock menu. Wave 2: pass real `menu` prop here */}
-          <PracticeMenuView />
+          {/* Wave 2: fetches real menu from GET /api/practice/menu */}
+          <PracticeMenuConnected />
         </section>
 
         {/* ── 6. Recent Badges ─────────────────────────────────────────── */}
@@ -187,8 +187,7 @@ export default function DashboardView({
 
       {/* ── Profile modal (portal-style overlay) ─────────────────────── */}
       {profileOpen && (
-        <ProfileModal
-          profile={MOCK_PROFILE}
+        <ProfileModalConnected
           onClose={() => setProfileOpen(false)}
         />
       )}

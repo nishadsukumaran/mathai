@@ -264,13 +264,24 @@ model StudentProfile {
   streakCount     Int          @default(0)
 
   /// UI theme key selected by the student ("space" | "ocean" | "forest" | ...).
-  preferredTheme  String       @default("space")
+  preferredTheme             String            @default("space")
+
+  /// How the AI tutor structures explanations for this student.
+  preferredExplanationStyle  ExplanationStyle  @default(visual)
 
   updatedAt       DateTime     @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("student_profiles")
+}
+
+enum ExplanationStyle {
+  visual
+  step_by_step
+  story
+  analogy
+  direct
 }
 
 /// Daily login streak tracking with shield (freeze) support.
