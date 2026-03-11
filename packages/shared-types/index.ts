@@ -15,7 +15,7 @@
 
 // ─── Primitives ────────────────────────────────────────────────────────────────
 
-export type Grade = "G1" | "G2" | "G3" | "G4" | "G5";
+export type Grade = "G1" | "G2" | "G3" | "G4" | "G5" | "G6" | "G7" | "G8" | "G9" | "G10";
 
 export type MasteryLevel =
   | "not_started"
@@ -465,8 +465,10 @@ export interface StudentProfileResponse {
 export interface UpdateProfileRequest {
   name?:                      string;
   preferredTheme?:            string;
+  grade?:                     Grade;
   learningPace?:              LearningPace;
   preferredExplanationStyle?: ExplanationStyle;
+  confidenceLevel?:           number;  // 1–5 student-set, stored on StudentProfile
 }
 
 // ─── Practice Menu ────────────────────────────────────────────────────────────

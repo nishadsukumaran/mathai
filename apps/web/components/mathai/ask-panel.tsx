@@ -1,101 +1,41 @@
 /**
  * @module components/mathai/ask-panel
  *
- * Slide-up panel rendered when a student asks a math question.
- * Shows mode selector tabs, the AI response text, and optional VisualRenderer.
- *
- * Wave 1: mock response fixture.
- * Wave 2: parent calls POST /api/tutor/ask and passes TutorResponse here.
+ * Slide-up panel that renders the AI response from POST /api/tutor/ask.
+ * Consumes AskMathAIResponse (explanation, steps, example, visualPlan,
+ * followUp, encouragement) — the real backend shape, not the mock TutorResponse.
  */
 
 "use client";
 
-import { useState } from "react";
-import { cn }       from "@/lib/utils";
-import type { HelpMode, TutorResponse, TutorStep } from "@/types";
+import { cn }            from "@/lib/utils";
+import type { AskMathAIResponse } from "@/types";
 import { VisualRenderer } from "./visual";
-
-// ─── Help mode config ────────────────────────────────────────────────────────
-
-interface HelpModeOption {
-  mode:  HelpMode;
-  label: string;
-  icon:  string;
-}
-
-const HELP_MODES: HelpModeOption[] = [
-  { mode: "teach_concept",   label: "Explain",    icon: "🎨" },
-  { mode: "next_step",       label: "Step by Step", icon: "🪜" },
-  { mode: "similar_example", label: "Example",    icon: "💡" },
-  { mode: "explain_fully",   label: "Simplify",   icon: "✨" },
-];
-
-// ─── Mock response factory ────────────────────────────────────────────────────
-
-function mockResponse(question: string, mode: HelpMode): TutorResponse {
-  const base: TutorResponse = {
-    helpMode:     mode,
-    encouragement: "Great question! You're thinking like a mathematician.",
-    content: {
-      text: mode === "next_step"
-        ? "Let me break this down step by step for you!"
-        : mode === "teach_concept"
-        ? "Here's a visual to help you see this clearly."
-        : mode === "similar_example"
-        ? "Try this: if you have 2 groups of 3 apples, how many apples are there in total?"
-        : "Let's make this simpler: just think about groups of equal size.",
-      steps: mode === "next_step"
-        ? ([
-            { stepNumber: 1, instruction: "Read the problem carefully and identify what you're asked to find." },
-            { stepNumber: 2, instruction: "Look for the numbers and the operation needed." },
-            { stepNumber: 3, instruction: "Calculate and double-check your answer." },
-          ] as TutorStep[])
-        : undefined,
-    },
-    visualPlan: mode === "teach_concept"
-      ? {
-          diagramType: "array",
-          data: { rows: 3, cols: 4, highlightGroups: [
-            { start: 0,  size: 4, color: "#6366f1" },
-            { start: 4,  size: 4, color: "#10b981" },
-            { start: 8,  size: 4, color: "#f59e0b" },
-          ] },
-        }
-      : undefined,
-  };
-  void question; // used in Wave 2
-  return base;
-}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 interface AskPanelProps {
   question:  string;
-  grade:     string;
-  response?: TutorResponse | null;
+  response?: AskMathAIResponse | null;
   loading?:  boolean;
+  error?:    string | null;
   onClose:   () => void;
   className?: string;
 }
 
 export function AskPanel({
   question,
-  grade,
   response,
   loading = false,
+  error   = null,
   onClose,
   className,
 }: AskPanelProps) {
-  const [mode, setMode] = useState<HelpMode>("teach_concept");
-  void grade; // used in Wave 2
-
-  const data = response ?? (loading ? null : mockResponse(question, mode));
-
   return (
     <div
       className={cn(
         "fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl shadow-2xl",
-        "flex flex-col max-h-[85vh]",
+        "flex flex-col max-h-[88vh]",
         className,
       )}
     >
@@ -124,80 +64,142 @@ export function AskPanel({
         </button>
       </div>
 
-      {/* Mode tabs */}
-      <div className="flex gap-2 px-5 pt-3 pb-2 overflow-x-auto scrollbar-none">
-        {HELP_MODES.map((hm) => (
-          <button
-            key={hm.mode}
-            onClick={() => setMode(hm.mode)}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold",
-              "whitespace-nowrap border transition",
-              mode === hm.mode
-                ? "bg-indigo-600 text-white border-indigo-600"
-                : "bg-white text-gray-600 border-gray-200 hover:border-indigo-300",
-            )}
-          >
-            <span>{hm.icon}</span>
-            <span>{hm.label}</span>
-          </button>
-        ))}
-      </div>
-
       {/* Body — scrollable */}
-      <div className="flex-1 overflow-y-auto px-5 pb-8 space-y-4">
-        {loading || !data ? (
-          <div className="flex items-center gap-3 py-8">
-            <div className="animate-spin text-2xl">⏳</div>
-            <p className="text-indigo-500 font-semibold">Thinking…</p>
-          </div>
-        ) : (
-          <>
-            {/* Visual diagram */}
-            {data.visualPlan && data.visualPlan.diagramType !== "none" && (
-              <VisualRenderer plan={data.visualPlan} animated />
-            )}
+      <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
 
-            {/* Text explanation */}
-            <p className="text-gray-700 text-sm leading-relaxed">
-              {data.content.text}
+        {/* ── Loading state ─────────────────────────────────────────────── */}
+        {loading && (
+          <div className="flex flex-col items-center gap-4 py-12">
+            <div className="w-12 h-12 rounded-full border-4 border-indigo-200 border-t-indigo-600 animate-spin" />
+            <p className="text-indigo-500 font-semibold text-sm">
+              MathAI is thinking…
             </p>
+            <p className="text-xs text-gray-400 text-center max-w-xs">
+              Preparing a personalised explanation just for you!
+            </p>
+          </div>
+        )}
 
-            {/* Numbered steps */}
-            {data.content.steps && data.content.steps.length > 0 && (
-              <ol className="space-y-2">
-                {data.content.steps.map((step) => (
-                  <li key={step.stepNumber} className="flex gap-3">
-                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-black flex items-center justify-center">
-                      {step.stepNumber}
-                    </span>
-                    <p className="text-sm text-gray-700 pt-0.5 leading-snug">
-                      {step.instruction}
-                    </p>
-                  </li>
-                ))}
-              </ol>
+        {/* ── Error state ───────────────────────────────────────────────── */}
+        {!loading && error && (
+          <div className="flex flex-col items-center gap-3 py-10">
+            <div className="text-4xl">😓</div>
+            <p className="font-bold text-gray-700">Something went wrong</p>
+            <p className="text-sm text-gray-500 text-center max-w-xs">{error}</p>
+            <p className="text-xs text-indigo-400">
+              Try rephrasing your question and ask again!
+            </p>
+          </div>
+        )}
+
+        {/* ── Empty state ───────────────────────────────────────────────── */}
+        {!loading && !error && !response && (
+          <div className="flex flex-col items-center gap-3 py-10">
+            <div className="text-4xl">💭</div>
+            <p className="text-sm text-gray-400 text-center">
+              No answer yet — try submitting your question.
+            </p>
+          </div>
+        )}
+
+        {/* ── Success: render real AI response ──────────────────────────── */}
+        {!loading && !error && response && (
+          <>
+            {/* Visual diagram (if applicable) */}
+            {response.visualPlan && response.visualPlan.diagramType !== "none" && (
+              <div className="rounded-2xl overflow-hidden bg-indigo-50 p-3">
+                <VisualRenderer plan={response.visualPlan} animated />
+              </div>
             )}
 
-            {/* Similar example */}
-            {data.similarExample && (
-              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
-                <p className="text-xs font-bold text-amber-600 uppercase tracking-widest mb-1">
-                  Try This
+            {/* Main explanation */}
+            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-4">
+              <p className="text-xs font-bold text-indigo-500 uppercase tracking-widest mb-2">
+                Explanation
+              </p>
+              <p className="text-gray-800 text-sm leading-relaxed font-medium">
+                {response.explanation}
+              </p>
+            </div>
+
+            {/* Step-by-step breakdown */}
+            {response.steps && response.steps.length > 0 && (
+              <div>
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">
+                  Step by Step
                 </p>
-                <p className="text-sm text-amber-900">{data.similarExample.questionText}</p>
-                <p className="text-xs text-amber-700 mt-2 font-semibold">
-                  Key insight: {data.similarExample.keyInsight}
+                <ol className="space-y-3">
+                  {response.steps.map((step) => (
+                    <li key={step.stepNumber} className="flex gap-3 items-start">
+                      <span className="flex-shrink-0 w-7 h-7 rounded-full bg-indigo-600 text-white text-xs font-black flex items-center justify-center shadow-sm">
+                        {step.stepNumber}
+                      </span>
+                      <div className="pt-0.5">
+                        <p className="text-sm text-gray-700 leading-snug">
+                          {step.instruction}
+                        </p>
+                        {step.formula && (
+                          <code className="mt-1 block text-xs bg-gray-100 rounded px-2 py-1 font-mono text-indigo-700">
+                            {step.formula}
+                          </code>
+                        )}
+                        {step.visualCue && (
+                          <p className="mt-1 text-xs text-slate-400 italic">
+                            💡 {step.visualCue}
+                          </p>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+
+            {/* Worked example */}
+            {response.example && (
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-2">
+                <p className="text-xs font-bold text-amber-600 uppercase tracking-widest">
+                  Worked Example
                 </p>
+                <p className="text-sm font-semibold text-amber-900">
+                  {response.example.problem}
+                </p>
+                <p className="text-sm text-amber-800 leading-relaxed">
+                  {response.example.solution}
+                </p>
+                <div className="flex items-start gap-2 pt-1">
+                  <span className="text-base">🔑</span>
+                  <p className="text-xs text-amber-700 font-semibold">
+                    {response.example.keyInsight}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Follow-up nudge */}
+            {response.followUp && (
+              <div className="flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
+                <span className="text-xl shrink-0">🚀</span>
+                <div>
+                  <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest mb-1">
+                    Explore Next
+                  </p>
+                  <p className="text-sm text-emerald-800">
+                    {response.followUp}
+                  </p>
+                </div>
               </div>
             )}
 
             {/* Encouragement */}
-            <p className="text-xs text-indigo-400 font-medium italic text-center">
-              {data.encouragement}
-            </p>
+            {response.encouragement && (
+              <p className="text-center text-sm text-indigo-400 font-semibold italic py-2">
+                {response.encouragement} ✨
+              </p>
+            )}
           </>
         )}
+
       </div>
     </div>
   );

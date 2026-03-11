@@ -1,10 +1,8 @@
 /**
  * @module components/mathai/ask-card
  *
- * Dashboard "Ask MathAI" card — a prominent text-input entrypoint
- * that opens AskPanel when the student types a question and presses Go.
- *
- * Designed to sit near the top of the dashboard above the practice sections.
+ * Dashboard "Ask MathAI" card — text-input entrypoint that calls
+ * POST /api/tutor/ask and renders the real AI response in AskPanel.
  */
 
 "use client";
@@ -13,7 +11,7 @@ import { useState, useRef }  from "react";
 import { cn }                from "@/lib/utils";
 import { AskPanel }          from "./ask-panel";
 import { clientPost }        from "@/lib/clientApi";
-import type { Grade, TutorResponse, HelpMode } from "@/types";
+import type { Grade, AskMathAIResponse } from "@/types";
 
 interface AskCardProps {
   grade:     Grade;
@@ -32,34 +30,51 @@ export function AskCard({ grade, className }: AskCardProps) {
   const [question,   setQuestion]   = useState("");
   const [submitted,  setSubmitted]  = useState("");
   const [panelOpen,  setPanelOpen]  = useState(false);
-  const [response,   setResponse]   = useState<TutorResponse | null>(null);
+  const [response,   setResponse]   = useState<AskMathAIResponse | null>(null);
   const [loading,    setLoading]    = useState(false);
+  const [error,      setError]      = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [placeholderIdx] = useState(
     () => Math.floor(Math.random() * PLACEHOLDER_HINTS.length)
   );
 
-  async function handleSubmit(overrideMode?: HelpMode) {
+  async function handleSubmit() {
     const q = question.trim();
     if (!q) return;
+
     setSubmitted(q);
     setResponse(null);
+    setError(null);
     setLoading(true);
     setPanelOpen(true);
     setQuestion("");
 
-    const data = await clientPost<TutorResponse>("/tutor/ask", {
-      question: q,
-      helpMode: overrideMode ?? "teach_concept",
-      grade,
-    });
-    setResponse(data);
-    setLoading(false);
+    try {
+      const data = await clientPost<AskMathAIResponse>("/tutor/ask", {
+        question: q,
+        grade,
+      });
+
+      if (data) {
+        setResponse(data);
+      } else {
+        setError("MathAI couldn't answer right now. Please try again!");
+      }
+    } catch {
+      setError("Connection error — check your internet and try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter") void handleSubmit();
+  }
+
+  function handleClose() {
+    setPanelOpen(false);
+    setError(null);
   }
 
   return (
@@ -99,15 +114,15 @@ export function AskCard({ grade, className }: AskCardProps) {
           />
           <button
             onClick={() => void handleSubmit()}
-            disabled={!question.trim()}
+            disabled={!question.trim() || loading}
             className={cn(
               "px-4 py-2.5 rounded-2xl font-black text-sm transition",
-              question.trim()
+              question.trim() && !loading
                 ? "bg-white text-indigo-600 hover:bg-indigo-50"
                 : "bg-white/20 text-white/40 cursor-not-allowed",
             )}
           >
-            Go →
+            {loading ? "…" : "Go →"}
           </button>
         </div>
 
@@ -134,14 +149,14 @@ export function AskCard({ grade, className }: AskCardProps) {
           {/* Backdrop */}
           <div
             className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
-            onClick={() => setPanelOpen(false)}
+            onClick={handleClose}
           />
           <AskPanel
             question={submitted}
-            grade={grade}
             response={response}
             loading={loading}
-            onClose={() => setPanelOpen(false)}
+            error={error}
+            onClose={handleClose}
           />
         </>
       )}

@@ -68,6 +68,8 @@ export type {
 
   // Ask MathAI
   AskRequest,
+  AskStep,
+  AskMathAIResponse,
 
   // Profile
   LearningPace,

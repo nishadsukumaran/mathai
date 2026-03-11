@@ -70,19 +70,28 @@ export async function updateProfile(
     update: {},
   });
 
-  // Update name on User if provided
-  if (patch.name) {
+  // Update User fields (name + gradeLevel live on User)
+  const userUpdate: Record<string, unknown> = {};
+  if (patch.name)  userUpdate["name"]       = patch.name;
+  if (patch.grade) userUpdate["gradeLevel"] = patch.grade;
+
+  if (Object.keys(userUpdate).length > 0) {
     await prisma.user.update({
       where: { id: userId },
-      data:  { name: patch.name },
+      data:  userUpdate,
     });
   }
 
-  // Build profile update payload
+  // Build profile update payload (StudentProfile table)
   const profileData: Record<string, unknown> = {};
   if (patch.preferredTheme)            profileData["preferredTheme"]            = patch.preferredTheme;
   if (patch.learningPace)              profileData["learningPace"]              = patch.learningPace;
   if (patch.preferredExplanationStyle) profileData["preferredExplanationStyle"] = patch.preferredExplanationStyle;
+  if (patch.confidenceLevel !== undefined) {
+    // Student-set confidence (1–5) mapped to the 0–100 EWMA scale stored in DB
+    // We scale it linearly: 1 → 20, 2 → 40, 3 → 60, 4 → 80, 5 → 100
+    profileData["confidenceLevel"] = patch.confidenceLevel * 20;
+  }
 
   if (Object.keys(profileData).length > 0) {
     await prisma.studentProfile.update({

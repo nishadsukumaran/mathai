@@ -110,6 +110,13 @@ Grade: ${gradeNum} (${grade})
 Difficulty profile: ${difficultyHint}
 Session mode: ${modeHint}${personalisation}
 
+CRITICAL GRADE REQUIREMENT:
+- ALL questions MUST be appropriate ONLY for Grade ${gradeNum} students (age ~${5 + Number(gradeNum)}–${6 + Number(gradeNum)}).
+- Do NOT go above Grade ${gradeNum} difficulty — no concepts, notation, or operations beyond this grade level.
+- Do NOT go below Grade ${Math.max(1, Number(gradeNum) - 1)} — questions must still be appropriately challenging.
+- If the topic touches concepts beyond Grade ${gradeNum}, simplify them to the grade-appropriate version.
+- Numbers, operations, and vocabulary must all be grade-level appropriate. A Grade 1 student should never see algebra; a Grade 9 student should not be asked basic single-digit arithmetic.
+
 RULES:
 - Mix question types: at least 1 fill_in_blank, at least 1 multiple_choice (if count ≥ 3)
 - multiple_choice MUST have exactly 4 options array with clearly distinct choices

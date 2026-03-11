@@ -14,13 +14,14 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { z }                   from "zod";
 import { askMathAIService }    from "../../ai/services/askMathAIService";
+import { getProfile }          from "../services/profileService";
 import type { Grade, ExplanationStyle, LearningPace } from "@mathai/shared-types";
 
 const router = Router();
 
 const AskSchema = z.object({
   question:    z.string().min(1).max(1000),
-  grade:       z.string().regex(/^G\d+$/).optional().default("G4"),
+  grade:       z.string().regex(/^G\d+$/).optional(), // falls back to student's profile grade
   context:     z.string().max(500).optional(),
   studentName: z.string().max(50).optional(),
   /** Optional profile fields for personalisation */
@@ -44,9 +45,20 @@ router.post("/ask", async (req: Request, res: Response, next: NextFunction) => {
 
     const { question, grade, context, studentName, profile } = parsed.data;
 
+    // Resolve grade: use body grade if provided, otherwise fall back to student profile
+    let resolvedGrade = grade as Grade | undefined;
+    if (!resolvedGrade) {
+      try {
+        const studentProfile = await getProfile(userId);
+        resolvedGrade = studentProfile.grade as Grade;
+      } catch {
+        resolvedGrade = "G4" as Grade; // last resort default
+      }
+    }
+
     const response = await askMathAIService.answer({
       question,
-      grade:       grade as Grade,
+      grade:       resolvedGrade,
       context,
       studentName,
       userId,       // injects full learning memory into the AI prompt
