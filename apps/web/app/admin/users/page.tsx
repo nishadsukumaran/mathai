@@ -23,8 +23,9 @@ interface SearchParams {
 export default async function AdminUsersPage({
   searchParams,
 }: {
-  searchParams: SearchParams;
+  searchParams: Promise<SearchParams>;
 }) {
+  const resolvedParams = await searchParams;
   const session = await getServerSession(authOptions);
 
   // @ts-ignore
@@ -32,10 +33,10 @@ export default async function AdminUsersPage({
     redirect("/auth/signin?callbackUrl=/admin/users");
   }
 
-  const page     = parseInt(searchParams.page ?? "1", 10) || 1;
-  const search   = searchParams.search   ?? "";
-  const role     = searchParams.role     ?? "";
-  const isActive = searchParams.isActive ?? "";
+  const page     = parseInt(resolvedParams.page ?? "1", 10) || 1;
+  const search   = resolvedParams.search   ?? "";
+  const role     = resolvedParams.role     ?? "";
+  const isActive = resolvedParams.isActive ?? "";
 
   const qs = new URLSearchParams();
   qs.set("page",  String(page));

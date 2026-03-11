@@ -16,8 +16,9 @@ export const metadata = { title: "User Detail — MathAI Admin" };
 export default async function AdminUserDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const session = await getServerSession(authOptions);
 
   // @ts-ignore
@@ -25,7 +26,7 @@ export default async function AdminUserDetailPage({
     redirect("/auth/signin?callbackUrl=/admin/users");
   }
 
-  const user = await apiFetch<Record<string, unknown>>(`/admin/users/${params.id}`);
+  const user = await apiFetch<Record<string, unknown>>(`/admin/users/${id}`);
   if (!user) notFound();
 
   return <AdminUserDetailView user={user as never} />;
