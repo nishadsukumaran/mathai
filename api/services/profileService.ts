@@ -8,8 +8,9 @@
  *   PATCH /api/profile           → updateProfile(userId, patch)
  */
 
-import { prisma }       from "../lib/prisma";
-import { NotFoundError } from "../middlewares/error.middleware";
+import { prisma }           from "../lib/prisma";
+import { NotFoundError }    from "../middlewares/error.middleware";
+import { generateAndStore } from "./topicAssignmentService";
 import type {
   StudentProfileResponse,
   UpdateProfileRequest,
@@ -98,6 +99,13 @@ export async function updateProfile(
       where: { userId },
       data:  profileData,
     });
+  }
+
+  // When grade or learning pace changes, regenerate the AI topic assignment
+  // so the next Practice hub visit gets fresh, grade-appropriate topics.
+  // Fire-and-forget — we don't block the profile save response on this.
+  if (patch.grade || patch.learningPace) {
+    void generateAndStore(userId);
   }
 
   // Return fresh profile

@@ -9,8 +9,10 @@
 
 import { useState, useEffect }  from "react";
 import { useSession }           from "next-auth/react";
+import { useQueryClient }       from "@tanstack/react-query";
 import { cn }                   from "@/lib/utils";
 import { useProfile }           from "@/hooks/use-profile";
+import { queryKeys }            from "@/lib/query-keys";
 import type {
   LearningPace,
   ExplanationStyle,
@@ -47,6 +49,7 @@ const STYLE_OPTIONS: { value: ExplanationStyle; label: string; icon: string; des
 export default function ProfilePageContent() {
   const { profile, loading, saving, save, error: profileError } = useProfile();
   const { update: updateSession } = useSession();
+  const queryClient = useQueryClient();
   // Separate save-error from load-error so we can block the form on load failure
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -84,6 +87,9 @@ export default function ProfilePageContent() {
       // Sync the new grade into the NextAuth JWT so subsequent
       // API calls (practice sessions, hints) use the correct grade.
       await updateSession({ grade });
+      // Bust the cached practice menu so the next visit to /practice
+      // fetches fresh topics matched to the newly saved grade.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.practiceMenu });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } else {
@@ -158,7 +164,7 @@ export default function ProfilePageContent() {
                     : "border-gray-100 text-gray-600 hover:border-indigo-300",
                 )}
               >
-                {g.label.replace("Grade ", "G")}
+                {g.label}
               </button>
             ))}
           </div>

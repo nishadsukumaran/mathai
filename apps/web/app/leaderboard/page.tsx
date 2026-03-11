@@ -18,6 +18,25 @@ async function fetchGamification(_userId: string) {
   return apiFetch("/gamification/dashboard");
 }
 
+/* ─── Level titles — must stay in sync with services/gamification/xp_engine.ts */
+
+const LEVEL_TITLES: Record<number, string> = {
+  1:  "Math Seedling",
+  2:  "Number Explorer",
+  3:  "Problem Solver",
+  4:  "Equation Hunter",
+  5:  "Fraction Fighter",
+  6:  "Math Navigator",
+  7:  "Logic Master",
+  8:  "Number Ninja",
+  9:  "Math Wizard",
+  10: "Math Champion",
+};
+
+function getLevelTitle(level: number): string {
+  return LEVEL_TITLES[level] ?? LEVEL_TITLES[10] ?? "Math Champion";
+}
+
 /* ─── Mock leaderboard data until the API grows a real endpoint ─────────── */
 
 const MOCK_LEADERBOARD = [
@@ -35,9 +54,10 @@ function mapXP(gamification: any): XPStatus | null {
   if (!gamification) return null;
   const xpInLevel = gamification.xp ?? 0;
   const xpToNext = gamification.xpToNextLevel ?? 500;
+  const level = gamification.level ?? 1;
   return {
-    level: gamification.level ?? 1,
-    levelTitle: "Explorer",
+    level,
+    levelTitle: getLevelTitle(level),
     xpInLevel,
     xpToNextLevel: xpToNext,
     progressPct: gamification.xpProgress
@@ -69,12 +89,36 @@ export default async function LeaderboardPage() {
 
   const gamification = await fetchGamification(userId);
 
+  // Build current-user entry and insert into the ranked list at the correct position.
+  const userName  = session.user?.name ?? "You";
+  const userXP    = (gamification as any)?.xp ?? 0;
+  const userLevel = (gamification as any)?.level ?? 1;
+  const userStreak = (gamification as any)?.streak ?? 0;
+
+  const userEntry = {
+    rank:   0,         // placeholder — will be overwritten below
+    name:   userName,
+    xp:     userXP,
+    level:  userLevel,
+    streak: userStreak,
+    avatar: "🧑‍🎓",
+    isCurrentUser: true,
+  };
+
+  // Merge current user into mock list, sort by XP desc, then re-rank.
+  const allEntries = [
+    ...MOCK_LEADERBOARD.map((e) => ({ ...e, isCurrentUser: false })),
+    userEntry,
+  ]
+    .sort((a, b) => b.xp - a.xp)
+    .map((e, i) => ({ ...e, rank: i + 1 }));
+
   return (
     <LeaderboardView
       xp={mapXP(gamification)}
       streak={mapStreak(gamification)}
-      userName={session.user?.name ?? "Explorer"}
-      entries={MOCK_LEADERBOARD}
+      userName={userName}
+      entries={allEntries}
     />
   );
 }

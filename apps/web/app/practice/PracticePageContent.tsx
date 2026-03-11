@@ -89,32 +89,28 @@ function PracticeHub() {
           </div>
         )}
 
-        {/* Empty — no recommendations yet */}
+        {/* Empty — topics are being generated (happens on first login) */}
         {!loading && !error && allItems.length === 0 && (
           <div className="text-center py-12 bg-white rounded-3xl border border-slate-100 shadow-sm">
-            <p className="text-4xl mb-3">📚</p>
-            <p className="font-bold text-gray-700 mb-2">No topics ready yet</p>
+            <p className="text-4xl mb-3">⏳</p>
+            <p className="font-bold text-gray-700 mb-2">Your topics are being prepared…</p>
             <p className="text-sm text-slate-400 mb-5">
-              Set up your grade in Profile and we&apos;ll personalise your recommendations
+              This only takes a moment. Refresh the page to check — or ask MathAI a question while you wait!
             </p>
-            <Link
-              href="/profile"
-              className="inline-block bg-indigo-600 text-white px-6 py-2.5 rounded-2xl font-bold text-sm hover:bg-indigo-700 transition"
-            >
-              Set Up Profile →
-            </Link>
-          </div>
-        )}
-
-        {/* Browse all topics link */}
-        {!loading && (
-          <div className="text-center pt-2">
-            <Link
-              href="/progress"
-              className="text-sm font-bold text-indigo-500 hover:text-indigo-700 transition"
-            >
-              Browse all topics on Progress page →
-            </Link>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <a
+                href="/practice"
+                className="inline-block bg-indigo-600 text-white px-6 py-2.5 rounded-2xl font-bold text-sm hover:bg-indigo-700 transition"
+              >
+                Refresh →
+              </a>
+              <Link
+                href="/ask"
+                className="inline-block bg-white border-2 border-indigo-200 text-indigo-600 px-6 py-2.5 rounded-2xl font-bold text-sm hover:border-indigo-400 transition"
+              >
+                Ask MathAI instead
+              </Link>
+            </div>
           </div>
         )}
 

@@ -8,6 +8,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { z }                 from "zod";
 import { getProfile, updateProfile } from "../services/profileService";
+import { generateAndStore }  from "../services/topicAssignmentService";
 import { NotFoundError }     from "../middlewares/error.middleware";
 
 const router = Router();
@@ -49,6 +50,25 @@ router.patch("/", async (req: Request, res: Response, next: NextFunction) => {
 
     const updated = await updateProfile(userId, parsed.data);
     res.json({ success: true, data: updated });
+  } catch (err) { next(err); }
+});
+
+// ── POST /api/profile/generate-initial-topics ─────────────────────────────────
+// Internal endpoint called by the Next.js signup route immediately after account
+// creation. No auth middleware here — validated by presence of userId in body.
+// Generates and stores the AI-assigned topic queue for a brand-new user so
+// that their first /practice visit shows content rather than an empty state.
+
+router.post("/generate-initial-topics", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { userId } = req.body as { userId?: string };
+    if (!userId) {
+      res.status(400).json({ success: false, error: "userId required" });
+      return;
+    }
+    // Run synchronously so we can confirm success to the caller.
+    await generateAndStore(userId);
+    res.json({ success: true });
   } catch (err) { next(err); }
 });
 

@@ -30,6 +30,10 @@ const BAR_R   = 6;
 
 export function FractionBar({ data, animated = true }: FractionBarProps) {
   const { fractions } = data;
+
+  // Guard: AI may return a visualPlan with missing or empty fractions array.
+  if (!fractions || fractions.length === 0) return null;
+
   const svgH = fractions.length * (ROW_H + ROW_GAP) + ROW_GAP;
 
   return (

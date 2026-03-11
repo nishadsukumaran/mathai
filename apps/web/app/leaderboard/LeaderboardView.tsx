@@ -19,6 +19,7 @@ interface LeaderboardEntry {
   level: number;
   streak: number;
   avatar: string;
+  isCurrentUser?: boolean;
 }
 
 interface LeaderboardViewProps {
@@ -54,9 +55,6 @@ export default function LeaderboardView({
         <header className="text-center">
           <h1 className="text-3xl font-black text-gray-800">Leaderboard 🏆</h1>
           <p className="text-sm text-slate-500 mt-1">Top mathematicians this week</p>
-          <span className="inline-flex items-center gap-1.5 mt-3 px-3 py-1 rounded-full bg-amber-100 border border-amber-300 text-amber-700 text-xs font-bold">
-            🔮 Sample data — live rankings coming soon
-          </span>
         </header>
 
         {/* ── Your stats row ───────────────────────────────────────────── */}
@@ -94,7 +92,9 @@ export default function LeaderboardView({
             <div
               key={entry.rank}
               className={`rounded-2xl p-4 border flex items-center gap-4 transition-all hover:shadow-md ${
-                RANK_STYLES[entry.rank] ?? "bg-white border-gray-100 shadow-sm"
+                entry.isCurrentUser
+                  ? "border-indigo-400 bg-indigo-50 ring-2 ring-indigo-200"
+                  : RANK_STYLES[entry.rank] ?? "bg-white border-gray-100 shadow-sm"
               }`}
             >
               <div className="w-10 text-center">
@@ -110,7 +110,9 @@ export default function LeaderboardView({
                 {entry.avatar}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-gray-800 truncate">{entry.name}</p>
+                <p className="font-bold text-gray-800 truncate">
+                  {entry.name}{entry.isCurrentUser && <span className="ml-1.5 text-xs text-indigo-500 font-black">(You)</span>}
+                </p>
                 <p className="text-xs text-slate-400">
                   Level {entry.level} · 🔥 {entry.streak} day streak
                 </p>
@@ -123,9 +125,9 @@ export default function LeaderboardView({
           ))}
         </div>
 
-        {/* ── Footer note ──────────────────────────────────────────────── */}
+        {/* ── Footer note — single "coming soon" notice ─────────────────── */}
         <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-center text-sm text-blue-600">
-          🔮 Real-time leaderboard coming soon — as more students join, rankings update live!
+          🔮 Live rankings coming soon — as more students join, the board updates in real time!
         </div>
 
       </div>

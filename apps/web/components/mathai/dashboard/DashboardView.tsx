@@ -78,7 +78,7 @@ export default function DashboardView({ data }: Props) {
             <h1 className="text-2xl font-black text-gray-800 truncate">
               Hey {student.name}! 👋
             </h1>
-            <p className="text-sm text-slate-500">Grade {student.grade}</p>
+            <p className="text-sm text-slate-500">Grade {student.grade.replace("G", "")}</p>
           </div>
 
           {xp && (
@@ -115,8 +115,8 @@ export default function DashboardView({ data }: Props) {
                 className="bg-white/15 hover:bg-white/25 rounded-2xl p-4 transition"
               >
                 <p className="text-2xl mb-1">⚙️</p>
-                <p className="font-bold text-sm">Set your grade</p>
-                <p className="text-xs text-indigo-200 mt-0.5">Personalise your learning experience</p>
+                <p className="font-bold text-sm">Customise settings</p>
+                <p className="text-xs text-indigo-200 mt-0.5">Learning pace, style &amp; confidence</p>
               </Link>
             </div>
           </section>

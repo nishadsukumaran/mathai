@@ -25,6 +25,9 @@ interface VisualRendererProps {
 }
 
 export function VisualRenderer({ plan, animated = true, className }: VisualRendererProps) {
+  // Guard: plan may be undefined/null at runtime even though type says required.
+  if (!plan) return null;
+
   const { diagramType, data } = plan;
 
   let diagram: React.ReactNode = null;

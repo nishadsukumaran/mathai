@@ -102,6 +102,7 @@ export function AppNav() {
               <Link
                 key={item.href}
                 href={item.href}
+                title={item.label}
                 className={cn(
                   "flex items-center gap-3 px-3 py-3 rounded-2xl font-bold text-sm transition-all",
                   active

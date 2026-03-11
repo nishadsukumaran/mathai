@@ -5,16 +5,16 @@ import { signIn } from "next-auth/react";
 import Link from "next/link";
 
 const GRADES = [
-  { value: "G1",  label: "G1" },
-  { value: "G2",  label: "G2" },
-  { value: "G3",  label: "G3" },
-  { value: "G4",  label: "G4" },
-  { value: "G5",  label: "G5" },
-  { value: "G6",  label: "G6" },
-  { value: "G7",  label: "G7" },
-  { value: "G8",  label: "G8" },
-  { value: "G9",  label: "G9" },
-  { value: "G10", label: "G10" },
+  { value: "G1",  label: "Grade 1" },
+  { value: "G2",  label: "Grade 2" },
+  { value: "G3",  label: "Grade 3" },
+  { value: "G4",  label: "Grade 4" },
+  { value: "G5",  label: "Grade 5" },
+  { value: "G6",  label: "Grade 6" },
+  { value: "G7",  label: "Grade 7" },
+  { value: "G8",  label: "Grade 8" },
+  { value: "G9",  label: "Grade 9" },
+  { value: "G10", label: "Grade 10" },
 ] as const;
 
 export default function SignUpPage() {

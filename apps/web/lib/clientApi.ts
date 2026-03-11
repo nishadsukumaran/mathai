@@ -33,8 +33,9 @@ async function getToken(): Promise<string> {
       return `Bearer ${token}`;
     }
     // Session expired or unauthenticated — redirect to sign-in.
+    // Guard window access: getToken may be called during SSR where window is undefined.
     if (res.status === 401) {
-      window.location.href = "/auth/signin";
+      if (typeof window !== "undefined") window.location.href = "/auth/signin";
       return "";
     }
   } catch {

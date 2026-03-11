@@ -40,8 +40,8 @@ export default function AskPageContent() {
 
   const grade = profile?.grade ?? "G4";
 
-  async function handleSubmit() {
-    const q = question.trim();
+  async function handleSubmit(overrideQ?: string) {
+    const q = (overrideQ !== undefined ? overrideQ : question).trim();
     if (!q) return;
 
     const id = `${Date.now()}`;
@@ -157,7 +157,7 @@ export default function AskPageContent() {
                 {SUGGESTIONS.map((s) => (
                   <button
                     key={s}
-                    onClick={() => { setQuestion(s); inputRef.current?.focus(); }}
+                    onClick={() => void handleSubmit(s)}
                     className="bg-white border border-indigo-100 rounded-2xl p-4 text-sm text-gray-700 font-medium text-left hover:border-indigo-300 hover:shadow-md transition-all"
                   >
                     &ldquo;{s}&rdquo;
@@ -250,21 +250,35 @@ export default function AskPageContent() {
   );
 }
 
+// ─── Inline markdown renderer ─────────────────────────────────────────────────
+// Handles **bold** and *italic* from AI responses without pulling in a full parser.
+
+function renderMd(text: string): React.ReactNode {
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith("*") && part.endsWith("*")) {
+      return <em key={i}>{part.slice(1, -1)}</em>;
+    }
+    return part;
+  });
+}
+
 // ─── Response card sub-component ─────────────────────────────────────────────
 
 function ResponseCard({ response }: { response: AskMathAIResponse }) {
   return (
     <div className="space-y-4">
-      {/* Visual */}
+      {/* Visual — VisualRenderer manages its own container; no wrapper div needed */}
       {response.visualPlan && response.visualPlan.diagramType !== "none" && (
-        <div className="bg-indigo-50 rounded-3xl p-4 border border-indigo-100">
-          <VisualRenderer plan={response.visualPlan} animated />
-        </div>
+        <VisualRenderer plan={response.visualPlan} animated />
       )}
 
       {/* Explanation */}
       <div className="bg-white rounded-3xl rounded-tl-lg px-5 py-4 shadow-sm border border-indigo-100">
-        <p className="text-gray-800 text-sm leading-relaxed">{response.explanation}</p>
+        <p className="text-gray-800 text-sm leading-relaxed">{renderMd(response.explanation)}</p>
       </div>
 
       {/* Steps */}
@@ -278,7 +292,7 @@ function ResponseCard({ response }: { response: AskMathAIResponse }) {
                   {step.stepNumber}
                 </span>
                 <div>
-                  <p className="text-sm text-gray-700">{step.instruction}</p>
+                  <p className="text-sm text-gray-700">{renderMd(step.instruction)}</p>
                   {step.formula && (
                     <code className="mt-1 block text-xs bg-gray-100 rounded px-2 py-1 font-mono text-purple-700">
                       {step.formula}
@@ -295,9 +309,9 @@ function ResponseCard({ response }: { response: AskMathAIResponse }) {
       {response.example && (
         <div className="bg-amber-50 border border-amber-200 rounded-3xl px-5 py-4 space-y-2">
           <p className="text-xs font-bold text-amber-600 uppercase tracking-widest">Worked Example</p>
-          <p className="text-sm font-semibold text-amber-900">{response.example.problem}</p>
-          <p className="text-sm text-amber-800">{response.example.solution}</p>
-          <p className="text-xs text-amber-700 font-semibold">🔑 {response.example.keyInsight}</p>
+          <p className="text-sm font-semibold text-amber-900">{renderMd(response.example.problem)}</p>
+          <p className="text-sm text-amber-800">{renderMd(response.example.solution)}</p>
+          <p className="text-xs text-amber-700 font-semibold">🔑 {renderMd(response.example.keyInsight)}</p>
         </div>
       )}
 
@@ -305,7 +319,7 @@ function ResponseCard({ response }: { response: AskMathAIResponse }) {
       {response.followUp && (
         <div className="bg-emerald-50 border border-emerald-200 rounded-3xl px-5 py-3">
           <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest mb-1">Explore Next</p>
-          <p className="text-sm text-emerald-800">{response.followUp}</p>
+          <p className="text-sm text-emerald-800">{renderMd(response.followUp)}</p>
         </div>
       )}
       {response.encouragement && (

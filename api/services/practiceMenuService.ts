@@ -28,6 +28,8 @@ import type {
 } from "@mathai/shared-types";
 import { recommendationService } from "../../ai/services/recommendationService";
 import { studentMemoryService }  from "../../ai/services/studentMemoryService";
+import { getTopicsForGrade }     from "@/curriculum/topic_tree";
+import { generateAndStore }      from "./topicAssignmentService";
 
 // ─── Grade progression map ────────────────────────────────────────────────────
 
@@ -126,20 +128,134 @@ export async function getPracticeMenu(userId: string): Promise<PracticeMenu> {
   // Helper to get progress for a topic
   const getProgress = (topicId: string) => progressMap.get(topicId) ?? null;
 
-  // 3. Fetch curriculum topics for this grade (and adjacent grades)
+  // 3. Resolve curriculum topics — priority order:
+  //    a) AI-assigned topic queue stored in StudentProfile (personalised, AI-ordered)
+  //    b) DB Topic table filtered by gradeBand (if seeded)
+  //    c) Static curriculum tree (always available fallback)
+
   let gradeTopics:    Array<{ id: string; name: string }> = [];
   let prevGradeTopics: Array<{ id: string; name: string }> = [];
   let nextGradeTopics: Array<{ id: string; name: string }> = [];
 
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const topicModel = (prisma as any).topic;
-    if (topicModel) {
-      gradeTopics     = await topicModel.findMany({ where: { gradeBand: grade },     select: { id: true, name: true }, take: 20 });
-      if (prevG) prevGradeTopics = await topicModel.findMany({ where: { gradeBand: prevG }, select: { id: true, name: true }, take: 10 });
-      if (nextG) nextGradeTopics = await topicModel.findMany({ where: { gradeBand: nextG }, select: { id: true, name: true }, take: 10 });
+  // ── 3a. AI-assigned queue ─────────────────────────────────────────────────
+  const storedAssigned = Array.isArray((profile as Record<string, unknown>)["aiAssignedTopics"])
+    ? (profile as Record<string, unknown>)["aiAssignedTopics"] as string[]
+    : [];
+
+  if (storedAssigned.length > 0) {
+    // The stored list is already AI-ordered across all three grade bands.
+    // We need topic names to display — build a name lookup from DB + static tree.
+    const allCurrTopics: Array<{ id: string; name: string }> = [];
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const topicModel = (prisma as any).topic;
+      if (topicModel) {
+        const dbTopics = await topicModel.findMany({
+          where:  { id: { in: storedAssigned } },
+          select: { id: true, name: true },
+        }) as { id: string; name: string }[];
+        allCurrTopics.push(...dbTopics);
+      }
+    } catch { /* DB not seeded */ }
+
+    // Fill gaps from static curriculum tree for any IDs not found in DB
+    const foundIds = new Set(allCurrTopics.map((t) => t.id));
+    if (foundIds.size < storedAssigned.length) {
+      const staticAll = [
+        ...getTopicsForGrade(grade as unknown as import("@/types").Grade),
+        ...(prevG ? getTopicsForGrade(prevG as unknown as import("@/types").Grade) : []),
+        ...(nextG ? getTopicsForGrade(nextG as unknown as import("@/types").Grade) : []),
+      ];
+      for (const t of staticAll) {
+        if (storedAssigned.includes(t.id) && !foundIds.has(t.id)) {
+          allCurrTopics.push({ id: t.id, name: t.name });
+          foundIds.add(t.id);
+        }
+      }
     }
-  } catch { /* curriculum not seeded — fall through to allProgress-based sections */ }
+
+    // Build name map and split by grade band for section builders below
+    const nameMap = new Map(allCurrTopics.map((t) => [t.id, t.name]));
+    const gradePrefix = grade.toLowerCase();        // e.g. "g5"
+    const prevPrefix  = prevG ? prevG.toLowerCase() : "";
+    const nextPrefix  = nextG ? nextG.toLowerCase() : "";
+
+    // Preserve AI-assigned order within each section
+    for (const id of storedAssigned) {
+      const name = nameMap.get(id) ??
+        id.replace(/^g\d+-/, "").replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+      if (id.startsWith(gradePrefix + "-")) {
+        gradeTopics.push({ id, name });
+      } else if (prevPrefix && id.startsWith(prevPrefix + "-")) {
+        prevGradeTopics.push({ id, name });
+      } else if (nextPrefix && id.startsWith(nextPrefix + "-")) {
+        nextGradeTopics.push({ id, name });
+      } else {
+        // Unknown grade prefix — add to grade topics as catch-all
+        gradeTopics.push({ id, name });
+      }
+    }
+  }
+
+  // ── 3b/c. Fallback: DB or static tree (runs if AI queue is empty) ─────────
+  if (gradeTopics.length === 0) {
+    // No AI assignment yet — generate synchronously so this request returns
+    // real topics rather than an empty state. Subsequent requests will hit
+    // the cached aiAssignedTopics in StudentProfile.
+    try { await generateAndStore(userId); } catch { /* will use static fallback below */ }
+    // Re-read profile to pick up the freshly generated topics
+    const refreshed = await prisma.studentProfile.findUnique({ where: { userId } });
+    const refreshedTopics = Array.isArray((refreshed as Record<string, unknown> | null)?.["aiAssignedTopics"])
+      ? (refreshed as Record<string, unknown>)["aiAssignedTopics"] as string[]
+      : [];
+    if (refreshedTopics.length > 0) {
+      const gradePrefix = grade.toLowerCase();
+      const prevPrefix  = prevG ? prevG.toLowerCase() : "";
+      const nextPrefix  = nextG ? nextG.toLowerCase() : "";
+      for (const id of refreshedTopics) {
+        const name = id.replace(/^g\d+-/, "").replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+        if (prevPrefix && id.startsWith(prevPrefix + "-")) {
+          prevGradeTopics.push({ id, name });
+        } else if (nextPrefix && id.startsWith(nextPrefix + "-")) {
+          nextGradeTopics.push({ id, name });
+        } else if (id.startsWith(gradePrefix + "-") || !prevPrefix) {
+          gradeTopics.push({ id, name });
+        } else {
+          gradeTopics.push({ id, name });
+        }
+      }
+    }
+
+    // DB + static fallbacks only needed if AI generation above didn't produce topics
+    if (gradeTopics.length === 0) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const topicModel = (prisma as any).topic;
+        if (topicModel) {
+          gradeTopics     = await topicModel.findMany({ where: { gradeBand: grade },     select: { id: true, name: true }, take: 20 });
+          if (prevG) prevGradeTopics = await topicModel.findMany({ where: { gradeBand: prevG }, select: { id: true, name: true }, take: 10 });
+          if (nextG) nextGradeTopics = await topicModel.findMany({ where: { gradeBand: nextG }, select: { id: true, name: true }, take: 10 });
+        }
+      } catch { /* curriculum not seeded */ }
+    }
+
+    // Static curriculum tree as final fallback
+    if (gradeTopics.length === 0) {
+      gradeTopics = getTopicsForGrade(grade as unknown as import("@/types").Grade)
+        .map((t) => ({ id: t.id, name: t.name }))
+        .slice(0, 20);
+    }
+    if (prevG && prevGradeTopics.length === 0) {
+      prevGradeTopics = getTopicsForGrade(prevG as unknown as import("@/types").Grade)
+        .map((t) => ({ id: t.id, name: t.name }))
+        .slice(0, 10);
+    }
+    if (nextG && nextGradeTopics.length === 0) {
+      nextGradeTopics = getTopicsForGrade(nextG as unknown as import("@/types").Grade)
+        .map((t) => ({ id: t.id, name: t.name }))
+        .slice(0, 10);
+    }
+  }
 
   // ── Section builders ──────────────────────────────────────────────────────
 

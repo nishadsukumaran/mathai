@@ -31,6 +31,7 @@ import { masteryEvaluator } from "../../curriculum/mastery_evaluator";
 import { tutorService } from "../../ai/tutor/tutor_service";
 import { questionGeneratorService } from "../../ai/services/questionGeneratorService";
 import { studentMemoryService }    from "../../ai/services/studentMemoryService";
+import { appendAfterCompletion }  from "./topicAssignmentService";
 import { NotFoundError, ValidationError } from "../middlewares/error.middleware";
 
 // ─── In-Memory Session Store ──────────────────────────────────────────────────
@@ -353,7 +354,10 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
         avgConfidenceAfter: avgConf,
       }),
       studentMemoryService.refreshSnapshot(session.userId),
-    ]).catch((e) => console.warn("[practiceService] Memory update failed:", e));
+      // Re-prioritise the AI topic queue: move the completed topic to the back
+      // and check if new grade-level topics should be injected.
+      appendAfterCompletion(session.userId, session.topicId),
+    ]).catch((e) => console.warn("[practiceService] Post-session update failed:", e));
   }
 
   // 9. Encouragement
