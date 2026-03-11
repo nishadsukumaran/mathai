@@ -38,7 +38,11 @@ export function VisualRenderer({ plan, animated = true, className }: VisualRende
       break;
 
     case "fraction_bar":
-      diagram = <FractionBar data={data} animated={animated} />;
+      // Guard: only create the element if the fractions array is non-empty;
+      // otherwise diagram stays null and the wrapper div is skipped.
+      if (data?.fractions && data.fractions.length > 0) {
+        diagram = <FractionBar data={data} animated={animated} />;
+      }
       break;
 
     case "array":
@@ -59,6 +63,10 @@ export function VisualRenderer({ plan, animated = true, className }: VisualRende
       // Not yet implemented / no visual needed
       return null;
   }
+
+  // If diagram is still null (e.g. fraction_bar with no fractions data),
+  // skip the wrapper entirely so we don't render an empty styled box.
+  if (!diagram) return null;
 
   return (
     <div
