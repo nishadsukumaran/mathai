@@ -184,7 +184,6 @@ export default function PracticeContainer({ topicId, mode }: Props) {
           questionId:     currentQ.id,
           questionText:   currentQ.prompt,
           topicId:        session.topicId,
-          grade:          "G4",
           hintsUsedSoFar: hintsUsed,
         }),
       });

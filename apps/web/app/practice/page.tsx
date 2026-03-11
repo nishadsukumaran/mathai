@@ -2,14 +2,20 @@
  * @module apps/web/app/practice/page
  *
  * Route entry point for /practice.
- * Responsibilities: read URL params + render PracticeContainer inside Suspense.
+ * Server component — performs auth check before rendering.
  * All session logic lives in PracticeContainer.
  */
 
-import { Suspense }          from "react";
-import PracticePageContent   from "./PracticePageContent";
+import { getServerSession } from "next-auth";
+import { redirect }         from "next/navigation";
+import { authOptions }      from "@/lib/auth";
+import { Suspense }         from "react";
+import PracticePageContent  from "./PracticePageContent";
 
-export default function PracticePage() {
+export default async function PracticePage() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) redirect("/auth/signin?callbackUrl=/practice");
+
   return (
     <Suspense
       fallback={

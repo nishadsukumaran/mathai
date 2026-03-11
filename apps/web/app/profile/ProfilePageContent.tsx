@@ -8,6 +8,7 @@
 "use client";
 
 import { useState, useEffect }  from "react";
+import { useSession }           from "next-auth/react";
 import { cn }                   from "@/lib/utils";
 import { useProfile }           from "@/hooks/use-profile";
 import type {
@@ -44,8 +45,10 @@ const STYLE_OPTIONS: { value: ExplanationStyle; label: string; icon: string }[] 
 ];
 
 export default function ProfilePageContent() {
-  const { profile, loading, saving, save } = useProfile();
+  const { profile, loading, saving, save, error: saveError } = useProfile();
+  const { update: updateSession } = useSession();
 
+  const [name,       setName]       = useState("");
   const [grade,      setGrade]      = useState<Grade>("G4");
   const [pace,       setPace]       = useState<LearningPace>("standard");
   const [style,      setStyle]      = useState<ExplanationStyle>("visual");
@@ -55,22 +58,32 @@ export default function ProfilePageContent() {
   // Populate from loaded profile
   useEffect(() => {
     if (profile) {
+      setName(profile.name ?? "");
       setGrade(profile.grade as Grade);
       setPace(profile.learningPace);
       setStyle(profile.preferredExplanationStyle);
-      setConfidence(profile.confidenceLevel ?? 3);
+      // DB stores confidenceLevel on a 0–100 EWMA scale.
+      // The UI slider uses 1–5. Map and clamp accordingly.
+      const raw = profile.confidenceLevel ?? 60;
+      setConfidence(Math.max(1, Math.min(5, Math.round(raw / 20))));
     }
   }, [profile]);
 
   async function handleSave() {
-    await save({
+    const updated = await save({
+      name:                      name.trim() || undefined,
       grade,
-      learningPace: pace,
+      learningPace:              pace,
       preferredExplanationStyle: style,
-      confidenceLevel: confidence,
+      confidenceLevel:           confidence,
     });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    if (updated) {
+      // Sync the new grade into the NextAuth JWT so subsequent
+      // API calls (practice sessions, hints) use the correct grade.
+      await updateSession({ grade });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    }
   }
 
   if (loading) {
@@ -87,12 +100,19 @@ export default function ProfilePageContent() {
 
         {/* Header */}
         <div className="flex items-center gap-4 bg-white rounded-3xl p-6 shadow-md border border-indigo-100">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-3xl font-black text-white shadow-lg">
-            {profile?.name?.[0]?.toUpperCase() ?? "S"}
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-3xl font-black text-white shadow-lg shrink-0">
+            {name?.[0]?.toUpperCase() ?? profile?.name?.[0]?.toUpperCase() ?? "S"}
           </div>
-          <div>
-            <h1 className="font-black text-2xl text-gray-800">{profile?.name ?? "Student"}</h1>
-            <p className="text-slate-500 text-sm">⭐ Level {profile?.currentLevel ?? 1} · {(profile?.totalXp ?? 0).toLocaleString()} XP</p>
+          <div className="flex-1 min-w-0">
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Your display name"
+              maxLength={80}
+              className="w-full font-black text-2xl text-gray-800 bg-transparent border-b-2 border-transparent focus:border-indigo-400 outline-none transition pb-0.5"
+            />
+            <p className="text-slate-500 text-sm mt-1">⭐ Level {profile?.currentLevel ?? 1} · {(profile?.totalXp ?? 0).toLocaleString()} XP</p>
           </div>
         </div>
 
@@ -181,6 +201,13 @@ export default function ProfilePageContent() {
             {["", "Not sure yet", "Getting there", "Doing OK", "Fairly confident", "Very confident"][confidence]}
           </p>
         </section>
+
+        {/* Save error */}
+        {saveError && (
+          <div className="bg-red-50 border border-red-200 rounded-2xl px-4 py-3 text-sm text-red-700 font-semibold">
+            ⚠️ {saveError} — please try again.
+          </div>
+        )}
 
         {/* Save button */}
         <button

@@ -11,10 +11,8 @@ import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 // Build provider list dynamically
 const providers: NextAuthOptions["providers"] = [];
@@ -84,15 +82,30 @@ export const authOptions: NextAuthOptions = {
         session.user = {
           ...session.user,
           // @ts-ignore — extend session type
-          id: token.sub,
+          id:    token.sub,
+          grade: (token["grade"] as string | undefined) ?? "G4",
         };
       }
       return session;
     },
-    jwt: async ({ token, user }) => {
+    jwt: async ({ token, user, trigger, session: updateSession }) => {
       if (user) {
+        // Initial sign-in: embed the student's gradeLevel into the JWT so
+        // the Express API auth middleware can read it without a DB call.
         token.sub = user.id;
+        const dbUser = await prisma.user.findUnique({
+          where:  { id: user.id },
+          select: { gradeLevel: true },
+        });
+        token["grade"] = dbUser?.gradeLevel ?? "G4";
       }
+
+      // Handle client-side session.update({ grade: "G5" }) calls —
+      // triggered from the profile page after a grade change is saved.
+      if (trigger === "update" && (updateSession as Record<string, unknown>)?.["grade"]) {
+        token["grade"] = (updateSession as Record<string, unknown>)["grade"];
+      }
+
       return token;
     },
   },

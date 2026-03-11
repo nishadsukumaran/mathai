@@ -5,15 +5,18 @@
  */
 
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { email, password, name } = body;
+    const { email, password, name, grade } = body as {
+      email: string;
+      password: string;
+      name: string;
+      grade?: string;
+    };
 
     if (!email || !password || !name) {
       return NextResponse.json(
@@ -21,6 +24,11 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
+
+    const VALID_GRADES = ["G1","G2","G3","G4","G5","G6","G7","G8","G9","G10"] as const;
+    const gradeLevel = VALID_GRADES.includes(grade as typeof VALID_GRADES[number])
+      ? (grade as string)
+      : "G4";
 
     if (password.length < 6) {
       return NextResponse.json(
@@ -46,6 +54,7 @@ export async function POST(req: Request) {
         name,
         hashedPassword,
         role: "student",
+        gradeLevel: gradeLevel as any,
       },
     });
 

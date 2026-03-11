@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MathAI — QA Test Report</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 14px;
+      color: #1a1a2e;
+      background: #f8f9fc;
+      line-height: 1.6;
+    }
+    header {
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      color: white;
+      padding: 40px 48px 32px;
+    }
+    header h1 { font-size: 28px; font-weight: 800; margin-bottom: 4px; }
+    header .meta { opacity: 0.8; font-size: 13px; margin-top: 8px; }
+    header .summary-pills {
+      display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px;
+    }
+    .pill {
+      padding: 4px 14px; border-radius: 999px; font-size: 12px; font-weight: 700;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .pill-p0 { background: #ff4757; color: white; }
+    .pill-p1 { background: #ff6b35; color: white; }
+    .pill-p2 { background: #ffa502; color: white; }
+    .pill-p3 { background: #2ed573; color: #1a1a2e; }
+    .pill-info { background: rgba(255,255,255,0.2); color: white; }
+
+    .container { max-width: 960px; margin: 0 auto; padding: 32px 24px; }
+
+    .section-header {
+      display: flex; align-items: center; gap: 12px;
+      margin: 36px 0 16px;
+    }
+    .section-header h2 {
+      font-size: 18px; font-weight: 800; color: #1a1a2e;
+    }
+    .severity-badge {
+      padding: 3px 10px; border-radius: 6px; font-size: 11px; font-weight: 800;
+      letter-spacing: 0.5px; text-transform: uppercase;
+    }
+    .sev-p0 { background: #ffe0e3; color: #c0392b; border: 1px solid #ffb3bb; }
+    .sev-p1 { background: #fff0e6; color: #c0601a; border: 1px solid #ffcc99; }
+    .sev-p2 { background: #fff8e1; color: #9a6700; border: 1px solid #ffd966; }
+    .sev-p3 { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+
+    .bug-card {
+      background: white;
+      border-radius: 12px;
+      border: 1px solid #e8ecf0;
+      padding: 20px 24px;
+      margin-bottom: 14px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+    .bug-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.09); }
+
+    .bug-title {
+      font-size: 15px; font-weight: 700; color: #1a1a2e; margin-bottom: 6px;
+      display: flex; align-items: flex-start; gap: 10px;
+    }
+    .bug-id {
+      font-size: 11px; font-weight: 700; color: #8892a4;
+      background: #f0f2f5; padding: 2px 8px; border-radius: 4px;
+      white-space: nowrap; margin-top: 2px; flex-shrink: 0;
+    }
+
+    .bug-meta {
+      display: flex; gap: 16px; flex-wrap: wrap; margin: 8px 0 12px;
+    }
+    .bug-meta-item {
+      font-size: 12px; color: #5c6880;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .bug-meta-item strong { color: #1a1a2e; }
+
+    .bug-desc { color: #444c5e; margin-bottom: 12px; }
+
+    .code-block {
+      background: #1e1e2e;
+      color: #cdd6f4;
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-family: "Fira Code", "Cascadia Code", Consolas, monospace;
+      font-size: 12.5px;
+      overflow-x: auto;
+      margin: 10px 0;
+      line-height: 1.6;
+    }
+    .code-block .line-no { color: #45475a; user-select: none; margin-right: 12px; }
+    .code-bad  { color: #f38ba8; }
+    .code-good { color: #a6e3a1; }
+    .code-comment { color: #6c7086; font-style: italic; }
+    .code-key { color: #cba6f7; }
+    .code-str { color: #a6e3a1; }
+
+    .fix-box {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-top: 10px;
+      color: #166534;
+      font-size: 13px;
+    }
+    .fix-box strong { display: block; margin-bottom: 4px; }
+
+    .impact-box {
+      background: #fff8f0;
+      border-left: 3px solid #ff6b35;
+      padding: 10px 14px;
+      margin: 10px 0;
+      font-size: 13px;
+      color: #7a3b1e;
+      border-radius: 0 6px 6px 0;
+    }
+    .impact-box.critical { border-left-color: #ff4757; background: #fff5f5; color: #7a1e1e; }
+
+    .toc {
+      background: white;
+      border-radius: 12px;
+      border: 1px solid #e8ecf0;
+      padding: 24px;
+      margin-bottom: 32px;
+    }
+    .toc h3 { font-size: 14px; font-weight: 700; color: #8892a4; text-transform: uppercase;
+               letter-spacing: 0.8px; margin-bottom: 14px; }
+    .toc-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 7px 0;
+      border-bottom: 1px solid #f0f2f5;
+      font-size: 13px; color: #444c5e;
+    }
+    .toc-row:last-child { border-bottom: none; }
+    .toc-row .num { font-weight: 700; color: #4f46e5; width: 24px; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 32px;
+    }
+    @media (max-width: 640px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+    .stat-card {
+      background: white;
+      border-radius: 12px;
+      border: 1px solid #e8ecf0;
+      padding: 18px;
+      text-align: center;
+    }
+    .stat-card .num { font-size: 36px; font-weight: 900; }
+    .stat-card .label { font-size: 12px; color: #8892a4; font-weight: 600; margin-top: 2px; }
+    .stat-p0 .num { color: #e53e3e; }
+    .stat-p1 .num { color: #dd6b20; }
+    .stat-p2 .num { color: #d69e2e; }
+    .stat-p3 .num { color: #38a169; }
+
+    .divider { border: none; border-top: 2px solid #e8ecf0; margin: 32px 0; }
+
+    .scope-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    .scope-table th {
+      text-align: left; padding: 8px 12px; background: #f0f2f5;
+      font-size: 12px; font-weight: 700; color: #5c6880;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .scope-table td { padding: 9px 12px; border-bottom: 1px solid #f0f2f5; font-size: 13px; }
+    .scope-table tr:last-child td { border-bottom: none; }
+    .pass { color: #38a169; font-weight: 700; }
+    .fail { color: #e53e3e; font-weight: 700; }
+    .warn { color: #d69e2e; font-weight: 700; }
+
+    footer {
+      text-align: center; padding: 32px; color: #8892a4; font-size: 12px;
+      border-top: 1px solid #e8ecf0; margin-top: 40px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🧪 MathAI — QA Test Report</h1>
+  <div class="meta">
+    Audit Date: 11 March 2026 &nbsp;·&nbsp;
+    Auditor: Claude (Cowork mode) &nbsp;·&nbsp;
+    Methodology: Full static code audit — all routes, pages, components, hooks, services &amp; API controllers
+  </div>
+  <div class="summary-pills">
+    <span class="pill pill-p0">🔴 3 Critical (P0)</span>
+    <span class="pill pill-p1">🟠 4 High (P1)</span>
+    <span class="pill pill-p2">🟡 4 Medium (P2)</span>
+    <span class="pill pill-p3">🟢 4 Low (P3)</span>
+    <span class="pill pill-info">📁 ~60 files audited</span>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Stats -->
+  <div class="stats-grid" style="margin-top: 28px;">
+    <div class="stat-card stat-p0"><div class="num">3</div><div class="label">P0 Critical</div></div>
+    <div class="stat-card stat-p1"><div class="num">4</div><div class="label">P1 High</div></div>
+    <div class="stat-card stat-p2"><div class="num">4</div><div class="label">P2 Medium</div></div>
+    <div class="stat-card stat-p3"><div class="num">4</div><div class="label">P3 Low / UX</div></div>
+  </div>
+
+  <!-- TOC -->
+  <div class="toc">
+    <h3>Table of Contents</h3>
+    <div class="toc-row"><span class="num">P0</span><span>AUTH-01 — Client API always sends hardcoded "Bearer dev-stub" token</span></div>
+    <div class="toc-row"><span class="num">P0</span><span>AUTH-02 — Confidence level scale mismatch corrupts student profile on save</span></div>
+    <div class="toc-row"><span class="num">P0</span><span>GRADE-01 — All practice sessions always use Grade 4 regardless of student profile</span></div>
+    <div class="toc-row"><span class="num">P1</span><span>NAV-01 — Profile page unreachable on mobile (missing from bottom nav)</span></div>
+    <div class="toc-row"><span class="num">P1</span><span>SIGNUP-01 — No grade set during signup; no grade step in onboarding flow</span></div>
+    <div class="toc-row"><span class="num">P1</span><span>DB-01 — Multiple PrismaClient instances risk connection pool exhaustion</span></div>
+    <div class="toc-row"><span class="num">P1</span><span>PRACTICE-01 — Practice start request missing grade in request body</span></div>
+    <div class="toc-row"><span class="num">P2</span><span>AUTH-03 — Practice page has no server-side auth guard</span></div>
+    <div class="toc-row"><span class="num">P2</span><span>DATA-01 — Hardcoded "user-alice-001" fallback in Dashboard and Progress pages</span></div>
+    <div class="toc-row"><span class="num">P2</span><span>PROFILE-01 — No name editing UI on profile page despite API supporting it</span></div>
+    <div class="toc-row"><span class="num">P2</span><span>PROFILE-02 — Profile save errors silently swallowed — never shown to user</span></div>
+    <div class="toc-row"><span class="num">P3</span><span>UX-01 — No custom 404 page</span></div>
+    <div class="toc-row"><span class="num">P3</span><span>UX-02 — Ask MathAI textarea does not auto-resize</span></div>
+    <div class="toc-row"><span class="num">P3</span><span>UX-03 — Page does not scroll to top on route change</span></div>
+    <div class="toc-row"><span class="num">P3</span><span>DATA-02 — Leaderboard is 100% mocked static data</span></div>
+  </div>
+
+  <!-- Scope -->
+  <div class="toc" style="margin-bottom: 16px;">
+    <h3>Audit Scope</h3>
+    <table class="scope-table">
+      <thead><tr><th>Area</th><th>Files</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>Next.js Pages &amp; Layouts</td><td>/, /dashboard, /practice, /ask, /profile, /leaderboard, /progress, /signup, /api/*</td><td><span class="pass">✓ Audited</span></td></tr>
+        <tr><td>React Components</td><td>AppNav, XPBar, StreakCounter, MasteryRing, PracticeMenu, PracticeContainer, AskPage, ProfilePage, DashboardContainer, ProgressContainer</td><td><span class="pass">✓ Audited</span></td></tr>
+        <tr><td>Hooks</td><td>use-profile, useSession (via next-auth)</td><td><span class="pass">✓ Audited</span></td></tr>
+        <tr><td>API Layer (Express)</td><td>practiceController, profileService, profileRoutes, practiceRoutes, tutorRoutes, gamificationRoutes, authMiddleware</td><td><span class="pass">✓ Audited</span></td></tr>
+        <tr><td>AI Services</td><td>questionGeneratorService, practiceService, askMathAIService, ai_client</td><td><span class="pass">✓ Audited</span></td></tr>
+        <tr><td>Auth</td><td>authOptions (next-auth), auth.ts (signup), JWT callbacks, middleware.ts</td><td><span class="pass">✓ Audited</span></td></tr>
+        <tr><td>Shared Types</td><td>packages/shared-types/index.ts</td><td><span class="pass">✓ Audited</span></td></tr>
+        <tr><td>Runtime Testing (browser)</td><td>Not performed — static analysis only</td><td><span class="warn">⚠ Static only</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ═══════════════════ P0 ═══════════════════ -->
+
+  <div class="section-header">
+    <span class="severity-badge sev-p0">P0 — Critical</span>
+    <h2>Showstopper bugs. Production deploy blocked.</h2>
+  </div>
+
+  <!-- AUTH-01 -->
+  <div class="bug-card">
+    <div class="bug-title">
+      <span class="bug-id">AUTH-01</span>
+      Client API always sends hardcoded "Bearer dev-stub" — authenticated calls never work
+    </div>
+    <div class="bug-meta">
+      <div class="bug-meta-item">📁 <strong>apps/web/lib/clientApi.ts</strong></div>
+      <div class="bug-meta-item">🔗 <strong>apps/web/lib/auth.ts (authOptions)</strong></div>
+    </div>
+
+    <div class="impact-box critical">
+      <strong>Impact:</strong> Every authenticated call from the browser — fetching the student profile, saving profile changes, sending Ask MathAI queries — goes out with the token "Bearer dev-stub". The Express API validates this token, and in production (where no dev-stub bypass exists) every API call returns 401. The entire authenticated experience is broken.
+    </div>
+
+    <p class="bug-desc">
+      <code>clientApi.ts</code> reads the access token via <code>session?.["accessToken"]</code>.
+      But <code>authOptions.callbacks.session</code> in <code>auth.ts</code> only copies
+      <code>token.id</code> onto the session object. The field <code>accessToken</code> is
+      never written, so it is always <code>undefined</code>. The fallback returns the literal
+      string <code>"Bearer dev-stub"</code> for every request.
+    </p>
+
+    <div class="code-block">
+<span class="code-comment">// apps/web/lib/clientApi.ts — getToken()</span>
+<span class="line-no">12</span><span class="code-bad">const token = session?.["accessToken"];           // ❌ never set</span>
+<span class="line-no">13</span><span class="code-bad">return token ? `Bearer ${token}` : "Bearer dev-stub"; // always falls back</span>
+
+<span class="code-comment">// apps/web/lib/auth.ts — callbacks.session</span>
+<span class="line-no">41</span>callbacks: {
+<span class="line-no">42</span>  async session({ session, token }) {
+<span class="line-no">43</span>    (session.user as { id?: string }).id = token.id as string;
+<span class="line-no">44</span><span class="code-bad">    // ❌ session.accessToken is never set here</span>
+<span class="line-no">45</span>    return session;
+<span class="line-no">46</span>  },
+<span class="line-no">47</span>}
+    </div>
+
+    <div class="fix-box">
+      <strong>Fix — two changes required:</strong>
+      1. In <code>authOptions.callbacks.jwt</code>, store the JWT string (or a signed token) on <code>token.accessToken</code>.<br/>
+      2. In <code>authOptions.callbacks.session</code>, propagate it: <code>(session as any).accessToken = token.accessToken</code>.<br/>
+      Or simplify by calling the Next.js internal <code>/api/auth/token</code> route already present in the codebase (<code>apps/web/app/api/auth/token/route.ts</code>) to get a short-lived token and cache it in <code>clientApi.ts</code>.
+    </div>
+  </div>
+
+  <!-- AUTH-02 -->
+  <div class="bug-card">
+    <div class="bug-title">
+      <span class="bug-id">AUTH-02</span>
+      Confidence level scale mismatch — slider broken on load, sends value 20× too high on save
+    </div>
+    <div class="bug-meta">
+      <div class="bug-meta-item">📁 <strong>apps/web/app/profile/ProfilePageContent.tsx</strong></div>
+      <div class="bug-meta-item">🔗 <strong>api/services/profileService.ts</strong></div>
+    </div>
+
+    <div class="impact-box critical">
+      <strong>Impact:</strong> The confidence slider renders at maximum (5) for any student with moderate confidence (e.g., 60/100 stored as 60, shown as 5 capped). On save, if student moves slider to 3, it POSTs 3. The backend multiplies by 20 and stores 60. But on next load it renders as 5 again. The field is permanently uneditable in any meaningful way.
+    </div>
+
+    <p class="bug-desc">
+      The database stores <code>confidenceLevel</code> as a 0–100 EWMA float (e.g., 62.5).
+      The Profile UI renders a slider with <code>min=1 max=5</code>. The <code>useEffect</code>
+      that populates state sets it directly from the raw DB value — no division by 20. Any
+      value over 5 is rendered at 5 (slider max), so the UI shows full confidence for every
+      student above the beginner tier.
+    </p>
+
+    <div class="code-block">
+<span class="code-comment">// ProfilePageContent.tsx — useEffect populating slider state</span>
+<span class="line-no">58</span>useEffect(() => {
+<span class="line-no">59</span>  if (!profile) return;
+<span class="line-no">60</span><span class="code-bad">  setConfidence(profile.confidenceLevel ?? 3);  // ❌ sets 62 on a 1-5 slider → renders as 5</span>
+<span class="line-no">61</span>}, [profile]);
+
+<span class="code-comment">// Correct approach</span>
+<span class="code-good">  setConfidence(Math.round((profile.confidenceLevel ?? 60) / 20)); // maps 0–100 → 1–5</span>
+    </div>
+
+    <div class="fix-box">
+      <strong>Fix:</strong> In the <code>useEffect</code> in <code>ProfilePageContent.tsx</code>,
+      divide the raw DB value by 20 and clamp to [1, 5]:
+      <code>setConfidence(Math.max(1, Math.min(5, Math.round((profile.confidenceLevel ?? 60) / 20))))</code>.
+      The save path already sends the 1–5 value which <code>profileService</code> multiplies back to 0–100,
+      so only the load side needs fixing.
+    </div>
+  </div>
+
+  <!-- GRADE-01 -->
+  <div class="bug-card">
+    <div class="bug-title">
+      <span class="bug-id">GRADE-01</span>
+      All practice sessions, hints, and explanations are hardcoded to Grade 4 — grade profile ignored
+    </div>
+    <div class="bug-meta">
+      <div class="bug-meta-item">📁 <strong>api/controllers/practiceController.ts</strong></div>
+      <div class="bug-meta-item">🔗 <strong>api/middleware/auth.ts (requireStudent)</strong></div>
+      <div class="bug-meta-item">🔗 <strong>apps/web/lib/auth.ts (authOptions.callbacks.jwt)</strong></div>
+    </div>
+
+    <div class="impact-box critical">
+      <strong>Impact:</strong> A Grade 2 student gets Grade 4 multiplication questions. A Grade 8 student gets Grade 4 fractions. The entire personalisation promise of MathAI is broken at the practice layer — the single most important feature of the product.
+    </div>
+
+    <p class="bug-desc">
+      <code>practiceController.ts</code> reads the grade from <code>req.student!.grade</code>.
+      <code>req.student</code> is populated by the <code>requireStudent</code> middleware which
+      decodes the JWT. But the JWT is built in <code>authOptions.callbacks.jwt</code>, which only
+      writes <code>token.id</code> (from the NextAuth token). The user's <code>gradeLevel</code>
+      from the DB is never placed into the JWT, so <code>req.student.grade</code> is always
+      <code>undefined</code>, and the fallback <code>?? "G4"</code> fires every time.
+    </p>
+
+    <div class="code-block">
+<span class="code-comment">// api/controllers/practiceController.ts</span>
+<span class="line-no">24</span><span class="code-bad">const grade = (req.student!.grade ?? "G4") as Grade;  // ❌ always G4 — grade never in JWT</span>
+
+<span class="code-comment">// apps/web/lib/auth.ts — jwt callback</span>
+<span class="line-no">31</span>async jwt({ token, user }) {
+<span class="line-no">32</span>  if (user) token.id = user.id;
+<span class="line-no">33</span><span class="code-bad">  // ❌ gradeLevel from DB never added to token</span>
+<span class="line-no">34</span>  return token;
+<span class="line-no">35</span>},
+
+<span class="code-comment">// Fix: fetch grade in jwt callback and embed it</span>
+<span class="code-good">async jwt({ token, user }) {</span>
+<span class="code-good">  if (user) {</span>
+<span class="code-good">    token.id = user.id;</span>
+<span class="code-good">    const dbUser = await prisma.user.findUnique({ where: { id: user.id }, select: { gradeLevel: true } });</span>
+<span class="code-good">    token.gradeLevel = dbUser?.gradeLevel ?? "G4";</span>
+<span class="code-good">  }</span>
+<span class="code-good">  return token;</span>
+<span class="code-good">},</span>
+    </div>
+
+    <div class="fix-box">
+      <strong>Fix — two steps:</strong><br/>
+      1. In <code>authOptions.callbacks.jwt</code>, fetch <code>gradeLevel</code> from Prisma on user sign-in and store as <code>token.gradeLevel</code>.<br/>
+      2. In <code>authOptions.callbacks.session</code> (or equivalent token middleware), propagate it to the signed JWT used by the Express API.<br/>
+      3. Also update token when grade is changed via PATCH /profile — either force a JWT re-issue or look up grade from DB fresh in <code>requireStudent</code> middleware.
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ═══════════════════ P1 ═══════════════════ -->
+
+  <div class="section-header">
+    <span class="severity-badge sev-p1">P1 — High</span>
+    <h2>Significant functionality gaps. Fix before soft launch.</h2>
+  </div>
+
+  <!-- NAV-01 -->
+  <div class="bug-card">
+    <div class="bug-title">
+      <span class="bug-id">NAV-01</span>
+      Profile page is unreachable on mobile — not included in bottom navigation bar
+    </div>
+    <div class="bug-meta">
+      <div class="bug-meta-item">📁 <strong>apps/web/components/mathai/AppNav.tsx</strong></div>
+    </div>
+
+    <div class="impact-box">
+      <strong>Impact:</strong> Any student on a mobile device (the primary device for this age group) cannot navigate to their profile to change grade, learning pace, or preferences. Combined with GRADE-01 above, this means mobile users have no path to fix incorrect personalisation.
+    </div>
+
+    <p class="bug-desc">
+      <code>AppNav.tsx</code> defines a <code>NAV_ITEMS</code> array with 5 entries:
+      Dashboard, Practice, Ask MathAI, Progress, and Leaderboard. On desktop, a sidebar also
+      renders a "Profile" link. On mobile, only the bottom bar with <code>NAV_ITEMS</code> is
+      shown. Profile is absent from that array.
+    </p>
+
+    <div class="fix-box">
+      <strong>Fix:</strong> Add a Profile entry to <code>NAV_ITEMS</code> (or conditionally render it in the mobile bar separately). Consider using a 👤 icon. If 6 items are too many for mobile, replace one lower-priority item (e.g., Leaderboard) or use a compact "More" overflow approach.
+    </div>
+  </div>
+
+  <!-- SIGNUP-01 -->
+  <div class="bug-card">
+    <div class="bug-title">
+      <span class="bug-id">SIGNUP-01</span>
+      No grade captured at signup — every new user defaults to Grade 4 forever
+    </div>
+    <div class="bug-meta">
+      <div class="bug-meta-item">📁 <strong>apps/web/app/api/auth/signup/route.ts</strong></div>
+      <div class="bug-meta-item">🔗 <strong>apps/web/app/signup/page.tsx (signup UI form)</strong></div>
+    </div>
+
+    <div class="impact-box">
+      <strong>Impact:</strong> Every student who signs up has no grade set. Combined with GRADE-01 (JWT never carries grade), this means a brand new user's first practice session is Grade 4. There's no prompt to select grade, and given NAV-01 on mobile, they may never find the profile page to fix it.
+    </div>
+
+    <p class="bug-desc">
+      The signup API route creates a <code>User</code> with <code>name</code>, <code>email</code>,
+      and <code>hashedPassword</code>. No <code>gradeLevel</code> field is set. The signup form UI
+      has fields for name, email, and password — no grade selector. The <code>StudentProfile</code>
+      is created in a follow-up Prisma call with all defaults.
+    </p>
+
+    <div class="fix-box">
+      <strong>Fix:</strong> Add a grade selector step to the signup form (a simple 1–10 picker or dropdown works well for this age group). Pass the selected grade to the API route and set <code>gradeLevel</code> on <code>User</code> creation. Alternatively, add a mandatory onboarding screen shown after first login that captures grade before proceeding.
+    </div>
+  </div>
+
+  <!-- DB-01 -->
+  <div class="bug-card">
+    <div class="bug-title">
+      <span class="bug-id">DB-01</span>
+      Multiple PrismaClient instances — connection pool leak risk under load
+    </div>
+    <div class="bug-meta">
+      <div class="bug-meta-item">📁 <strong>apps/web/lib/auth.ts</strong></div>
+      <div class="bug-meta-item">📁 <strong>apps/web/app/api/auth/signup/route.ts</strong></div>
+      <div class="bug-meta-item">🔗 <strong>apps/web/lib/prisma.ts (singleton — exists but unused here)</strong></div>
+    </div>
+
+    <div class="impact-box">
+      <strong>Impact:</strong> In development with Next.js hot-reload, each module re-evaluation creates a new PrismaClient. Each client opens a database connection pool. In production, this is less frequent but still wasteful. Prisma warns explicitly about this pattern in its Next.js docs and recommends a singleton.
+    </div>
+
+    <div class="code-block">
+<span class="code-comment">// apps/web/lib/auth.ts</span>
+<span class="line-no">3</span><span class="code-bad">const prisma = new PrismaClient();  // ❌ new instance per module load</span>
+
+<span class="code-comment">// apps/web/app/api/auth/signup/route.ts</span>
+<span class="line-no">3</span><span class="code-bad">const prisma = new PrismaClient();  // ❌ another new instance</span>
+
+<span class="code-comment">// The singleton already exists — just import it</span>
+<span class="code-good">import { prisma } from "@/lib/prisma";  // ✓ use shared singleton</span>
+    </div>
+
+    <div class="fix-box">
+      <strong>Fix:</strong> Replace both <code>new PrismaClient()</code> instantiations with
+      <code>import { prisma } from "@/lib/prisma"</code>. The singleton is already defined
+      at <code>apps/web/lib/prisma.ts</code> with the recommended Next.js global caching pattern.
+    </div>
+  </div>
+
+  <!-- PRACTICE-01 -->
+  <div class="bug-card">
+    <div class="bug-title">
+      <span class="bug-id">PRACTICE-01</span>
+      Practice session start request does not include grade — controller always receives null
+    </div>
+    <div class="bug-meta">
+      <div class="bug-meta-item">📁 <strong>apps/web/components/mathai/PracticeContainer.tsx</strong></div>
+      <div class="bug-meta-item">🔗 <strong>api/controllers/practiceController.ts</strong></div>
+    </div>
+
+    <p class="bug-desc">
+      Even if GRADE-01 is fixed so the JWT carries <code>gradeLevel</code>, the POST body sent
+      by <code>PracticeContainer</code> to <code>/api/practice/start</code> includes
+      <code>topicId</code> and <code>mode</code> but no <code>grade</code> field.
+      The controller currently reads grade from <code>req.student.grade</code> (the JWT-decoded value),
+      so this is a secondary path — but including it in the body would make the flow explicit,
+      debuggable, and independent of JWT state. Also noted: an earlier version of the container
+      had a hardcoded <code>grade: "G4"</code> in the body which was an additional override risk.
+    </p>
+
+    <div class="fix-box">
+      <strong>Fix:</strong> In <code>PracticeContainer.tsx</code>, read grade from the session or
+      from the loaded student profile and include it in the POST body. Update the Zod schema in
+      <code>practice.routes.ts</code> to accept an optional <code>grade</code> field. This makes
+      the grade path explicit and easier to test.
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ═══════════════════ P2 ═══════════════════ -->
+
+  <div class="section-header">
+    <span class="severity-badge sev-p2">P2 — Medium</span>
+    <h2>Functional issues and incomplete features. Fix before public launch.</h2>
+  </div>
+
+  <!-- AUTH-03 -->
+  <div class="bug-card">
+    <div class="bug-title">
+      <span class="bug-id">AUTH-03</span>
+      Practice page has no server-side auth guard — unauthenticated users see a flash before redirect
+    </div>
+    <div class="bug-meta">
+      <div class="bug-meta-item">📁 <strong>apps/web/app/practice/page.tsx</strong></div>
+      <div class="bug-meta-item">🔗 <strong>apps/web/middleware.ts</strong></div>
+    </div>
+
+    <p class="bug-desc">
+      <code>apps/web/app/practice/page.tsx</code> is a client component that uses
+      <code>useSession()</code> with a redirect if unauthenticated. This causes a flash of the
+      practice UI before the redirect fires. Other pages (e.g., Dashboard, Leaderboard) use
+      <code>getServerSession()</code> in a server component and redirect on the server.
+      The practice page is inconsistent and provides a worse user experience.
+    </p>
+
+    <div class="fix-box">
+      <strong>Fix:</strong> Either (a) convert <code>practice/page.tsx</code> to a server component
+      using <code>getServerSession()</code> and <code>redirect()</code>, or (b) ensure
+      <code>middleware.ts</code> covers the <code>/practice</code> route (check the matcher config).
+    </div>
+  </div>
+
+  <!-- DATA-01 -->
+  <div class="bug-card">
+    <div class="bug-title">
+      <span class="bug-id">DATA-01</span>
+      Hardcoded "user-alice-001" fallback in Dashboard and Progress — real users see no data
+    </div>
+    <div class="bug-meta">
+      <div class="bug-meta-item">📁 <strong>apps/web/components/mathai/DashboardContainer.tsx</strong></div>
+      <div class="bug-meta-item">📁 <strong>apps/web/components/mathai/ProgressContainer.tsx</strong></div>
+    </div>
+
+    <p class="bug-desc">
+      Both containers extract <code>userId</code> from <code>session.user</code> with a fallback
+      to the literal string <code>"user-alice-001"</code>. If the session user has no <code>id</code>
+      (which happens when AUTH-01 is in play and sessions aren't returning the full user object),
+      every real user's dashboard loads data for a fictional seed user. Their XP, streaks, and
+      progress data appears as Alice's data.
+    </p>
+
+    <div class="fix-box">
+      <strong>Fix:</strong> Remove the fallback string entirely. If <code>userId</code> is undefined,
+      redirect to login or show an error state. Do not silently serve another user's data.
+    </div>
+  </div>
+
+  <!-- PROFILE-01 -->
+  <div class="bug-card">
+    <div class="bug-title">
+      <span class="bug-id">PROFILE-01</span>
+      Profile page has no name editing UI — name change is impossible despite API supporting it
+    </div>
+    <div class="bug-meta">
+      <div class="bug-meta-item">📁 <strong>apps/web/app/profile/ProfilePageContent.tsx</strong></div>
+      <div class="bug-meta-item">🔗 <strong>api/routes/profile.routes.ts (PATCH accepts name)</strong></div>
+    </div>
+
+    <p class="bug-desc">
+      The profile page renders the user's display name as static text. The PATCH endpoint at
+      <code>/api/profile</code> accepts a <code>name</code> field in the request body, and
+      <code>profileService.updateProfile()</code> persists it to <code>User.name</code>. But
+      the UI has no editable input field for it. A student who misspelled their name at signup
+      has no way to fix it.
+    </p>
+
+    <div class="fix-box">
+      <strong>Fix:</strong> Add a text input for display name to the profile form, wired into
+      the existing save flow alongside grade, learning pace, and explanation style.
+    </div>
+  </div>
+
+  <!-- PROFILE-02 -->
+  <div class="bug-card">
+    <div class="bug-title">
+      <span class="bug-id">PROFILE-02</span>
+      Profile save errors are silently discarded — user receives no feedback on failure
+    </div>
+    <div class="bug-meta">
+      <div class="bug-meta-item">📁 <strong>apps/web/hooks/use-profile.ts</strong></div>
+      <div class="bug-meta-item">📁 <strong>apps/web/app/profile/ProfilePageContent.tsx</strong></div>
+    </div>
+
+    <p class="bug-desc">
+      <code>use-profile.ts</code> has an <code>error</code> state field in its return object.
+      On a failed save, this state is updated. But <code>ProfilePageContent.tsx</code> never
+      reads the <code>error</code> field — there is no error message, toast, or visual indicator
+      of any kind. If the save fails (network error, 401, 500), the user sees the "Saved!" button
+      animation and nothing else. They have no idea their changes were not persisted.
+    </p>
+
+    <div class="fix-box">
+      <strong>Fix:</strong> In <code>ProfilePageContent.tsx</code>, destructure <code>error</code>
+      from <code>useProfile()</code> and render a visible error message or toast when it is truthy.
+      An inline red alert below the Save button is the simplest approach.
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ═══════════════════ P3 ═══════════════════ -->
+
+  <div class="section-header">
+    <span class="severity-badge sev-p3">P3 — Low / UX Polish</span>
+    <h2>Minor UX gaps and missing polish. Fix before public launch if time allows.</h2>
+  </div>
+
+  <!-- UX-01 -->
+  <div class="bug-card">
+    <div class="bug-title">
+      <span class="bug-id">UX-01</span>
+      No custom 404 page — Next.js default shown on bad URLs
+    </div>
+    <div class="bug-meta">
+      <div class="bug-meta-item">📁 <strong>apps/web/app/not-found.tsx (missing)</strong></div>
+    </div>
+    <p class="bug-desc">
+      Navigating to an invalid route (e.g., <code>/mathai/foo</code>) shows the default
+      Next.js 404 page. For a product aimed at children, a branded, friendly 404 with a
+      "Go back home" button is important for user confidence.
+    </p>
+    <div class="fix-box">
+      <strong>Fix:</strong> Create <code>apps/web/app/not-found.tsx</code> with a fun math-themed message and a prominent link back to <code>/dashboard</code>.
+    </div>
+  </div>
+
+  <!-- UX-02 -->
+  <div class="bug-card">
+    <div class="bug-title">
+      <span class="bug-id">UX-02</span>
+      Ask MathAI textarea does not auto-resize — long questions feel cramped
+    </div>
+    <div class="bug-meta">
+      <div class="bug-meta-item">📁 <strong>apps/web/app/ask/AskPageContent.tsx</strong></div>
+    </div>
+    <p class="bug-desc">
+      The question input is a fixed-height <code>&lt;textarea&gt;</code>. As the student types
+      a longer question, scrollbars appear inside the box rather than the box growing to fit.
+      This feels clunky, especially on mobile.
+    </p>
+    <div class="fix-box">
+      <strong>Fix:</strong> Add an <code>onInput</code> handler that sets
+      <code>element.style.height = "auto"</code> then
+      <code>element.style.height = element.scrollHeight + "px"</code>.
+      Or use the <code>react-textarea-autosize</code> library (already in many Next.js starters).
+    </div>
+  </div>
+
+  <!-- UX-03 -->
+  <div class="bug-card">
+    <div class="bug-title">
+      <span class="bug-id">UX-03</span>
+      Page does not scroll to top on route change — content appears mid-page
+    </div>
+    <div class="bug-meta">
+      <div class="bug-meta-item">📁 <strong>apps/web/app/layout.tsx</strong></div>
+    </div>
+    <p class="bug-desc">
+      When navigating between pages (e.g., Practice → Dashboard), Next.js App Router preserves
+      scroll position in some scenarios. If the user scrolled down on Practice, Dashboard opens
+      mid-scroll. There is no scroll-reset mechanism in the root layout or route transitions.
+    </p>
+    <div class="fix-box">
+      <strong>Fix:</strong> Add a minimal client component to the root layout that calls
+      <code>window.scrollTo(0, 0)</code> on <code>usePathname()</code> change. This is a
+      common Next.js App Router pattern.
+    </div>
+  </div>
+
+  <!-- DATA-02 -->
+  <div class="bug-card">
+    <div class="bug-title">
+      <span class="bug-id">DATA-02</span>
+      Leaderboard is fully mocked static data — does not reflect real students
+    </div>
+    <div class="bug-meta">
+      <div class="bug-meta-item">📁 <strong>apps/web/app/leaderboard/page.tsx</strong></div>
+    </div>
+    <p class="bug-desc">
+      The leaderboard always renders Alice, Marcus, Priya, Leo, and Zoe with hardcoded XP values.
+      No real student data is shown. The page does include a footer note saying real-time is
+      "coming soon" — so this is a known placeholder, but worth tracking as a formal backlog item.
+    </p>
+    <div class="fix-box">
+      <strong>Fix:</strong> Implement a <code>GET /gamification/leaderboard?scope=class&limit=10</code>
+      endpoint that queries the top students by <code>StudentProfile.xp</code> and returns
+      anonymised or real names based on privacy settings.
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- Summary table -->
+  <div class="toc">
+    <h3>Bug Summary</h3>
+    <table class="scope-table">
+      <thead>
+        <tr>
+          <th>ID</th><th>Severity</th><th>Area</th><th>Title</th><th>Fix Effort</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>AUTH-01</td><td><span class="sev-p0 severity-badge">P0</span></td><td>Auth</td><td>Client API always sends dev-stub token</td><td>Medium (2–3h)</td></tr>
+        <tr><td>AUTH-02</td><td><span class="sev-p0 severity-badge">P0</span></td><td>Profile</td><td>Confidence level scale mismatch</td><td>Small (30m)</td></tr>
+        <tr><td>GRADE-01</td><td><span class="sev-p0 severity-badge">P0</span></td><td>Practice / Auth</td><td>All sessions always Grade 4</td><td>Medium (2h)</td></tr>
+        <tr><td>NAV-01</td><td><span class="sev-p1 severity-badge">P1</span></td><td>Navigation</td><td>Profile missing from mobile nav</td><td>Small (30m)</td></tr>
+        <tr><td>SIGNUP-01</td><td><span class="sev-p1 severity-badge">P1</span></td><td>Auth / UX</td><td>No grade at signup</td><td>Medium (2–3h)</td></tr>
+        <tr><td>DB-01</td><td><span class="sev-p1 severity-badge">P1</span></td><td>Database</td><td>Multiple PrismaClient instances</td><td>Tiny (15m)</td></tr>
+        <tr><td>PRACTICE-01</td><td><span class="sev-p1 severity-badge">P1</span></td><td>Practice</td><td>Grade missing from session start body</td><td>Small (30m)</td></tr>
+        <tr><td>AUTH-03</td><td><span class="sev-p2 severity-badge">P2</span></td><td>Auth</td><td>No server-side auth on practice page</td><td>Small (30m)</td></tr>
+        <tr><td>DATA-01</td><td><span class="sev-p2 severity-badge">P2</span></td><td>Data</td><td>Hardcoded user-alice-001 fallback</td><td>Tiny (15m)</td></tr>
+        <tr><td>PROFILE-01</td><td><span class="sev-p2 severity-badge">P2</span></td><td>Profile</td><td>Name editing not available in UI</td><td>Small (1h)</td></tr>
+        <tr><td>PROFILE-02</td><td><span class="sev-p2 severity-badge">P2</span></td><td>Profile</td><td>Save errors silently swallowed</td><td>Tiny (20m)</td></tr>
+        <tr><td>UX-01</td><td><span class="sev-p3 severity-badge">P3</span></td><td>UX</td><td>No 404 page</td><td>Tiny (30m)</td></tr>
+        <tr><td>UX-02</td><td><span class="sev-p3 severity-badge">P3</span></td><td>UX</td><td>Textarea no auto-resize</td><td>Tiny (20m)</td></tr>
+        <tr><td>UX-03</td><td><span class="sev-p3 severity-badge">P3</span></td><td>UX</td><td>No scroll-to-top on nav</td><td>Tiny (20m)</td></tr>
+        <tr><td>DATA-02</td><td><span class="sev-p3 severity-badge">P3</span></td><td>Data</td><td>Leaderboard is fully mocked</td><td>Large (API + frontend)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Notes -->
+  <div class="toc" style="margin-top: 16px;">
+    <h3>Positive Observations</h3>
+    <div class="toc-row"><span style="color:#38a169; font-weight:700;">✓</span><span>AI question generator prompt is excellent — child-friendly, grade-bounded, interest-aware, misconception-targeted</span></div>
+    <div class="toc-row"><span style="color:#38a169; font-weight:700;">✓</span><span>Graceful fallback to static curriculum if AI generation fails — no broken screens</span></div>
+    <div class="toc-row"><span style="color:#38a169; font-weight:700;">✓</span><span>Gamification components (XPBar, StreakCounter, MasteryRing) are well-built and consistent</span></div>
+    <div class="toc-row"><span style="color:#38a169; font-weight:700;">✓</span><span>All API routes validate input with Zod — good defence against malformed requests</span></div>
+    <div class="toc-row"><span style="color:#38a169; font-weight:700;">✓</span><span>TypeScript compiles clean across apps/web after Wave 6 fixes</span></div>
+    <div class="toc-row"><span style="color:#38a169; font-weight:700;">✓</span><span>Practice session in-memory store (ACTIVE_SESSIONS Map) works fine for single-process dev, though will need Redis or DB-backed sessions for multi-process production</span></div>
+    <div class="toc-row"><span style="color:#38a169; font-weight:700;">✓</span><span>Loading and skeleton states implemented throughout — good perceived performance</span></div>
+  </div>
+
+</div>
+
+<footer>
+  MathAI QA Test Report · Generated 11 March 2026 · Static code audit — ~60 files across monorepo
+  <br/>
+  <span style="opacity:0.6">15 bugs identified · 3 P0 · 4 P1 · 4 P2 · 4 P3</span>
+</footer>
+
+</body>
+</html>

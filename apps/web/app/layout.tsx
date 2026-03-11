@@ -17,7 +17,8 @@ import type { Metadata } from "next";
 import { Inter, Nunito } from "next/font/google";
 import "./globals.css";
 import { Providers }  from "./providers";
-import { AppNav }     from "@/components/mathai/AppNav";
+import { AppNav }       from "@/components/mathai/AppNav";
+import { ScrollToTop }  from "@/components/shared/ScrollToTop";
 
 // Nunito is the primary font — friendly, rounded, great for kids
 const nunito = Nunito({
@@ -56,6 +57,7 @@ export default function RootLayout({
       <body className="font-nunito bg-gradient-to-br from-indigo-50 to-purple-50 min-h-screen">
         <Providers>
           {/* Nav: fixed bottom bar (mobile) + fixed left sidebar (desktop) */}
+          <ScrollToTop />
           <AppNav />
           {/*
            * pb-20   = clears 64px mobile bottom nav

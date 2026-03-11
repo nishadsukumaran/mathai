@@ -4,12 +4,26 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 
+const GRADES = [
+  { value: "G1",  label: "G1" },
+  { value: "G2",  label: "G2" },
+  { value: "G3",  label: "G3" },
+  { value: "G4",  label: "G4" },
+  { value: "G5",  label: "G5" },
+  { value: "G6",  label: "G6" },
+  { value: "G7",  label: "G7" },
+  { value: "G8",  label: "G8" },
+  { value: "G9",  label: "G9" },
+  { value: "G10", label: "G10" },
+] as const;
+
 export default function SignUpPage() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [name,     setName]     = useState("");
+  const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [grade,    setGrade]    = useState<string>("G4");
+  const [error,    setError]    = useState("");
+  const [loading,  setLoading]  = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,7 +34,7 @@ export default function SignUpPage() {
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, password, grade }),
       });
 
       const data = await res.json();
@@ -103,6 +117,29 @@ export default function SignUpPage() {
               className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-indigo-500 outline-none transition"
               placeholder="At least 6 characters"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              My Grade
+            </label>
+            <div className="grid grid-cols-5 gap-2">
+              {GRADES.map((g) => (
+                <button
+                  key={g.value}
+                  type="button"
+                  onClick={() => setGrade(g.value)}
+                  className={[
+                    "py-2 rounded-xl border-2 text-sm font-bold transition",
+                    grade === g.value
+                      ? "border-indigo-500 bg-indigo-600 text-white"
+                      : "border-gray-200 text-gray-600 hover:border-indigo-300",
+                  ].join(" ")}
+                >
+                  {g.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <button

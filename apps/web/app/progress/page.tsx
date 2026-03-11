@@ -15,7 +15,8 @@ export default async function ProgressPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect("/");
 
-  const userId = (session.user as { id?: string }).id ?? "user-alice-001";
+  const userId = (session.user as { id?: string }).id;
+  if (!userId) redirect("/auth/signin");
 
-  return <ProgressContainer userId={userId} />;
+  return <ProgressContainer userId={userId!} />;
 }

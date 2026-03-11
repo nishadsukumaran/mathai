@@ -7,7 +7,7 @@
 
 "use client";
 
-import { useState, useRef }  from "react";
+import { useState, useRef, useCallback }  from "react";
 import { cn }                from "@/lib/utils";
 import { clientPost }        from "@/lib/clientApi";
 import { useProfile }        from "@/hooks/use-profile";
@@ -82,6 +82,12 @@ export default function AskPageContent() {
       void handleSubmit();
     }
   }
+
+  /** Grow the textarea to fit its content, up to max-h-32 (8rem). */
+  const autoResize = useCallback((el: HTMLTextAreaElement) => {
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 128) + "px";
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex flex-col">
@@ -180,7 +186,7 @@ export default function AskPageContent() {
               ref={inputRef}
               rows={1}
               value={question}
-              onChange={(e) => setQuestion(e.target.value)}
+              onChange={(e) => { setQuestion(e.target.value); autoResize(e.target); }}
               onKeyDown={handleKey}
               placeholder="Ask a math question…"
               className={cn(

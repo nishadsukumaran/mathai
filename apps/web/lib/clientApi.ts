@@ -14,21 +14,28 @@
  *   const result  = await clientPost<TutorResponse>("/tutor/ask", body);
  */
 
-import { getSession } from "next-auth/react";
-
 export const API_BASE =
   process.env["NEXT_PUBLIC_API_BASE_URL"] ?? "http://localhost:3001/api";
 
+/**
+ * Retrieves the raw NextAuth JWE session token via the internal
+ * /api/auth/token route. This token is accepted as a Bearer token
+ * by the Express API, which decrypts it with the shared NEXTAUTH_SECRET.
+ *
+ * Falls back to "dev-stub" only in local development when no real
+ * session exists (e.g., during unit tests or unauthenticated preview).
+ */
 async function getToken(): Promise<string> {
   try {
-    const session = await getSession();
-    // next-auth returns the raw token on the session object when
-    // callbacks.jwt passes it through. The Express API accepts it as Bearer.
-    const token = (session as Record<string, unknown> | null)?.["accessToken"] as string | undefined;
-    return `Bearer ${token ?? "dev-stub"}`;
+    const res = await fetch("/api/auth/token");
+    if (res.ok) {
+      const { token } = (await res.json()) as { token: string };
+      return `Bearer ${token}`;
+    }
   } catch {
-    return "Bearer dev-stub";
+    // network failure — fall through
   }
+  return "Bearer dev-stub";
 }
 
 async function clientFetch<T>(

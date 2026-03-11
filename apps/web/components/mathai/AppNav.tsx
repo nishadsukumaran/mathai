@@ -6,14 +6,6 @@
  * Mobile  (< md): fixed bottom bar with icon + label per route
  * Desktop (≥ md): fixed left sidebar with icon + label, collapses to icons only
  *
- * Routes:
- *   /dashboard   — Home
- *   /practice    — Practice
- *   /ask         — Ask MathAI
- *   /progress    — Progress
- *   /leaderboard — Leaderboard
- *   /profile     — Profile
- *
  * Hidden automatically on /auth/* routes.
  */
 
@@ -25,15 +17,16 @@ import { cn }             from "@/lib/utils";
 
 // ─── Nav items ────────────────────────────────────────────────────────────────
 
+// All items appear on BOTH mobile bottom bar and desktop sidebar.
+// Profile is in this list (fix for NAV-01 — previously missing from mobile).
 const NAV_ITEMS = [
-  { href: "/dashboard",    label: "Home",        icon: "🏠", activeIcon: "🏠" },
-  { href: "/practice",     label: "Practice",    icon: "📚", activeIcon: "📚" },
-  { href: "/ask",          label: "Ask MathAI",  icon: "🤖", activeIcon: "🤖" },
-  { href: "/progress",     label: "Progress",    icon: "📈", activeIcon: "📈" },
-  { href: "/leaderboard",  label: "Leaderboard", icon: "🏆", activeIcon: "🏆" },
+  { href: "/dashboard",   label: "Home",     icon: "🏠", activeIcon: "🏠" },
+  { href: "/practice",    label: "Practice", icon: "📚", activeIcon: "📚" },
+  { href: "/ask",         label: "Ask AI",   icon: "🤖", activeIcon: "🤖" },
+  { href: "/progress",    label: "Progress", icon: "📈", activeIcon: "📈" },
+  { href: "/leaderboard", label: "Board",    icon: "🏆", activeIcon: "🏆" },
+  { href: "/profile",     label: "Profile",  icon: "👤", activeIcon: "👤" },
 ] as const;
-
-const PROFILE_ITEM = { href: "/profile", label: "Profile", icon: "👤" };
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -71,11 +64,11 @@ export function AppNav() {
                     : "text-gray-400 hover:text-indigo-400",
                 )}
               >
-                <span className={cn("text-xl leading-none", active && "scale-110 transition-transform")}>
+                <span className={cn("text-lg leading-none", active && "scale-110 transition-transform")}>
                   {active ? item.activeIcon : item.icon}
                 </span>
                 <span className={cn(
-                  "text-[10px] font-bold leading-none",
+                  "text-[9px] font-bold leading-none",
                   active ? "text-indigo-600" : "text-gray-400",
                 )}>
                   {item.label}
@@ -101,7 +94,7 @@ export function AppNav() {
           </span>
         </div>
 
-        {/* Nav links */}
+        {/* Nav links — all items including Profile */}
         <div className="flex-1 flex flex-col gap-1 px-2">
           {NAV_ITEMS.map((item) => {
             const active = isActive(item.href);
@@ -121,22 +114,6 @@ export function AppNav() {
               </Link>
             );
           })}
-        </div>
-
-        {/* Profile link at bottom */}
-        <div className="px-2 mt-4">
-          <Link
-            href={PROFILE_ITEM.href}
-            className={cn(
-              "flex items-center gap-3 px-3 py-3 rounded-2xl font-bold text-sm transition-all",
-              isActive(PROFILE_ITEM.href)
-                ? "bg-indigo-600 text-white shadow-md shadow-indigo-200"
-                : "text-gray-500 hover:bg-indigo-50 hover:text-indigo-600",
-            )}
-          >
-            <span className="text-xl shrink-0">{PROFILE_ITEM.icon}</span>
-            <span className="hidden xl:block">{PROFILE_ITEM.label}</span>
-          </Link>
         </div>
       </aside>
 
