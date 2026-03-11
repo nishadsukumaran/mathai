@@ -8,6 +8,14 @@ import { MasteryLevel, TopicProgress } from "@/types";
 import { prisma } from "../lib/prisma";
 import { NotFoundError } from "../middlewares/error.middleware";
 
+// Pre-fetched data passed from dashboardController to avoid duplicate queries
+type StudentCtx = {
+  user:              NonNullable<Awaited<ReturnType<typeof prisma.user.findUnique>>>;
+  profile:           Awaited<ReturnType<typeof prisma.studentProfile.upsert>>;
+  topicProgressRows: Awaited<ReturnType<typeof prisma.topicProgress.findMany>>;
+  streak:            Awaited<ReturnType<typeof prisma.streak.findUnique>>;
+};
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 export async function getStudentById(studentId: string) {
@@ -16,18 +24,18 @@ export async function getStudentById(studentId: string) {
   return user;
 }
 
-export async function getStudentWithProfile(userId: string) {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+export async function getStudentWithProfile(userId: string, ctx?: StudentCtx) {
+  // Use pre-fetched data from controller when available; fall back to own queries
+  const user = ctx?.user ?? await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw new NotFoundError("Student", userId);
 
-  // Upsert profile — new users get defaults on first dashboard load
-  const profile = await prisma.studentProfile.upsert({
+  const profile = ctx?.profile ?? await prisma.studentProfile.upsert({
     where:  { userId },
     create: { userId },
     update: {},
   });
 
-  const topicProgressRows = await prisma.topicProgress.findMany({
+  const topicProgressRows = ctx?.topicProgressRows ?? await prisma.topicProgress.findMany({
     where: { userId },
   });
 

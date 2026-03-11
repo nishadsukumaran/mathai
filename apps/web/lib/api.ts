@@ -44,7 +44,7 @@ export async function apiFetch<T>(
   const url = `${API_BASE}${path}`;
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10_000); // 10s — Render free tier cold start
+    const timeout = setTimeout(() => controller.abort(), 30_000); // 30s — generous safety net for prod
 
     const res = await fetch(url, {
       ...options,

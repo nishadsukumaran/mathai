@@ -9,19 +9,24 @@ import { prisma } from "../lib/prisma";
 import { xpEngine } from "../../services/gamification/xp_engine";
 import { NotFoundError } from "../middlewares/error.middleware";
 
+// Pre-fetched data passed from dashboardController to avoid duplicate queries
+type ProgressCtx = {
+  profile:           Awaited<ReturnType<typeof prisma.studentProfile.upsert>>;
+  streak:            Awaited<ReturnType<typeof prisma.streak.findUnique>>;
+  topicProgressRows: Awaited<ReturnType<typeof prisma.topicProgress.findMany>>;
+};
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
-export async function getProgressSummary(userId: string): Promise<ProgressSummary> {
-  // Upsert profile so new users get defaults
-  const profile = await prisma.studentProfile.upsert({
-    where:  { userId },
-    create: { userId },
-    update: {},
-  });
-
-  const streak         = await prisma.streak.findUnique({ where: { userId } });
-  const topicProgressRows = await prisma.topicProgress.findMany({ where: { userId } });
-  const totalTopics    = await prisma.topic.count();
+export async function getProgressSummary(userId: string, ctx?: ProgressCtx): Promise<ProgressSummary> {
+  // When called from dashboard, profile/streak/topicProgress are pre-fetched.
+  // When called standalone (e.g. progressController), fall back to parallel queries.
+  const [profile, streak, topicProgressRows, totalTopics] = await Promise.all([
+    ctx !== undefined ? Promise.resolve(ctx.profile)           : prisma.studentProfile.upsert({ where: { userId }, create: { userId }, update: {} }),
+    ctx !== undefined ? Promise.resolve(ctx.streak)            : prisma.streak.findUnique({ where: { userId } }),
+    ctx !== undefined ? Promise.resolve(ctx.topicProgressRows) : prisma.topicProgress.findMany({ where: { userId } }),
+    prisma.topic.count(),
+  ]);
 
   const totalXp        = profile.totalXp;
   const levelInfo      = xpEngine.getLevelForXP(totalXp);

@@ -136,26 +136,37 @@ export async function getTopicDetail(
 export async function getWeakAreas(userId: string): Promise<AdaptiveRecommendation[]> {
   const progressRows = await prisma.topicProgress.findMany({ where: { userId } });
   const progressMap  = buildProgressMap(progressRows);
+
+  // Only consider in-progress topics (not mastered, has some progress)
+  const inProgressEntries = Object.entries(progressMap).filter(
+    ([, p]) => !p.isMastered && p.completionPercent > 0
+  );
+
+  if (inProgressEntries.length === 0) return [];
+
+  // Batch-fetch all topic names in a single query — replaces N sequential findUnique calls
+  const inProgressIds = inProgressEntries.map(([id]) => id);
+  const dbTopics = await prisma.topic.findMany({
+    where:  { id: { in: inProgressIds } },
+    select: { id: true, name: true },
+  });
+  const topicNameMap: Record<string, string> = {};
+  for (const t of dbTopics) topicNameMap[t.id] = t.name;
+
   const recommendations: AdaptiveRecommendation[] = [];
 
-  for (const [topicId, progress] of Object.entries(progressMap)) {
-    if (progress.isMastered) continue;
+  for (const [topicId, progress] of inProgressEntries) {
+    const topicName = topicNameMap[topicId] ?? getTopicById(topicId)?.name ?? topicId;
+    const daysSince = progress.lastPracticedAt
+      ? Math.floor((Date.now() - (progress.lastPracticedAt as Date).getTime()) / 86_400_000)
+      : 999;
 
-    const dbTopic = await prisma.topic.findUnique({ where: { id: topicId } }).catch(() => null);
-    const topicName = dbTopic?.name ?? getTopicById(topicId)?.name ?? topicId;
-
-    if (progress.completionPercent > 0) {
-      const daysSince = progress.lastPracticedAt
-        ? Math.floor((Date.now() - (progress.lastPracticedAt as Date).getTime()) / 86_400_000)
-        : 999;
-
-      recommendations.push({
-        topicId,
-        topicName,
-        reason:   daysSince > 7 ? RecommendationReason.LongTimeNoSee : RecommendationReason.WeakArea,
-        priority: Math.round((1 - progress.masteryScore) * 10),
-      });
-    }
+    recommendations.push({
+      topicId,
+      topicName,
+      reason:   daysSince > 7 ? RecommendationReason.LongTimeNoSee : RecommendationReason.WeakArea,
+      priority: Math.round((1 - progress.masteryScore) * 10),
+    });
   }
 
   return recommendations.sort((a, b) => b.priority - a.priority).slice(0, 5);

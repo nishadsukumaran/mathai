@@ -9,17 +9,24 @@ import { prisma } from "../lib/prisma";
 import { xpEngine } from "../../services/gamification/xp_engine";
 import { NotFoundError } from "../middlewares/error.middleware";
 
+// Pre-fetched data passed from dashboardController to avoid duplicate queries
+type GamificationCtx = {
+  profile: Awaited<ReturnType<typeof prisma.studentProfile.upsert>>;
+  streak:  Awaited<ReturnType<typeof prisma.streak.findUnique>>;
+};
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
-export async function getGamificationDashboard(userId: string): Promise<GamificationDashboard> {
-  // Upsert profile so new users get defaults
-  const profile = await prisma.studentProfile.upsert({
+export async function getGamificationDashboard(userId: string, ctx?: GamificationCtx): Promise<GamificationDashboard> {
+  // Use pre-fetched data from controller when available; fall back to own queries
+  const profile = ctx?.profile ?? await prisma.studentProfile.upsert({
     where:  { userId },
     create: { userId },
     update: {},
   });
 
-  const streak = await prisma.streak.findUnique({ where: { userId } });
+  // Use `ctx !== undefined` (not optional chain) so a null streak from ctx is respected
+  const streak = ctx !== undefined ? ctx.streak : await prisma.streak.findUnique({ where: { userId } });
 
   const studentBadges = await prisma.studentBadge.findMany({
     where:   { userId },
