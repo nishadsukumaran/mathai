@@ -112,4 +112,4 @@ export class AIParseError extends Error {
 // ─── Provider registry ────────────────────────────────────────────────────────
 // Used by config.ts to list available providers
 
-export type ProviderName = "anthropic" | "openai" | "mock";
+export type ProviderName = "vercel_gateway" | "anthropic" | "openai" | "mock";

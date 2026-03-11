@@ -26,6 +26,7 @@ import type {
   Grade,
   PracticeMode,
 } from "@mathai/shared-types";
+import { recommendationService } from "../../ai/services/recommendationService";
 
 // ─── Grade progression map ────────────────────────────────────────────────────
 
@@ -271,9 +272,57 @@ export async function getPracticeMenu(userId: string): Promise<PracticeMenu> {
     }
   }
 
-  // Fallback: if no progress data at all, return empty sections gracefully
+  // ── AI enrichment: personalise reasons via Vercel AI Gateway ─────────────────
+  // Build candidates from the top items across sections for AI to rank
+  const candidates = sections
+    .flatMap((s) => s.items.slice(0, 4))
+    .slice(0, 8)
+    .map((item) => {
+      const p = progressMap.get(item.topicId);
+      return {
+        topicId:               item.topicId,
+        topicName:             item.topicName,
+        masteryLevel:          item.masteryLevel,
+        accuracyPct:           item.accuracyPct,
+        daysSinceLastPractice: p ? daysSince(p.lastPracticedAt) : 9999,
+        sectionHint:           sections.find((s) => s.items.some((i) => i.topicId === item.topicId))?.type ?? "grade_level",
+      };
+    });
+
+  let aiEnriched = false;
+  if (candidates.length > 0) {
+    try {
+      const aiRecos = await recommendationService.enrich(candidates, {
+        grade,
+        learningPace:              profile.learningPace ?? "standard",
+        confidenceLevel:           profile.confidenceLevel ?? 50,
+        preferredExplanationStyle: (profile as Record<string, unknown>)["preferredExplanationStyle"] as string ?? "step_by_step",
+        recentStreak:              0,
+        totalXP:                   profile.totalXp ?? 0,
+      });
+
+      // Merge AI reasons back into sections
+      const aiRecoMap = new Map(aiRecos.map((r) => [r.topicId, r]));
+      for (const section of sections) {
+        for (const item of section.items) {
+          const reco = aiRecoMap.get(item.topicId);
+          if (reco) {
+            item.reason        = reco.reason;
+            item.encouragement = reco.encouragement;
+            item.suggestedMode = reco.suggestedMode;
+          }
+        }
+      }
+      aiEnriched = true;
+      console.log(`[practiceMenuService] AI enriched ${aiRecos.length} menu items`);
+    } catch (aiErr) {
+      console.warn("[practiceMenuService] AI enrichment failed — returning algorithmic menu:", (aiErr as Error).message);
+    }
+  }
+
   return {
     generatedAt: new Date().toISOString(),
+    aiEnriched,
     sections,
   };
 }

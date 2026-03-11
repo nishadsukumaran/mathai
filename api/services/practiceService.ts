@@ -29,6 +29,7 @@ import { xpEngine } from "../../services/gamification/xp_engine";
 import { practiceGenerator } from "../../curriculum/practice_generator";
 import { masteryEvaluator } from "../../curriculum/mastery_evaluator";
 import { tutorService } from "../../ai/tutor/tutor_service";
+import { questionGeneratorService } from "../../ai/services/questionGeneratorService";
 import { NotFoundError, ValidationError } from "../middlewares/error.middleware";
 
 // ─── In-Memory Session Store ──────────────────────────────────────────────────
@@ -60,15 +61,62 @@ export async function startSession(
 ): Promise<{ session: Omit<ActivePracticeSession, "responses">; firstQuestion: PracticeQuestion }> {
   const { userId, topicId, lessonId, mode, difficulty, questionCount, grade, practiceSetId } = params;
 
-  const result = await practiceGenerator.createSession({
-    studentId:     userId,
-    lessonId:      lessonId ?? "",
-    topicId,
-    mode,
-    grade,
-    difficulty:    difficulty ?? Difficulty.Intermediate,
-    questionCount: questionCount ?? 10,
-  });
+  // ── Step 1: Fetch student profile for AI personalisation ────────────────────
+  const profile = await prisma.studentProfile.findUnique({ where: { userId } }).catch(() => null);
+  const topicName = topicId.replace(/^g\d+-/, "").replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+  // ── Step 2: AI-first question generation via Vercel AI Gateway ──────────────
+  let questions: PracticeQuestion[];
+
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const profileAny = profile as any;
+    const aiQuestions = await questionGeneratorService.generate({
+      topicId,
+      topicName,
+      grade: grade as import("@mathai/shared-types").Grade,
+      difficulty:    difficulty ?? Difficulty.Intermediate,
+      mode: mode as import("@mathai/shared-types").PracticeMode,
+      questionCount: questionCount ?? 10,
+      studentContext: profile ? {
+        learningPace:              String(profileAny.learningPace ?? "standard"),
+        confidenceLevel:           Number(profile.confidenceLevel ?? 50),
+        preferredExplanationStyle: String(profileAny.preferredExplanationStyle ?? "step_by_step"),
+      } : undefined,
+    });
+
+    // Map AI questions to PracticeQuestion shape (correctAnswer is held server-side)
+    questions = aiQuestions.map((q) => ({
+      id:            q.id,
+      topicId,
+      type:          q.type,
+      prompt:        q.prompt,
+      options:       q.options,
+      correctAnswer: q.correctAnswer,
+      explanation:   "",          // AI explanations are generated on-demand via tutor
+      difficulty:    q.difficulty as Difficulty,
+      grade,
+      xpReward:      q.xpReward,
+      conceptTags:   q.conceptTags,
+    } as PracticeQuestion));
+
+    console.log(`[practiceService] AI generated ${questions.length} questions for topic "${topicName}" (grade ${grade})`);
+
+  } catch (aiError) {
+    // ── Fallback: static curriculum generator ──────────────────────────────────
+    console.warn("[practiceService] AI question generation failed — falling back to static curriculum:", (aiError as Error).message);
+
+    const result = await practiceGenerator.createSession({
+      studentId:     userId,
+      lessonId:      lessonId ?? "",
+      topicId,
+      mode,
+      grade,
+      difficulty:    difficulty ?? Difficulty.Intermediate,
+      questionCount: questionCount ?? 10,
+    });
+    questions = result.questions;
+  }
 
   const sessionId = `session-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
@@ -81,7 +129,7 @@ export async function startSession(
     mode,
     grade,
     startedAt:       new Date(),
-    questions:       result.questions,
+    questions,
     responses:       [],
     currentIndex:    0,
     xpEarned:        0,
@@ -91,7 +139,7 @@ export async function startSession(
 
   ACTIVE_SESSIONS.set(sessionId, session);
 
-  const firstQuestion = result.questions[0];
+  const firstQuestion = questions[0];
   if (!firstQuestion) throw new ValidationError("Practice set has no questions for this topic");
 
   const { responses: _r, ...sessionMeta } = session;
@@ -222,7 +270,7 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
     encouragement,
     nextAction,
     levelUp: levelUp
-      ? { newLevel: levelUp.level, title: levelUp.label }
+      ? { newLevel: levelUp.level, title: levelUp.label ?? "" }
       : undefined,
     sessionComplete,
     masteryUpdate,

@@ -1,33 +1,34 @@
 /**
  * @module api/routes/tutor.routes
  *
- * Standalone "Ask MathAI" endpoint — not tied to a practice session.
+ * Ask MathAI — standalone open-ended Q&A endpoint.
+ * All requests go through Vercel AI Gateway via askMathAIService.
  *
  *   POST /api/tutor/ask
- *   body: { question, helpMode, grade?, context? }
+ *   body: { question, grade?, context?, studentName? }
+ *
+ * This replaces the old session-bound tutorService stub.
+ * For in-session hints/explanations, see practiceController.getPracticeHint().
  */
 
 import { Router, Request, Response, NextFunction } from "express";
-import { z }               from "zod";
-import { tutorService }    from "../../ai/tutor/tutor_service";
-import { HelpMode, Grade } from "../../types/index";
+import { z }                   from "zod";
+import { askMathAIService }    from "../../ai/services/askMathAIService";
+import type { Grade, ExplanationStyle, LearningPace } from "@mathai/shared-types";
 
 const router = Router();
 
-const HELP_MODE_MAP: Record<string, HelpMode> = {
-  hint_1:          HelpMode.Hint1,
-  hint_2:          HelpMode.Hint2,
-  next_step:       HelpMode.NextStep,
-  explain_fully:   HelpMode.ExplainFully,
-  teach_concept:   HelpMode.TeachConcept,
-  similar_example: HelpMode.SimilarExample,
-};
-
 const AskSchema = z.object({
-  question: z.string().min(1).max(1000),
-  helpMode: z.enum(["hint_1", "hint_2", "next_step", "explain_fully", "teach_concept", "similar_example"]),
-  grade:    z.string().regex(/^G\d+$/).optional().default("G4"),
-  context:  z.string().max(500).optional(),
+  question:    z.string().min(1).max(1000),
+  grade:       z.string().regex(/^G\d+$/).optional().default("G4"),
+  context:     z.string().max(500).optional(),
+  studentName: z.string().max(50).optional(),
+  /** Optional profile fields for personalisation */
+  profile: z.object({
+    confidenceLevel:           z.number().min(0).max(100).optional(),
+    preferredExplanationStyle: z.enum(["visual", "step_by_step", "story", "analogy", "direct"]).optional(),
+    learningPace:              z.enum(["slow", "standard", "fast"]).optional(),
+  }).optional(),
 });
 
 router.post("/ask", async (req: Request, res: Response, next: NextFunction) => {
@@ -41,30 +42,21 @@ router.post("/ask", async (req: Request, res: Response, next: NextFunction) => {
       return;
     }
 
-    const { question, helpMode, grade, context } = parsed.data;
-    const internalMode = HELP_MODE_MAP[helpMode] ?? HelpMode.TeachConcept;
+    const { question, grade, context, studentName, profile } = parsed.data;
 
-    const response = await tutorService.handleHelpRequest({
-      sessionId:    "ask-standalone",
-      userId,
-      topicId:      "general",
-      questionText: question,
-      helpMode:     internalMode,
-      grade:        grade as Grade,
-      hintsUsed:    0,
-      studentAnswer: context,
+    const response = await askMathAIService.answer({
+      question,
+      grade:       grade as Grade,
+      context,
+      studentName,
+      profile: profile ? {
+        confidenceLevel:           profile.confidenceLevel           ?? 50,
+        preferredExplanationStyle: (profile.preferredExplanationStyle ?? "step_by_step") as ExplanationStyle,
+        learningPace:              (profile.learningPace              ?? "standard") as LearningPace,
+      } : undefined,
     });
 
-    res.json({
-      success: true,
-      data: {
-        helpMode,
-        encouragement:  response.encouragement,
-        content:        response.content,
-        visualPlan:     response.visualPlan,
-        similarExample: response.similarExample,
-      },
-    });
+    res.json({ success: true, data: response });
   } catch (err) { next(err); }
 });
 

@@ -4,8 +4,9 @@
  * Provider factory — reads AI_PROVIDER from env and returns the correct implementation.
  *
  * ENVIRONMENT VARIABLES:
- *   AI_PROVIDER=mock       → MockProvider (default, no API key needed)
- *   AI_PROVIDER=anthropic  → AnthropicProvider (requires ANTHROPIC_API_KEY)
+ *   AI_PROVIDER=vercel_gateway → VercelGatewayProvider (production — all calls through Vercel AI Gateway)
+ *   AI_PROVIDER=mock           → MockProvider (default, no API key needed)
+ *   AI_PROVIDER=anthropic      → AnthropicProvider (direct Anthropic, legacy)
  *
  * ADDING A NEW PROVIDER:
  *   1. Create ai/providers/openai.ts implementing AIProvider
@@ -22,8 +23,9 @@
 
 import type { AIProvider, AIRequest, AIResponse, ProviderName } from "./types";
 import { AIProviderError } from "./types";
-import { AnthropicProvider } from "./anthropic";
-import { MockProvider }      from "./mock";
+import { VercelGatewayProvider } from "./vercel_gateway";
+import { AnthropicProvider }     from "./anthropic";
+import { MockProvider }           from "./mock";
 
 // ─── Factory ──────────────────────────────────────────────────────────────────
 
@@ -31,6 +33,9 @@ export function createProvider(override?: ProviderName): AIProvider {
   const name = (override ?? process.env["AI_PROVIDER"] ?? "mock") as ProviderName;
 
   switch (name) {
+    case "vercel_gateway":
+      return withRetry(new VercelGatewayProvider(), { maxAttempts: 3 });
+
     case "anthropic":
       return withRetry(new AnthropicProvider(), { maxAttempts: 3 });
 

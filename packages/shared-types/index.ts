@@ -374,12 +374,75 @@ export type VisualPlan =
 // ─── Ask MathAI ───────────────────────────────────────────────────────────────
 
 export interface AskRequest {
-  question:  string;
-  helpMode:  HelpMode;
-  grade:     Grade;
-  context?:  string;
+  question:     string;
+  grade:        Grade;
+  context?:     string;
+  studentName?: string;
+  // Optional profile for personalisation
+  profile?: {
+    confidenceLevel:           number;
+    preferredExplanationStyle: ExplanationStyle;
+    learningPace:              LearningPace;
+  };
 }
-// AskRequest response shape reuses TutorResponse (already defined above)
+
+/** Step within an AI explanation */
+export interface AskStep {
+  stepNumber:  number;
+  instruction: string;
+  formula?:    string;      // LaTeX expression for KaTeX rendering
+  visualCue?:  string;
+}
+
+/** Full structured response from Ask MathAI */
+export interface AskMathAIResponse {
+  question:      string;
+  explanation:   string;
+  steps?:        AskStep[];
+  example: {
+    problem:    string;
+    solution:   string;
+    keyInsight: string;
+  };
+  visualPlan?:   VisualPlan;
+  followUp:      string;
+  encouragement: string;
+}
+
+// ─── AI-generated practice questions ─────────────────────────────────────────
+
+/** A practice question generated dynamically by the AI (not fetched from DB) */
+export interface AIGeneratedQuestion {
+  id:            string;
+  type:          QuestionType;
+  prompt:        string;
+  options?:      string[];    // only for multiple_choice — exactly 4 items
+  difficulty:    Difficulty;
+  xpReward:      number;
+  conceptTags:   string[];
+  aiGenerated:   true;
+  // correctAnswer NOT sent to frontend (same rule as static questions)
+}
+
+/** Enriched practice menu item — reason written by AI */
+export interface AIEnrichedMenuItem extends PracticeMenuItem {
+  encouragement?: string;       // Short AI-written motivational line
+}
+
+/** AI-personalised section (replaces or augments algorithmic section) */
+export interface AIEnrichedSection {
+  type:        PracticeMenuSectionType | "ai_picks";
+  title:       string;
+  subtitle:    string;
+  items:       AIEnrichedMenuItem[];
+  aiGenerated: true;
+}
+
+/** Practice menu with optional AI enrichment layer */
+export interface PersonalisedPracticeMenu extends PracticeMenu {
+  aiEnriched:    boolean;        // true when AI reasons are present
+  sections:      (PracticeMenuSection | AIEnrichedSection)[];
+}
 
 // ─── Student Profile ──────────────────────────────────────────────────────────
 
@@ -413,7 +476,8 @@ export type PracticeMenuSectionType =
   | "revise_this"
   | "grade_level"
   | "challenge"
-  | "confidence_booster";
+  | "confidence_booster"
+  | "ai_picks";             // AI-curated section (personalised recommendations)
 
 export interface PracticeMenuItem {
   topicId:       string;
@@ -422,8 +486,9 @@ export interface PracticeMenuItem {
   masteryLevel:  MasteryLevel;
   accuracyPct:   number;
   suggestedMode: PracticeMode;
-  reason:        string;        // e.g. "You got 4/10 last time"
+  reason:        string;        // Algorithmic or AI-written reason
   isNew?:        boolean;
+  encouragement?: string;       // AI-written motivational line (optional)
 }
 
 export interface PracticeMenuSection {
@@ -435,6 +500,7 @@ export interface PracticeMenuSection {
 
 export interface PracticeMenu {
   generatedAt: string;          // ISO timestamp
+  aiEnriched?: boolean;         // true when AI has enriched reasons/priorities
   sections:    PracticeMenuSection[];
 }
 
