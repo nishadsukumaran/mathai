@@ -119,12 +119,21 @@ export default function AskPageContent() {
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xl shadow">
             🤖
           </div>
-          <div>
+          <div className="flex-1">
             <h1 className="font-black text-xl text-gray-800 leading-tight">Ask MathAI</h1>
             <p className="text-xs text-slate-400">
               Grade {grade.replace("G", "")} · Your personal math tutor
             </p>
           </div>
+          {conversation.length > 0 && (
+            <button
+              onClick={() => setConversation([])}
+              className="text-xs font-bold text-slate-400 hover:text-slate-600 transition px-3 py-1.5 rounded-xl border border-slate-200 hover:border-slate-300 shrink-0"
+              title="Start a new conversation"
+            >
+              New chat ↺
+            </button>
+          )}
         </div>
       </header>
 

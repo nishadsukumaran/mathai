@@ -88,6 +88,40 @@ export default function DashboardView({ data }: Props) {
           )}
         </header>
 
+        {/* ── Getting Started — shown only to brand-new users (0 XP) ─── */}
+        {progressSummary && progressSummary.totalXP === 0 && (
+          <section className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-3xl p-6 text-white shadow-lg">
+            <h2 className="font-black text-lg mb-1">Welcome to MathAI! 🎉</h2>
+            <p className="text-indigo-200 text-sm mb-4">Here&apos;s how to get started:</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <Link
+                href="/progress"
+                className="bg-white/15 hover:bg-white/25 rounded-2xl p-4 transition"
+              >
+                <p className="text-2xl mb-1">📚</p>
+                <p className="font-bold text-sm">Pick a topic</p>
+                <p className="text-xs text-indigo-200 mt-0.5">Browse all topics on the Progress page</p>
+              </Link>
+              <Link
+                href="/ask"
+                className="bg-white/15 hover:bg-white/25 rounded-2xl p-4 transition"
+              >
+                <p className="text-2xl mb-1">🤖</p>
+                <p className="font-bold text-sm">Ask MathAI</p>
+                <p className="text-xs text-indigo-200 mt-0.5">Get step-by-step help on any math question</p>
+              </Link>
+              <Link
+                href="/profile"
+                className="bg-white/15 hover:bg-white/25 rounded-2xl p-4 transition"
+              >
+                <p className="text-2xl mb-1">⚙️</p>
+                <p className="font-bold text-sm">Set your grade</p>
+                <p className="text-xs text-indigo-200 mt-0.5">Personalise your learning experience</p>
+              </Link>
+            </div>
+          </section>
+        )}
+
         {/* ── 1. Continue Learning ────────────────────────────────────── */}
         <section>
           <h2 className="text-lg font-black text-gray-800 mb-3">Continue Learning 📖</h2>

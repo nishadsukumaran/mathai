@@ -97,7 +97,7 @@ export default function ProgressView({ data }: Props) {
         </div>
 
         {/* ── Focus Areas (weak areas) ─────────────────────────────────── */}
-        {weakAreas.length > 0 && (
+        {weakAreas.length > 0 && totalXp > 0 && (
           <section>
             <h2 className="text-lg font-black text-gray-800 mb-4">Focus Areas 🎯</h2>
             <div className="space-y-3">
@@ -140,7 +140,10 @@ export default function ProgressView({ data }: Props) {
         {/* ── All Topics by Strand ─────────────────────────────────────── */}
         {curriculum.length > 0 && (
           <section>
-            <h2 className="text-lg font-black text-gray-800 mb-4">All Topics 📚</h2>
+            <h2 className="text-lg font-black text-gray-800 mb-1">All Topics 📚</h2>
+            <p className="text-xs text-slate-400 mb-4">
+              🔒 Topics unlock as you complete earlier ones in each strand
+            </p>
             {curriculum.map((strand) => (
               <div key={strand.strand.id} className="mb-6">
                 <p className="text-sm font-black text-slate-600 uppercase tracking-widest mb-3">

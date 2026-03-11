@@ -36,12 +36,12 @@ const PACE_OPTIONS: { value: LearningPace; label: string; icon: string; desc: st
   { value: "fast",     label: "Fast Track",    icon: "🚀", desc: "Challenge me!" },
 ];
 
-const STYLE_OPTIONS: { value: ExplanationStyle; label: string; icon: string }[] = [
-  { value: "visual",       label: "Visual",       icon: "🎨" },
-  { value: "step_by_step", label: "Step by Step", icon: "🪜" },
-  { value: "story",        label: "Story",        icon: "📖" },
-  { value: "analogy",      label: "Analogy",      icon: "🔗" },
-  { value: "direct",       label: "Direct",       icon: "⚡" },
+const STYLE_OPTIONS: { value: ExplanationStyle; label: string; icon: string; desc: string }[] = [
+  { value: "visual",       label: "Visual",       icon: "🎨", desc: "Diagrams & pictures"      },
+  { value: "step_by_step", label: "Step by Step", icon: "🪜", desc: "Numbered instructions"    },
+  { value: "story",        label: "Story",        icon: "📖", desc: "Real-world scenarios"     },
+  { value: "analogy",      label: "Analogy",      icon: "🔗", desc: "Familiar comparisons"     },
+  { value: "direct",       label: "Direct",       icon: "⚡", desc: "Concise & to the point"  },
 ];
 
 export default function ProfilePageContent() {
@@ -189,21 +189,25 @@ export default function ProfilePageContent() {
 
         {/* Explanation style */}
         <section className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 space-y-3">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">How I Like to Learn</p>
-          <div className="flex flex-wrap gap-2">
+          <div>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">How I Like to Learn</p>
+            <p className="text-xs text-slate-400 mt-0.5">MathAI will adapt its explanations to match your style</p>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {STYLE_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
                 onClick={() => setStyle(opt.value)}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold border-2 transition",
+                  "flex flex-col items-center gap-1 p-3 rounded-2xl border-2 text-center transition",
                   style === opt.value
-                    ? "border-purple-500 bg-purple-50 text-purple-700"
-                    : "border-gray-100 text-gray-600 hover:border-purple-300",
+                    ? "border-purple-500 bg-purple-50"
+                    : "border-gray-100 hover:border-purple-200",
                 )}
               >
-                <span>{opt.icon}</span>
-                <span>{opt.label}</span>
+                <span className="text-xl">{opt.icon}</span>
+                <span className="text-xs font-bold text-gray-700">{opt.label}</span>
+                <span className="text-xs text-gray-400">{opt.desc}</span>
               </button>
             ))}
           </div>
@@ -211,7 +215,10 @@ export default function ProfilePageContent() {
 
         {/* Confidence */}
         <section className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 space-y-3">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">My Confidence Level</p>
+          <div>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">My Confidence Level</p>
+            <p className="text-xs text-slate-400 mt-0.5">Helps MathAI decide when to offer hints vs. push you harder</p>
+          </div>
           <div className="flex items-center gap-4">
             <span className="text-xl">😟</span>
             <input

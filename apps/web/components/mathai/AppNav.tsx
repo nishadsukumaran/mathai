@@ -24,7 +24,7 @@ const NAV_ITEMS = [
   { href: "/practice",    label: "Practice", icon: "📚", activeIcon: "📚" },
   { href: "/ask",         label: "Ask AI",   icon: "🤖", activeIcon: "🤖" },
   { href: "/progress",    label: "Progress", icon: "📈", activeIcon: "📈" },
-  { href: "/leaderboard", label: "Board",    icon: "🏆", activeIcon: "🏆" },
+  { href: "/leaderboard", label: "Leaders",  icon: "🏆", activeIcon: "🏆" },
   { href: "/profile",     label: "Profile",  icon: "👤", activeIcon: "👤" },
 ] as const;
 
