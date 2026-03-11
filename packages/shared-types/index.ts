@@ -325,16 +325,117 @@ export interface TutorExample {
   keyInsight:   string;
 }
 
-export interface VisualPlan {
-  diagramType:
-    | "number_line"
-    | "array"
-    | "bar_model"
-    | "fraction_bar"
-    | "place_value_chart"
-    | "coordinate_grid"
-    | "none";
-  data: Record<string, unknown>;
+// ─── Visual plan — typed data per diagramType ────────────────────────────────
+
+export interface NumberLineData {
+  min:       number;
+  max:       number;
+  step:      number;
+  highlight?: [number, number];          // inclusive range to shade
+  point?:    number;                     // single marked point
+  arrow?:    { from: number; to: number; label?: string };
+}
+
+export interface FractionBarData {
+  fractions: Array<{
+    numerator:   number;
+    denominator: number;
+    label?:      string;
+    color?:      string;                 // tailwind bg class or hex
+  }>;
+  showEquivalent?: boolean;
+}
+
+export interface ArrayData {
+  rows:            number;
+  cols:            number;
+  highlightGroups?: Array<{ start: number; size: number; color: string }>;
+}
+
+export interface BarModelData {
+  bars:  Array<{ label: string; value: number; color?: string }>;
+  total?: { label: string };
+}
+
+export interface PlaceValueChartData {
+  digits:     Record<string, number>;    // e.g. { thousands: 3, hundreds: 2, tens: 1, ones: 5 }
+  highlight?: string[];                  // column keys to highlight
+}
+
+export type VisualPlan =
+  | { diagramType: "number_line";       data: NumberLineData }
+  | { diagramType: "fraction_bar";      data: FractionBarData }
+  | { diagramType: "array";             data: ArrayData }
+  | { diagramType: "bar_model";         data: BarModelData }
+  | { diagramType: "place_value_chart"; data: PlaceValueChartData }
+  | { diagramType: "coordinate_grid";   data: Record<string, unknown> }
+  | { diagramType: "none";              data: Record<string, unknown> };
+
+// ─── Ask MathAI ───────────────────────────────────────────────────────────────
+
+export interface AskRequest {
+  question:  string;
+  helpMode:  HelpMode;
+  grade:     Grade;
+  context?:  string;
+}
+// AskRequest response shape reuses TutorResponse (already defined above)
+
+// ─── Student Profile ──────────────────────────────────────────────────────────
+
+export type LearningPace      = "slow" | "standard" | "fast";
+export type ExplanationStyle  = "visual" | "step_by_step" | "story" | "analogy" | "direct";
+
+export interface StudentProfileResponse {
+  id:                        string;
+  name:                      string;
+  grade:                     Grade;
+  avatarUrl?:                string;
+  preferredTheme:            string;
+  learningPace:              LearningPace;
+  confidenceLevel:           number;        // 0–100, AI-managed
+  preferredExplanationStyle: ExplanationStyle;
+  totalXp:                   number;
+  currentLevel:              number;
+}
+
+export interface UpdateProfileRequest {
+  name?:                      string;
+  preferredTheme?:            string;
+  learningPace?:              LearningPace;
+  preferredExplanationStyle?: ExplanationStyle;
+}
+
+// ─── Practice Menu ────────────────────────────────────────────────────────────
+
+export type PracticeMenuSectionType =
+  | "best_for_you"
+  | "revise_this"
+  | "grade_level"
+  | "challenge"
+  | "confidence_booster";
+
+export interface PracticeMenuItem {
+  topicId:       string;
+  topicName:     string;
+  iconSlug:      string;
+  masteryLevel:  MasteryLevel;
+  accuracyPct:   number;
+  suggestedMode: PracticeMode;
+  reason:        string;        // e.g. "You got 4/10 last time"
+  isNew?:        boolean;
+}
+
+export interface PracticeMenuSection {
+  type:     PracticeMenuSectionType;
+  title:    string;
+  subtitle: string;
+  items:    PracticeMenuItem[];
+}
+
+export interface PracticeMenu {
+  generatedAt: string;          // ISO timestamp
+  sections:    PracticeMenuSection[];
 }
 
 // ─── Error codes (known) ──────────────────────────────────────────────────────

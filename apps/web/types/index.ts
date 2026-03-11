@@ -60,9 +60,47 @@ export type {
   TutorStep,
   TutorExample,
   VisualPlan,
+  NumberLineData,
+  FractionBarData,
+  ArrayData,
+  BarModelData,
+  PlaceValueChartData,
+
+  // Ask MathAI
+  AskRequest,
+
+  // Profile
+  LearningPace,
+  ExplanationStyle,
+  StudentProfileResponse,
+  UpdateProfileRequest,
+
+  // Practice Menu
+  PracticeMenuSectionType,
+  PracticeMenuItem,
+  PracticeMenuSection,
+  PracticeMenu,
 } from "@mathai/shared-types";
 
 export { API_ERROR_CODES } from "@mathai/shared-types";
+
+// ─── View contracts ────────────────────────────────────────────────────────────
+// What containers pass to view components (mapped from API types)
+
+export type {
+  DashboardViewData,
+  ContinueLearningItem,
+  DailyMissionData,
+  ProgressSummaryData,
+  ProgressViewData,
+  CurriculumViewItem,
+  CurriculumTopicItem,
+  PracticeViewData,
+  PracticeQuestionItem,
+  SubmitResultView,
+  ProfileViewData,
+  PracticeMenuViewData,
+} from "./contracts";
 
 // ─── UI State types ────────────────────────────────────────────────────────────
 
