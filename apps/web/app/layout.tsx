@@ -17,8 +17,9 @@ import type { Metadata } from "next";
 import { Inter, Nunito } from "next/font/google";
 import "./globals.css";
 import { Providers }  from "./providers";
-import { AppNav }       from "@/components/mathai/AppNav";
-import { ScrollToTop }  from "@/components/shared/ScrollToTop";
+import { AppNav }      from "@/components/mathai/AppNav";
+import { RootMain }    from "@/components/shared/RootMain";
+import { ScrollToTop } from "@/components/shared/ScrollToTop";
 
 // Nunito is the primary font — friendly, rounded, great for kids
 const nunito = Nunito({
@@ -60,14 +61,11 @@ export default function RootLayout({
           <ScrollToTop />
           <AppNav />
           {/*
-           * pb-20   = clears 64px mobile bottom nav
-           * md:pl-20 = clears 80px desktop sidebar (icon-only width)
-           * xl:pl-56 = clears 224px desktop sidebar (icon + label width)
-           * md:pb-0  = no bottom padding needed on desktop
+           * RootMain conditionally applies sidebar padding:
+           *   Student routes: pb-20 md:pb-0 md:pl-20 xl:pl-56
+           *   Admin routes  : no padding (AdminLayout is self-contained)
            */}
-          <main className="pb-20 md:pb-0 md:pl-20 xl:pl-56">
-            {children}
-          </main>
+          <RootMain>{children}</RootMain>
         </Providers>
       </body>
     </html>

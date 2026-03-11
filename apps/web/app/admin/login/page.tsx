@@ -1,13 +1,13 @@
 /**
  * @module app/admin/login/page
  *
- * Admin login redirect — sends the browser to the shared /auth/signin page
- * with a callbackUrl pointing back to the admin dashboard.
- * The middleware handles all real access control.
+ * Legacy entry point — admin access is now via the sidebar ⚙️ Admin link
+ * (visible only when role === "admin"). This page still exists so old
+ * bookmarks don't 404; middleware handles auth/role enforcement.
  */
 
 import { redirect } from "next/navigation";
 
 export default function AdminLoginPage() {
-  redirect("/auth/signin?callbackUrl=/admin/dashboard");
+  redirect("/admin/dashboard");
 }

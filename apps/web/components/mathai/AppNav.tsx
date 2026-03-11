@@ -13,33 +13,41 @@
 
 import Link               from "next/link";
 import { usePathname }    from "next/navigation";
+import { useSession }     from "next-auth/react";
 import { cn }             from "@/lib/utils";
 
 // ─── Nav items ────────────────────────────────────────────────────────────────
 
-// All items appear on BOTH mobile bottom bar and desktop sidebar.
-// Profile is in this list (fix for NAV-01 — previously missing from mobile).
 const NAV_ITEMS = [
-  { href: "/dashboard",   label: "Home",     icon: "🏠", activeIcon: "🏠" },
-  { href: "/practice",    label: "Practice", icon: "📚", activeIcon: "📚" },
-  { href: "/ask",         label: "Ask AI",   icon: "🤖", activeIcon: "🤖" },
-  { href: "/progress",    label: "Progress", icon: "📈", activeIcon: "📈" },
-  { href: "/leaderboard", label: "Leaders",  icon: "🏆", activeIcon: "🏆" },
-  { href: "/profile",     label: "Profile",  icon: "👤", activeIcon: "👤" },
-] as const;
+  { href: "/dashboard",   label: "Home",     icon: "🏠" },
+  { href: "/practice",    label: "Practice", icon: "📚" },
+  { href: "/ask",         label: "Ask AI",   icon: "🤖" },
+  { href: "/progress",    label: "Progress", icon: "📈" },
+  { href: "/leaderboard", label: "Leaders",  icon: "🏆" },
+  { href: "/profile",     label: "Profile",  icon: "👤" },
+];
+
+const ADMIN_ITEM = { href: "/admin/dashboard", label: "Admin", icon: "⚙️" };
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function AppNav() {
-  const pathname = usePathname();
+  const pathname            = usePathname();
+  const { data: session }   = useSession();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const role                = (session?.user as any)?.role as string | undefined;
 
-  // Hide on auth routes and landing page
+  // Hide on auth routes, landing page, and admin area (admin has its own nav)
   if (
     pathname === "/" ||
-    pathname.startsWith("/auth")
+    pathname.startsWith("/auth") ||
+    pathname.startsWith("/admin")
   ) {
     return null;
   }
+
+  // Append admin link for admin users
+  const navItems = role === "admin" ? [...NAV_ITEMS, ADMIN_ITEM] : NAV_ITEMS;
 
   const isActive = (href: string) =>
     href === "/dashboard"
@@ -51,7 +59,7 @@ export function AppNav() {
       {/* ── Mobile: fixed bottom bar ────────────────────────────────────── */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-gray-100 shadow-lg safe-area-pb">
         <div className="flex items-stretch h-16">
-          {[...NAV_ITEMS].map((item) => {
+          {navItems.map((item) => {
             const active = isActive(item.href);
             return (
               <Link
@@ -65,7 +73,7 @@ export function AppNav() {
                 )}
               >
                 <span className={cn("text-lg leading-none", active && "scale-110 transition-transform")}>
-                  {active ? item.activeIcon : item.icon}
+                  {item.icon}
                 </span>
                 <span className={cn(
                   "text-[9px] font-bold leading-none",
@@ -96,8 +104,9 @@ export function AppNav() {
 
         {/* Nav links — all items including Profile */}
         <div className="flex-1 flex flex-col gap-1 px-2">
-          {NAV_ITEMS.map((item) => {
+          {navItems.map((item) => {
             const active = isActive(item.href);
+            const isAdminLink = item.href.startsWith("/admin");
             return (
               <Link
                 key={item.href}
@@ -107,7 +116,9 @@ export function AppNav() {
                   "flex items-center gap-3 px-3 py-3 rounded-2xl font-bold text-sm transition-all",
                   active
                     ? "bg-indigo-600 text-white shadow-md shadow-indigo-200"
-                    : "text-gray-500 hover:bg-indigo-50 hover:text-indigo-600",
+                    : isAdminLink
+                      ? "text-amber-600 hover:bg-amber-50 hover:text-amber-700 border border-amber-200"
+                      : "text-gray-500 hover:bg-indigo-50 hover:text-indigo-600",
                 )}
               >
                 <span className="text-xl shrink-0">{item.icon}</span>
