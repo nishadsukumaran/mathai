@@ -77,11 +77,11 @@ export default function LeaderboardView({
         {entries.length >= 3 && (
           <div className="flex items-end justify-center gap-3 py-4">
             {/* 2nd place */}
-            <PodiumCard entry={entries[1]} height="h-28" />
+            <PodiumCard entry={entries[1]!} height="h-28" />
             {/* 1st place */}
-            <PodiumCard entry={entries[0]} height="h-36" crown />
+            <PodiumCard entry={entries[0]!} height="h-36" crown />
             {/* 3rd place */}
-            <PodiumCard entry={entries[2]} height="h-24" />
+            <PodiumCard entry={entries[2]!} height="h-24" />
           </div>
         )}
 

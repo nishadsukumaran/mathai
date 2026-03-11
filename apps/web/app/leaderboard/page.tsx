@@ -51,9 +51,10 @@ function mapXP(gamification: any): XPStatus | null {
 function mapStreak(gamification: any): StreakStatus | null {
   if (!gamification) return null;
   return {
-    currentStreak: gamification.streak ?? 0,
-    longestStreak: gamification.longestStreak ?? gamification.streak ?? 0,
-    shieldActive: gamification.hasStreakShield ?? false,
+    currentStreak:  gamification.streak ?? 0,
+    longestStreak:  gamification.longestStreak ?? gamification.streak ?? 0,
+    lastActiveDate: gamification.lastActiveDate ?? new Date().toISOString().split("T")[0]!,
+    shieldActive:   gamification.hasStreakShield ?? false,
   };
 }
 

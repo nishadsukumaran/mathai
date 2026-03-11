@@ -86,6 +86,7 @@ const SECTION_ACCENT: Record<PracticeMenuSectionType, string> = {
   grade_level:        "text-emerald-600 bg-emerald-50 border-emerald-100",
   challenge:          "text-rose-600   bg-rose-50   border-rose-100",
   confidence_booster: "text-purple-600 bg-purple-50 border-purple-100",
+  ai_picks:           "text-sky-600    bg-sky-50    border-sky-100",
 };
 
 // ─── PracticeMenuCard ─────────────────────────────────────────────────────────
