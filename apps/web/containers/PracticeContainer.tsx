@@ -223,6 +223,20 @@ export default function PracticeContainer({ topicId, mode }: Props) {
     }
   }, [session, hintsUsed]);
 
+  // ── Teach Me — redirect to Ask MathAI with the current question pre-filled ────
+
+  const teachMe = useCallback(() => {
+    const currentQ = session?.questions[session.currentIndex];
+    if (!currentQ) {
+      router.push("/ask");
+      return;
+    }
+    // Build a natural-language question from the problem text so Ask MathAI
+    // can give a full concept explanation, not just a session-specific hint.
+    const teachQuestion = `Explain how to solve this and teach me the concept: ${currentQ.prompt}`;
+    router.push(`/ask?q=${encodeURIComponent(teachQuestion)}&topic=${encodeURIComponent(topicId)}`);
+  }, [session, topicId, router]);
+
   // ── Auto-start once ───────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -258,6 +272,7 @@ export default function PracticeContainer({ topicId, mode }: Props) {
       onSubmit={submitAnswer}
       onNextQuestion={nextQuestion}
       onGetHint={getHint}
+      onTeachMe={teachMe}
       onRetry={startSession}
       onRestart={() => {
         setSession(null);

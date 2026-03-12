@@ -29,6 +29,8 @@ import {
 import { HintEngine } from "./hint_engine";
 import { ExplanationEngine } from "./explanation_engine";
 import { MisconceptionEngine } from "./misconception_engine";
+import type { MisconceptionResult } from "./misconception_engine";
+import { callAIModel } from "../ai_client";
 
 // ─── Concept Tag Map ──────────────────────────────────────────────────────────
 // Maps topicId prefixes/keywords → concept tags used by hint + explanation engines
@@ -116,6 +118,55 @@ function pickEncouragement(helpMode: HelpMode, hintsUsed: number): string {
   return pool[Math.floor(Math.random() * pool.length)] ?? "You're doing great!";
 }
 
+// ─── AI Hint Generation ────────────────────────────────────────────────────────
+// Generates a contextual, question-specific hint using the AI engine.
+// Falls back to the template engine if the AI call fails.
+
+const HINT_SYSTEM_PROMPT = `You are MathAI — a warm, patient math tutor for school students.
+Your job is to give SHORT, targeted hints that help a student think through a specific problem.
+Rules:
+- Never give the final answer directly
+- Keep your response to 1–2 sentences maximum
+- Use simple, age-appropriate language
+- Be encouraging and kind
+- Focus on the specific problem the student is looking at`;
+
+async function generateAIHint(params: {
+  questionText:  string;
+  grade:         string;
+  hintLevel:     1 | 2 | 3;
+  hintsUsed:     number;
+  misconception: MisconceptionResult | null;
+}): Promise<string> {
+  const { questionText, grade, hintLevel, misconception } = params;
+
+  const levelGuide =
+    hintLevel === 1
+      ? "Give a gentle nudge — remind them of the relevant concept or what to look at first. Do NOT show any method or calculation."
+      : hintLevel === 2
+        ? "Give a bigger clue — tell them what operation or approach to use, but stop before any calculation."
+        : "Tell them the next step to take — be specific about what to do right now, but stop just before the final answer.";
+
+  const misconceptionLine =
+    misconception && misconception.confidence > 0.6
+      ? `\nThe student may have this misconception: "${misconception.description}". Gently address it.`
+      : "";
+
+  const prompt = `A Grade ${grade} student is working on this math problem:
+"${questionText}"
+
+This is hint #${hintLevel}. ${levelGuide}${misconceptionLine}
+
+Write your hint now (1–2 sentences only):`;
+
+  return callAIModel(prompt, {
+    system:    HINT_SYSTEM_PROMPT,
+    maxTokens: 120,
+    temperature: 0.6,
+    callSite: "tutor_service.ai_hint",
+  });
+}
+
 // ─── TutorService ─────────────────────────────────────────────────────────────
 
 export class TutorService {
@@ -171,19 +222,41 @@ export class TutorService {
     let similarExample;
 
     if (isHintMode) {
-      const result = this.hintEngine.generate({
-        topicId,
-        conceptTags,
-        questionText,
-        studentAnswer,
-        helpMode,
-        hintsUsed,
-        grade,
-        misconception: misconception ?? undefined,
-      });
+      // ── AI-first: generate a contextual hint from the actual question text ────
+      const hintLevel: 1 | 2 | 3 =
+        helpMode === HelpMode.Hint1 ? 1 : helpMode === HelpMode.Hint2 ? 2 : 3;
 
-      content    = result.content;
-      visualPlan = result.visualPlan;
+      let hintText: string | null = null;
+      try {
+        hintText = await generateAIHint({
+          questionText,
+          grade,
+          hintLevel,
+          hintsUsed,
+          misconception,
+        });
+      } catch (aiErr) {
+        console.warn("[tutor_service] AI hint failed — falling back to template:", (aiErr as Error).message);
+      }
+
+      if (hintText) {
+        // AI succeeded — use its text directly
+        content = { text: hintText };
+        // Still get visual plan from template engine (no AI needed for diagrams)
+        const templateResult = this.hintEngine.generate({
+          topicId, conceptTags, questionText, studentAnswer,
+          helpMode, hintsUsed, grade, misconception: misconception ?? undefined,
+        });
+        visualPlan = templateResult.visualPlan;
+      } else {
+        // AI failed — fall back fully to template engine
+        const result = this.hintEngine.generate({
+          topicId, conceptTags, questionText, studentAnswer,
+          helpMode, hintsUsed, grade, misconception: misconception ?? undefined,
+        });
+        content    = result.content;
+        visualPlan = result.visualPlan;
+      }
 
     } else {
       const result = this.explanationEngine.generate({

@@ -7,7 +7,7 @@
 
 "use client";
 
-import { useState, useRef, useCallback }  from "react";
+import { useState, useRef, useCallback, useEffect }  from "react";
 import { cn }                from "@/lib/utils";
 import { clientPost }        from "@/lib/clientApi";
 import { useProfile }        from "@/hooks/use-profile";
@@ -31,12 +31,18 @@ type ConversationItem = {
   loading:  boolean;
 };
 
-export default function AskPageContent() {
+interface AskPageContentProps {
+  /** If set (from ?q= URL param), auto-submit this question on mount */
+  initialQuestion?: string;
+}
+
+export default function AskPageContent({ initialQuestion = "" }: AskPageContentProps) {
   const { profile } = useProfile();
   const [question,      setQuestion]      = useState("");
   const [conversation,  setConversation]  = useState<ConversationItem[]>([]);
-  const inputRef    = useRef<HTMLTextAreaElement>(null);
-  const bottomRef   = useRef<HTMLDivElement>(null);
+  const inputRef         = useRef<HTMLTextAreaElement>(null);
+  const bottomRef        = useRef<HTMLDivElement>(null);
+  const autoSubmittedRef = useRef(false);
 
   const grade = profile?.grade ?? "G4";
 
@@ -100,6 +106,17 @@ export default function AskPageContent() {
       void handleSubmit();
     }
   }
+
+  // ── Auto-submit when coming from practice "Teach Me" button ─────────────────
+  // Runs once on mount; profile grade must be loaded first for a good response.
+  useEffect(() => {
+    if (!initialQuestion || autoSubmittedRef.current) return;
+    // Wait until profile has resolved so the grade is correct in the AI prompt
+    if (!profile) return;
+    autoSubmittedRef.current = true;
+    void handleSubmit(initialQuestion);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialQuestion, profile]);
 
   /** Grow the textarea to fit its content, up to max-h-32 (8rem). */
   const autoResize = useCallback((el: HTMLTextAreaElement) => {

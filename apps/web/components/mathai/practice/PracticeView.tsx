@@ -33,6 +33,7 @@ interface Props {
   onSubmit:        () => void;
   onNextQuestion:  () => void;
   onGetHint:       () => void;
+  onTeachMe:       () => void;
   onRetry:         () => void;
   onRestart:       () => void;
 }
@@ -52,6 +53,7 @@ export default function PracticeView({
   onSubmit,
   onNextQuestion,
   onGetHint,
+  onTeachMe,
   onRetry,
   onRestart,
 }: Props) {
@@ -243,8 +245,14 @@ export default function PracticeView({
               />
             )}
 
-            {/* Hint box */}
-            {hint && (
+            {/* Hint box — shows AI-generated hint or loading state */}
+            {loading && hintsUsed > 0 && !result && (
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4 flex items-center gap-3">
+                <div className="w-4 h-4 rounded-full border-2 border-amber-400 border-t-amber-700 animate-spin shrink-0" />
+                <span className="text-amber-700 text-sm font-medium">MathAI is thinking of a hint for you…</span>
+              </div>
+            )}
+            {hint && !loading && (
               <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4 text-amber-800 text-sm">
                 💡 {hint}
               </div>
@@ -264,15 +272,25 @@ export default function PracticeView({
                 </p>
                 <p className="text-sm text-gray-600 mt-1">{result.encouragement}</p>
                 {!result.isCorrect && (
-                  <p className="text-sm text-gray-500 mt-1">
-                    Correct answer: <strong>{result.correctAnswer}</strong>
-                  </p>
+                  <>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Correct answer: <strong>{result.correctAnswer}</strong>
+                    </p>
+                    {/* Teach Me — deep-links to Ask MathAI with this question pre-loaded */}
+                    <button
+                      onClick={onTeachMe}
+                      className="mt-3 flex items-center gap-2 text-sm font-bold text-indigo-600 hover:text-indigo-800 transition"
+                    >
+                      <span className="text-base">📖</span>
+                      Teach me this properly →
+                    </button>
+                  </>
                 )}
               </div>
             )}
 
             {/* Action buttons */}
-            <div className="flex gap-3 mt-4">
+            <div className="flex gap-2 mt-4 flex-wrap">
               {!result ? (
                 <>
                   <button
@@ -280,14 +298,23 @@ export default function PracticeView({
                     disabled={!answer.trim() || loading}
                     className="flex-1 bg-indigo-600 text-white py-3 rounded-2xl font-bold hover:bg-indigo-700 disabled:opacity-40 transition"
                   >
-                    {loading ? "Checking..." : "Check Answer ✓"}
+                    {loading && hintsUsed === 0 ? "Checking..." : "Check Answer ✓"}
                   </button>
                   <button
                     onClick={onGetHint}
                     disabled={loading || hintsUsed >= 3}
                     className="px-4 py-3 rounded-2xl border border-amber-300 text-amber-600 font-semibold hover:bg-amber-50 disabled:opacity-40 transition"
+                    title="Get an AI-generated hint for this question"
                   >
                     💡 Hint {hintsUsed > 0 ? `(${hintsUsed}/3)` : ""}
+                  </button>
+                  <button
+                    onClick={onTeachMe}
+                    disabled={loading}
+                    className="px-4 py-3 rounded-2xl border border-indigo-200 text-indigo-500 font-semibold hover:bg-indigo-50 disabled:opacity-40 transition"
+                    title="Don't know this topic? Let MathAI explain it fully"
+                  >
+                    📖 Teach Me
                   </button>
                 </>
               ) : (
