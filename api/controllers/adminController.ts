@@ -134,7 +134,26 @@ export async function resetPassword(
   next: NextFunction
 ): Promise<void> {
   try {
-    const temporaryPassword = await adminService.resetPassword(req.params["id"]!);
+    // Optional: admin can supply a specific password instead of auto-generating.
+    const newPassword = (req.body?.newPassword as string | undefined)?.trim() || undefined;
+
+    if (newPassword !== undefined) {
+      // Validate complexity: min 8 chars, at least one letter, at least one number
+      if (newPassword.length < 8) {
+        res.status(400).json({ error: "Password must be at least 8 characters." });
+        return;
+      }
+      if (!/[a-zA-Z]/.test(newPassword)) {
+        res.status(400).json({ error: "Password must contain at least one letter." });
+        return;
+      }
+      if (!/[0-9]/.test(newPassword)) {
+        res.status(400).json({ error: "Password must contain at least one number." });
+        return;
+      }
+    }
+
+    const temporaryPassword = await adminService.resetPassword(req.params["id"]!, newPassword);
     send(res, {
       message: "Password reset successfully",
       temporaryPassword,

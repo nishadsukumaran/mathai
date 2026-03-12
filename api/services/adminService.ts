@@ -289,10 +289,25 @@ export async function resetPassword(
 }
 
 function generateTemporaryPassword(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
-  let result = "";
-  for (let i = 0; i < 12; i++) {
-    result += chars[Math.floor(Math.random() * chars.length)];
+  const letters = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz";
+  const digits  = "23456789";
+  const all     = letters + digits;
+
+  // Build a 12-char password that is guaranteed to contain
+  // at least 2 letters and 2 digits, then fill the rest randomly.
+  const fixed = [
+    letters[Math.floor(Math.random() * letters.length)]!,
+    letters[Math.floor(Math.random() * letters.length)]!,
+    digits[Math.floor(Math.random() * digits.length)]!,
+    digits[Math.floor(Math.random() * digits.length)]!,
+  ];
+  const rest: string[] = [];
+  for (let i = 0; i < 8; i++) {
+    rest.push(all[Math.floor(Math.random() * all.length)]!);
   }
-  return result;
+
+  // Shuffle all characters together so the fixed positions aren't predictable
+  return [...fixed, ...rest]
+    .sort(() => Math.random() - 0.5)
+    .join("");
 }

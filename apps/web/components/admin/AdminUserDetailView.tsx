@@ -7,7 +7,7 @@
 
 "use client";
 
-import { useState }       from "react";
+import { useState, useMemo } from "react";
 import { useRouter }      from "next/navigation";
 import Link               from "next/link";
 import { clientPatch, clientPost } from "@/lib/clientApi";
@@ -56,8 +56,24 @@ export default function AdminUserDetailView({ user }: Props) {
   const [actionMsg,     setActionMsg]     = useState<string | null>(null);
 
   // Reset password state
-  const [resetLoading,  setResetLoading]  = useState(false);
-  const [tempPassword,  setTempPassword]  = useState<string | null>(null);
+  const [resetMode,         setResetMode]         = useState<"auto" | "manual">("auto");
+  const [manualPassword,    setManualPassword]    = useState("");
+  const [confirmPassword,   setConfirmPassword]   = useState("");
+  const [showManualPwd,     setShowManualPwd]     = useState(false);
+  const [resetLoading,      setResetLoading]      = useState(false);
+  const [tempPassword,      setTempPassword]      = useState<string | null>(null);
+  const [resetError,        setResetError]        = useState<string | null>(null);
+
+  // Live complexity checks for manual password
+  const complexity = useMemo(() => ({
+    length:  manualPassword.length >= 8,
+    letter:  /[a-zA-Z]/.test(manualPassword),
+    number:  /[0-9]/.test(manualPassword),
+    match:   manualPassword.length > 0 && manualPassword === confirmPassword,
+  }), [manualPassword, confirmPassword]);
+
+  const manualIsValid =
+    complexity.length && complexity.letter && complexity.number && complexity.match;
 
   // ── Save edits ──────────────────────────────────────────────────────────────
 
@@ -117,15 +133,31 @@ export default function AdminUserDetailView({ user }: Props) {
   // ── Reset password ──────────────────────────────────────────────────────────
 
   async function handleResetPassword() {
-    if (!confirm(`Reset password for ${user.name}? A temporary password will be generated.`)) return;
+    const isManual = resetMode === "manual";
+    const confirmMsg = isManual
+      ? `Set a specific password for ${user.name}?`
+      : `Auto-generate a new password for ${user.name}?`;
+    if (!confirm(confirmMsg)) return;
+
     setResetLoading(true);
     setTempPassword(null);
+    setResetError(null);
     try {
-      const res = await clientPost<{ temporaryPassword: string }>(`/admin/users/${user.id}/reset-password`, {});
-      setTempPassword(res?.temporaryPassword ?? null);
+      const body = isManual ? { newPassword: manualPassword } : {};
+      const res = await clientPost<{ temporaryPassword: string }>(
+        `/admin/users/${user.id}/reset-password`,
+        body
+      );
+      if (res?.temporaryPassword) {
+        setTempPassword(res.temporaryPassword);
+        // Clear manual fields after success
+        setManualPassword("");
+        setConfirmPassword("");
+      } else {
+        setResetError("Reset failed — no password returned.");
+      }
     } catch {
-      setTempPassword(null);
-      alert("Password reset failed");
+      setResetError("Password reset failed. Please try again.");
     } finally {
       setResetLoading(false);
     }
@@ -260,19 +292,109 @@ export default function AdminUserDetailView({ user }: Props) {
 
       {/* ── Reset password ────────────────────────────────────────────────────── */}
       <Card title="Reset Password">
-        <p className="text-sm text-gray-600 mb-3">
-          Generates a temporary password and sets it immediately. Give the password to the user out-of-band; they should change it after logging in.
+        <p className="text-sm text-gray-600">
+          Set a new password for this user. They should change it after logging in.
         </p>
+
+        {/* Mode toggle */}
+        <div className="flex gap-2 mt-1">
+          {(["auto", "manual"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => { setResetMode(m); setTempPassword(null); setResetError(null); }}
+              className={`px-4 py-1.5 rounded-xl text-xs font-bold border transition ${
+                resetMode === m
+                  ? "bg-indigo-600 text-white border-indigo-600"
+                  : "bg-white text-gray-500 border-gray-200 hover:border-indigo-300"
+              }`}
+            >
+              {m === "auto" ? "Auto-generate" : "Set manually"}
+            </button>
+          ))}
+        </div>
+
+        {/* Manual entry fields */}
+        {resetMode === "manual" && (
+          <div className="space-y-3 mt-1">
+            {/* New password */}
+            <Field label="New password">
+              <div className="relative">
+                <input
+                  type={showManualPwd ? "text" : "password"}
+                  value={manualPassword}
+                  onChange={e => setManualPassword(e.target.value)}
+                  placeholder="Min 8 chars, letters + numbers"
+                  className={inputCls}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowManualPwd(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-gray-600 font-semibold"
+                >
+                  {showManualPwd ? "Hide" : "Show"}
+                </button>
+              </div>
+            </Field>
+
+            {/* Confirm password */}
+            <Field label="Confirm password">
+              <input
+                type={showManualPwd ? "text" : "password"}
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                placeholder="Re-enter new password"
+                className={`${inputCls} ${
+                  confirmPassword.length > 0 && !complexity.match
+                    ? "border-red-400 focus:border-red-500"
+                    : ""
+                }`}
+              />
+            </Field>
+
+            {/* Live complexity indicators */}
+            {manualPassword.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                <ComplexityBadge ok={complexity.length}  label="8+ characters" />
+                <ComplexityBadge ok={complexity.letter}  label="Contains a letter" />
+                <ComplexityBadge ok={complexity.number}  label="Contains a number" />
+                <ComplexityBadge ok={complexity.match}   label="Passwords match" />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Auto-generate description */}
+        {resetMode === "auto" && (
+          <p className="text-xs text-gray-400">
+            A secure 12-character alphanumeric password will be generated and shown to you once.
+          </p>
+        )}
+
+        {/* Action button */}
         <button
-          onClick={handleResetPassword}
-          disabled={resetLoading}
+          onClick={() => void handleResetPassword()}
+          disabled={resetLoading || (resetMode === "manual" && !manualIsValid)}
           className="bg-amber-500 text-white font-bold px-5 py-2 rounded-xl text-sm hover:bg-amber-600 transition disabled:opacity-50"
         >
-          {resetLoading ? "Resetting…" : "Generate Temporary Password"}
+          {resetLoading
+            ? "Resetting…"
+            : resetMode === "auto"
+              ? "Generate Password"
+              : "Set Password"}
         </button>
+
+        {/* Error */}
+        {resetError && (
+          <p className="text-sm font-semibold text-red-500">{resetError}</p>
+        )}
+
+        {/* Result */}
         {tempPassword && (
-          <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-            <p className="text-xs font-bold text-amber-600 uppercase tracking-widest mb-1">Temporary Password</p>
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+            <p className="text-xs font-bold text-amber-600 uppercase tracking-widest mb-1">
+              {resetMode === "auto" ? "Generated Password" : "New Password Set"}
+            </p>
             <p className="font-mono text-lg font-black text-amber-900 select-all">{tempPassword}</p>
             <p className="text-xs text-amber-600 mt-1">Copy this now — it will not be shown again.</p>
           </div>
@@ -321,4 +443,15 @@ function StatusBadge({ isActive }: { isActive: boolean }) {
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function ComplexityBadge({ ok, label }: { ok: boolean; label: string }) {
+  return (
+    <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
+      ok ? "bg-green-50 text-green-600" : "bg-gray-100 text-gray-400"
+    }`}>
+      <span>{ok ? "✓" : "○"}</span>
+      {label}
+    </span>
+  );
 }
