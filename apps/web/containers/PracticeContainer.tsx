@@ -65,14 +65,17 @@ export default function PracticeContainer({ topicId, mode }: Props) {
   const hasAttemptedRef      = useRef(false);
   const queryClient          = useQueryClient();
 
-  const [session,   setSession]   = useState<SessionState | null>(null);
-  const [answer,    setAnswer]    = useState("");
-  const [result,    setResult]    = useState<SubmitResultView | null>(null);
-  const [hint,      setHint]      = useState<string | null>(null);
-  const [loading,   setLoading]   = useState(false);
-  const [error,     setError]     = useState<string | null>(null);
-  const [xpAnim,    setXpAnim]    = useState<number | null>(null);
-  const [hintsUsed, setHintsUsed] = useState(0);
+  const [session,          setSession]          = useState<SessionState | null>(null);
+  const [answer,           setAnswer]           = useState("");
+  const [result,           setResult]           = useState<SubmitResultView | null>(null);
+  const [hint,             setHint]             = useState<string | null>(null);
+  const [loading,          setLoading]          = useState(false);
+  const [error,            setError]            = useState<string | null>(null);
+  const [xpAnim,           setXpAnim]           = useState<number | null>(null);
+  const [hintsUsed,        setHintsUsed]        = useState(0);
+  // confidenceBefore: student self-rates 1–5 before answering each question.
+  // Sent to the API and written to QuestionAttempt for mastery analytics.
+  const [confidenceBefore, setConfidenceBefore] = useState<number | null>(null);
 
   // ── Start session ────────────────────────────────────────────────────────────
 
@@ -143,6 +146,10 @@ export default function PracticeContainer({ topicId, mode }: Props) {
           answer:           answer.trim(),
           timeSpentSeconds: 30,
           hintsUsed,
+          // hintMaxLevel = highest tier hint used (1–3). If no hints used, omit.
+          ...(hintsUsed > 0 && { hintMaxLevel: Math.min(hintsUsed, 3) }),
+          // confidenceBefore: student self-rating 1–5. Omit if not set.
+          ...(confidenceBefore !== null && { confidenceBefore }),
         }),
       });
       clearTimeout(timeout);
@@ -173,7 +180,7 @@ export default function PracticeContainer({ topicId, mode }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [session, answer, hintsUsed]);
+  }, [session, answer, hintsUsed, confidenceBefore]);
 
   // ── Next question ─────────────────────────────────────────────────────────────
 
@@ -186,6 +193,7 @@ export default function PracticeContainer({ topicId, mode }: Props) {
     setResult(null);
     setHint(null);
     setHintsUsed(0);
+    setConfidenceBefore(null);
   }, [session, result]);
 
   // ── Get hint ──────────────────────────────────────────────────────────────────
@@ -274,9 +282,12 @@ export default function PracticeContainer({ topicId, mode }: Props) {
       onGetHint={getHint}
       onTeachMe={teachMe}
       onRetry={startSession}
+      confidenceBefore={confidenceBefore}
+      onConfidenceChange={setConfidenceBefore}
       onRestart={() => {
         setSession(null);
         hasAttemptedRef.current = false;
+        setConfidenceBefore(null);
         void startSession();
       }}
     />

@@ -32,6 +32,7 @@ import { tutorService } from "../../ai/tutor/tutor_service";
 import { questionGeneratorService } from "../../ai/services/questionGeneratorService";
 import { studentMemoryService }    from "../../ai/services/studentMemoryService";
 import { appendAfterCompletion }  from "./topicAssignmentService";
+import { learningMetrics }         from "../../services/analytics/learning_metrics";
 import { NotFoundError, ValidationError } from "../middlewares/error.middleware";
 
 // ─── In-Memory Session Store ──────────────────────────────────────────────────
@@ -136,7 +137,23 @@ export async function startSession(
     questions = result.questions;
   }
 
-  const sessionId = `session-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  // Persist session to DB so state survives server restarts / Render deploys.
+  // questionsJson lets us reconstruct in-memory session if ACTIVE_SESSIONS is evicted.
+  const dbRow = await (prisma.practiceSession.create as any)({
+    data: {
+      userId,
+      practiceSetId:  null,
+      topicId:        topicId ?? null,
+      lessonId:       lessonId ?? null,
+      mode,
+      questionsJson:  questions,
+      questionsCount: questions.length,
+    },
+  }).catch((e: Error) => {
+    console.warn("[practiceService] PracticeSession create failed — using ephemeral id:", (e as Error).message);
+    return null;
+  });
+  const sessionId = dbRow?.id ?? `session-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
   const session: ActivePracticeSession = {
     id:              sessionId,
@@ -176,6 +193,7 @@ export interface SubmitAnswerParams {
   studentAnswer:     string;
   timeSpentSeconds:  number;
   hintsUsed:         number;
+  hintMaxLevel?:     number;   // highest tier used: 1 = nudge, 2 = partial, 3 = full step
   confidenceBefore?: number;
 }
 
@@ -184,10 +202,19 @@ export interface SubmitAnswerParams {
  * Checks correctness, tags misconception, awards XP, updates mastery.
  */
 export async function submitAnswer(params: SubmitAnswerParams): Promise<SubmissionResult> {
-  const { sessionId, questionId, studentAnswer, timeSpentSeconds, hintsUsed } = params;
+  const { sessionId, questionId, studentAnswer, timeSpentSeconds, hintsUsed, hintMaxLevel } = params;
 
-  const session = ACTIVE_SESSIONS.get(sessionId);
-  if (!session) throw new NotFoundError("PracticeSession", sessionId);
+  const sessionFromMemory = ACTIVE_SESSIONS.get(sessionId);
+  let session: ActivePracticeSession;
+  if (sessionFromMemory) {
+    session = sessionFromMemory;
+  } else {
+    // Session evicted from memory (e.g. server restart) — try to reconstruct from DB
+    const recovered = await loadSessionFromDB(sessionId);
+    if (!recovered) throw new NotFoundError("PracticeSession", sessionId);
+    ACTIVE_SESSIONS.set(sessionId, recovered);
+    session = recovered;
+  }
 
   const question = session.questions.find((q) => q.id === questionId);
   if (!question) throw new NotFoundError("Question", questionId);
@@ -210,9 +237,11 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
     isCorrect,
     attemptCount,
     hintsUsed,
+    hintMaxLevel:     hintMaxLevel ?? undefined,
     timeSpentSeconds,
     studentAnswer,
     misconceptionTag,
+    confidenceBefore: params.confidenceBefore ?? undefined,
   };
   session.responses.push(response);
 
@@ -226,6 +255,29 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
     studentMemoryService.checkAndResolvePatterns(session.userId, session.topicId)
       .catch((e) => console.warn("[practiceService] checkAndResolvePatterns failed:", e));
   }
+
+  // 4c. Persist QuestionAttempt row (fire-and-forget — session.id is a DB cuid after P2 migration)
+  // Note: cast to `any` because the Prisma client was generated before the hintMaxLevel migration;
+  // the column exists in DB. Remove cast after next `prisma generate`.
+  (prisma.questionAttempt.create as any)({
+    data: {
+      sessionId:        session.id,
+      userId:           session.userId,
+      topicId:          session.topicId,
+      practiceSetId:    session.practiceSetId ?? "",
+      questionText:     question.prompt,
+      studentAnswer,
+      correctAnswer:    question.correctAnswer,
+      isCorrect,
+      hintsUsed,
+      hintMaxLevel:     hintMaxLevel ?? null,
+      confidenceBefore: params.confidenceBefore ?? null,
+      timeSpentSeconds,
+      misconceptionTag: (misconceptionTag as string) === "None" || (misconceptionTag as string) === "none"
+        ? null
+        : (misconceptionTag as string),
+    },
+  }).catch((e: Error) => console.warn("[practiceService] QuestionAttempt persist failed:", e));
 
   // 5. XP
   const profile = await prisma.studentProfile.findUnique({ where: { userId: session.userId } });
@@ -261,6 +313,12 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
   // 7. Advance question index
   if (isCorrect || attemptCount >= 3) {
     session.currentIndex = Math.min(session.currentIndex + 1, session.questions.length);
+    // Persist index so session can be recovered on server restart.
+    // Cast to `any`: Prisma client generated before currentIndex migration; remove after prisma generate.
+    (prisma.practiceSession.update as any)({
+      where: { id: session.id },
+      data:  { currentIndex: session.currentIndex },
+    }).catch((e: Error) => console.warn("[practiceService] currentIndex persist failed:", e));
   }
 
   const sessionComplete = session.currentIndex >= session.questions.length;
@@ -302,12 +360,23 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
     };
 
     // 8b. Persist mastery + topic progress to DB
-    const sessionAccuracy  = session.accuracyPercent / 100;
+    //
+    // Use the spec formula (accuracy×0.6 + speed×0.2 + consistency×0.2) via
+    // LearningMetricsService rather than accuracy-only EWMA.
+    const sessionAccuracy     = session.accuracyPercent / 100;
+    const sessionMetrics      = masteryEvaluator.computeMetrics(evalSession as any);
+    const sessionMasteryScore = learningMetrics.computeConfidence(
+      learningMetrics.buildComponents({
+        accuracy:             sessionMetrics.accuracy,
+        firstAttemptAccuracy: sessionMetrics.firstAttemptAccuracy,
+        avgTimePerQuestion:   sessionMetrics.avgTimePerQuestion,
+      })
+    );
     const prevMasteryScore = topicProgress?.masteryScore ?? 0;
-    // EWMA blend: weight recent sessions at 30%, historical at 70%
+    // EWMA blend: weight recent session at 30%, historical at 70%
     const newMasteryScore  = topicProgress
-      ? prevMasteryScore * 0.7 + sessionAccuracy * 0.3
-      : sessionAccuracy;
+      ? prevMasteryScore * 0.7 + sessionMasteryScore * 0.3
+      : sessionMasteryScore;
     const newIsMastered    = newMasteryScore >= 0.8;
     const newCompletionPct = Math.min((topicProgress?.completionPercent ?? 0) + 0.2, 1.0);
 
@@ -357,6 +426,15 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
       // Re-prioritise the AI topic queue: move the completed topic to the back
       // and check if new grade-level topics should be injected.
       appendAfterCompletion(session.userId, session.topicId),
+      // Infer preferred explanation style from this session's behaviour and
+      // write it back to StudentProfile so future AI prompts use it.
+      (async () => {
+        const style = inferExplanationStyle(sessionMetrics);
+        await prisma.studentProfile.update({
+          where: { userId: session.userId },
+          data:  { preferredExplanationStyle: style as any },
+        }).catch((e) => console.warn("[practiceService] preferredExplanationStyle update failed:", e));
+      })(),
     ]).catch((e) => console.warn("[practiceService] Post-session update failed:", e));
   }
 
@@ -500,4 +578,65 @@ function pickEncouragement(
         ? attemptCount === 1 ? ENCOURAGEMENTS.correct_first : ENCOURAGEMENTS.correct_retry
         : ENCOURAGEMENTS.incorrect;
   return pool[Math.floor(Math.random() * pool.length)] ?? "Keep going!";
+}
+
+/**
+ * Infers a preferred explanation style from session performance metrics.
+ *
+ * Heuristic rules (in priority order):
+ *   high hint usage   → student needs structured walk-through → step_by_step
+ *   fast + accurate   → student is confident, no hand-holding needed → direct
+ *   moderate hints    → visual worked-examples help more than words → visual
+ *   default           → direct (most versatile starting point)
+ */
+function inferExplanationStyle(
+  metrics: import("../../curriculum/mastery_evaluator").SessionMetrics
+): string {
+  if (metrics.avgHintsPerQuestion > 1.5) return "step_by_step";
+  if (metrics.avgTimePerQuestion < 25 && metrics.firstAttemptAccuracy >= 0.8) return "direct";
+  if (metrics.avgHintsPerQuestion > 0.5) return "visual";
+  return "direct";
+}
+
+/**
+ * Attempts to reconstruct an ActivePracticeSession from a persisted DB row.
+ * Called when ACTIVE_SESSIONS has been evicted (e.g. server restart).
+ * Returns null if the session doesn't exist or the row can't be parsed.
+ */
+async function loadSessionFromDB(sessionId: string): Promise<ActivePracticeSession | null> {
+  try {
+    // Cast to `any`: Prisma client generated before questionsJson/topicId/currentIndex migration.
+    // All these columns exist in DB. Remove cast after next `prisma generate`.
+    const row = await prisma.practiceSession.findUnique({ where: { id: sessionId } }) as any;
+    if (!row) return null;
+
+    // questionsJson is stored as a JSON array of PracticeQuestion objects
+    const questions: PracticeQuestion[] = Array.isArray(row.questionsJson)
+      ? (row.questionsJson as PracticeQuestion[])
+      : [];
+
+    // We can't fully reconstruct per-question responses (attempt counts etc.) from
+    // QuestionAttempt rows because we don't store the question ID there — only the
+    // text snapshot. Responses restart from empty; the currentIndex ensures we serve
+    // the right next question.
+    return {
+      id:              row.id,
+      userId:          row.userId,
+      practiceSetId:   row.practiceSetId ?? undefined,
+      topicId:         row.topicId ?? "",
+      lessonId:        row.lessonId ?? undefined,
+      mode:            row.mode as PracticeMode,
+      grade:           Grade.G4,   // not stored on session; default acceptable for recovery
+      startedAt:       row.startedAt,
+      questions,
+      responses:       [],
+      currentIndex:    row.currentIndex ?? 0,
+      xpEarned:        row.xpEarned ?? 0,
+      accuracyPercent: row.accuracyPercent ?? 0,
+      difficulty:      Difficulty.Intermediate,
+    };
+  } catch (e) {
+    console.warn("[practiceService] loadSessionFromDB failed:", (e as Error).message);
+    return null;
+  }
 }

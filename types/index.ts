@@ -407,26 +407,27 @@ export interface StudentQuestProgress {
 
 /** Gamification dashboard shape — returned by GET /gamification/dashboard. */
 export interface GamificationDashboard {
-  xp:           number;
-  level:        number;
-  xpToNextLevel: number;
-  xpProgress:   number;  // 0–1 fraction toward next level
-  streak:       number;
+  xp:             number;
+  level:          number;
+  xpToNextLevel:  number;
+  xpProgress:     number;  // 0–1 fraction toward next level
+  streak:         number;
+  longestStreak:  number;
   hasStreakShield: boolean;
-  recentBadges: EarnedBadge[];
-  activeQuests: StudentQuestProgress[];
+  recentBadges:   EarnedBadge[];
+  activeQuests:   StudentQuestProgress[];
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // LEVEL THRESHOLDS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/** XP required for each gamification level. */
+/** XP thresholds for each gamification level. */
 export interface LevelThreshold {
-  level: number;
-  xpRequired: number;
-  title: string;        // "Math Seedling", "Math Explorer", …
-  label?: string;       // Short display label
+  level:     number;
+  label:     string;    // "Math Seedling", "Number Explorer", …
+  minXP:     number;    // inclusive lower bound
+  maxXP:     number;    // inclusive upper bound (Infinity for max level)
   badgeUrl?: string;
 }
 
@@ -547,7 +548,7 @@ export interface ProgressSummary {
   streak:          number;
   masteredTopics:  number;
   totalTopics:     number;
-  weakAreas:       AdaptiveRecommendation[];
+  weakAreas:       string[];        // topicIds of in-progress, lowest-mastery topics
   recentActivity:  PracticeSession[];
 }
 
@@ -586,13 +587,15 @@ export interface PracticeQuestion {
  * Lightweight in-memory record; persisted as QuestionAttempt after session ends.
  */
 export interface QuestionResponse {
-  questionId:       string;
-  isCorrect:        boolean;
-  attemptCount:     number;      // 1 = first attempt, 2+ = retry
-  hintsUsed:        number;
-  timeSpentSeconds: number;
-  studentAnswer?:   string;
+  questionId:        string;
+  isCorrect:         boolean;
+  attemptCount:      number;      // 1 = first attempt, 2+ = retry
+  hintsUsed:         number;
+  hintMaxLevel?:     number;      // highest hint tier used: 1 = nudge, 2 = partial, 3 = full step
+  timeSpentSeconds:  number;
+  studentAnswer?:    string;
   misconceptionTag?: string;
+  confidenceBefore?: number;      // 1–5 self-rating before answering
 }
 
 /**

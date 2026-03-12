@@ -480,7 +480,14 @@ model PracticeSet {
 model PracticeSession {
   id            String       @id @default(cuid())
   userId        String
-  practiceSetId String
+
+  /// Nullable: AI-driven sessions are created on-the-fly without a
+  /// pre-existing PracticeSet row. Set when a named practice set is used.
+  practiceSetId String?
+
+  /// Denormalised topicId slug — avoids joining through practice_sets on
+  /// analytics queries.
+  topicId       String?
 
   /// Denormalised from practiceSet.lessonId for easy lesson-level filtering.
   lessonId      String?
@@ -498,9 +505,16 @@ model PracticeSession {
   /// Total questions served in this session.
   questionsCount  Int        @default(0)
 
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  practiceSet PracticeSet   @relation(fields: [practiceSetId], references: [id])
-  lesson      Lesson?       @relation(fields: [lessonId], references: [id])
+  /// Full AI-generated question list serialised as JSON.
+  /// Used to reconstruct session state if the in-memory map is evicted.
+  questionsJson   Json       @default("[]")
+
+  /// Current question index — written on each submit for recovery.
+  currentIndex    Int        @default(0)
+
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  practiceSet PracticeSet?   @relation(fields: [practiceSetId], references: [id])
+  lesson      Lesson?        @relation(fields: [lessonId], references: [id])
   attempts    QuestionAttempt[]
 
   @@index([userId, completedAt])
@@ -529,6 +543,12 @@ model QuestionAttempt {
 
   /// Hints requested before the student committed an answer.
   hintsUsed     Int     @default(0)
+
+  /// Highest hint tier used: 1 = gentle nudge, 2 = partial method,
+  /// 3 = full next-step. Null = no hints used.
+  /// Distinct from hintsUsed (count) — tier 3 is weighted differently
+  /// in mastery scoring than tier 1.
+  hintMaxLevel  Int?
 
   /// Whether the student opened the full explanation panel.
   explanationUsed Boolean @default(false)

@@ -22,38 +22,54 @@
  *   - "Weak area" = topic where confidence < 0.5 AND at least 2 sessions attempted
  */
 
-import { LearningSignal, AdaptiveRecommendation, RecommendationReason, StudentProfile } from "@/types";
+import { AdaptiveRecommendation, RecommendationReason, StudentProfile } from "@/types";
 
-// ─── Confidence Score Formula ──────────────────────────────────────────────────
+/**
+ * Per-topic analytics signal used for confidence scoring and weak-area detection.
+ * Internal to the analytics layer — not persisted as its own table.
+ */
+export interface LearningSignal {
+  topicId:              string;
+  topicName:            string;
+  confidenceScore:      number;   // 0–1 composite
+  accuracy:             number;
+  firstAttemptAccuracy: number;
+  avgHintsPerQuestion:  number;
+  avgTimePerQuestion:   number;
+  sessionCount:         number;
+  lastPracticed:        Date;
+}
+
+// ─── Mastery Score Formula (aligned to spec) ───────────────────────────────────
 //
-//   confidence = (0.4 × accuracy)
-//              + (0.3 × firstAttemptAccuracy)
-//              + (0.2 × (1 - hintRate))
-//              + (0.1 × speedScore)
+//   masteryScore = (accuracy × 0.6)
+//               + (speedScore × 0.2)
+//               + (consistency × 0.2)
 //
 //   Where:
-//     hintRate   = avgHintsPerQuestion / 3 (normalised to 0-1)
-//     speedScore = 1 if avgTime < 30s, 0.5 if < 60s, 0 otherwise
+//     accuracy     = fraction of questions answered correctly (0–1)
+//     speedScore   = 1 if avgTime < 30s, 0.5 if < 60s, 0 otherwise
+//     consistency  = firstAttemptAccuracy (stable first-try performance)
+//
+//   This matches the spec formula and the MasteryEvaluator implementation.
 
 export interface ConfidenceComponents {
-  accuracy: number;
-  firstAttemptAccuracy: number;
-  hintRate: number;         // avgHintsPerQuestion / 3
-  speedScore: number;       // 0, 0.5, or 1
+  accuracy:             number;   // overall accuracy (0–1)
+  firstAttemptAccuracy: number;   // consistency proxy (0–1)
+  speedScore:           number;   // 0, 0.5, or 1 — use computeSpeedScore()
 }
 
 export class LearningMetricsService {
   /**
-   * Computes the composite confidence score for a topic (0–1).
+   * Computes the spec mastery score for a topic (0–1).
+   *
+   * Formula: (accuracy × 0.6) + (speedScore × 0.2) + (consistency × 0.2)
    */
   computeConfidence(components: ConfidenceComponents): number {
-    const { accuracy, firstAttemptAccuracy, hintRate, speedScore } = components;
-
-    return (
-      0.4 * accuracy +
-      0.3 * firstAttemptAccuracy +
-      0.2 * (1 - Math.min(hintRate, 1)) +
-      0.1 * speedScore
+    const { accuracy, firstAttemptAccuracy, speedScore } = components;
+    return Math.min(
+      accuracy * 0.6 + speedScore * 0.2 + firstAttemptAccuracy * 0.2,
+      1
     );
   }
 
@@ -87,12 +103,12 @@ export class LearningMetricsService {
 
     // Priority 1: Weak area review
     for (const topicId of weakAreas.slice(0, 2)) {
+      const signal = signals.find((s) => s.topicId === topicId);
       recommendations.push({
-        studentId: profile.id,
-        recommendedLessonId: `review-${topicId}`, // TODO: resolve actual lesson from topic
-        reason: RecommendationReason.WeakArea,
-        priority: 1,
-        generatedAt: new Date(),
+        topicId,
+        topicName:  signal?.topicName ?? topicId,
+        reason:     RecommendationReason.WeakArea,
+        priority:   1,
       });
     }
 
@@ -116,9 +132,26 @@ export class LearningMetricsService {
 
   /**
    * Computes hint rate (normalised 0–1) from average hints per question.
+   * Retained for callers that surface hint dependency stats.
    */
   computeHintRate(avgHintsPerQuestion: number): number {
     return Math.min(avgHintsPerQuestion / 3, 1);
+  }
+
+  /**
+   * Builds a ConfidenceComponents payload from raw session metrics —
+   * convenience wrapper so callers don't have to compute speedScore manually.
+   */
+  buildComponents(opts: {
+    accuracy:             number;
+    firstAttemptAccuracy: number;
+    avgTimePerQuestion:   number;
+  }): ConfidenceComponents {
+    return {
+      accuracy:             opts.accuracy,
+      firstAttemptAccuracy: opts.firstAttemptAccuracy,
+      speedScore:           this.computeSpeedScore(opts.avgTimePerQuestion),
+    };
   }
 }
 

@@ -58,6 +58,7 @@ export async function submitPracticeAnswer(req: Request, res: Response, next: Ne
       studentAnswer:    body.answer,
       timeSpentSeconds: body.timeSpentSeconds,
       hintsUsed:        body.hintsUsed,
+      hintMaxLevel:     body.hintMaxLevel,
       confidenceBefore: body.confidenceBefore,
     });
 

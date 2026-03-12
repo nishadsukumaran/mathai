@@ -19,24 +19,35 @@ interface SessionState {
 }
 
 interface Props {
-  session:         SessionState | null;
-  currentQuestion: PracticeQuestionItem | null;
-  answer:          string;
-  result:          SubmitResultView | null;
-  hint:            string | null;
-  loading:         boolean;
-  error:           string | null;
-  xpAnim:          number | null;
-  hintsUsed:       number;
-  authStatus:      "loading" | "authenticated" | "unauthenticated";
-  onAnswerChange:  (v: string) => void;
-  onSubmit:        () => void;
-  onNextQuestion:  () => void;
-  onGetHint:       () => void;
-  onTeachMe:       () => void;
-  onRetry:         () => void;
-  onRestart:       () => void;
+  session:           SessionState | null;
+  currentQuestion:   PracticeQuestionItem | null;
+  answer:            string;
+  result:            SubmitResultView | null;
+  hint:              string | null;
+  loading:           boolean;
+  error:             string | null;
+  xpAnim:            number | null;
+  hintsUsed:         number;
+  authStatus:        "loading" | "authenticated" | "unauthenticated";
+  /** Student self-rating 1–5 before answering. Null = not yet rated. */
+  confidenceBefore:  number | null;
+  onConfidenceChange:(v: number) => void;
+  onAnswerChange:    (v: string) => void;
+  onSubmit:          () => void;
+  onNextQuestion:    () => void;
+  onGetHint:         () => void;
+  onTeachMe:         () => void;
+  onRetry:           () => void;
+  onRestart:         () => void;
 }
+
+const CONFIDENCE_LABELS: Record<number, { emoji: string; label: string }> = {
+  1: { emoji: "😕", label: "Not sure" },
+  2: { emoji: "😐", label: "Bit unsure" },
+  3: { emoji: "🙂", label: "Think so" },
+  4: { emoji: "😊", label: "Pretty sure" },
+  5: { emoji: "😎", label: "Confident!" },
+};
 
 export default function PracticeView({
   session,
@@ -49,6 +60,8 @@ export default function PracticeView({
   xpAnim,
   hintsUsed,
   authStatus,
+  confidenceBefore,
+  onConfidenceChange,
   onAnswerChange,
   onSubmit,
   onNextQuestion,
@@ -204,9 +217,42 @@ export default function PracticeView({
               </span>
             </div>
 
-            <h2 className="text-2xl font-bold text-gray-800 mb-6 leading-relaxed">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4 leading-relaxed">
               {currentQuestion.prompt}
             </h2>
+
+            {/* Confidence check-in — only shown before student submits an answer */}
+            {!result && (
+              <div className="mb-5">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">
+                  How confident are you?
+                </p>
+                <div className="flex gap-2">
+                  {([1, 2, 3, 4, 5] as const).map((level) => {
+                    const { emoji, label } = CONFIDENCE_LABELS[level]!;
+                    const selected = confidenceBefore === level;
+                    return (
+                      <button
+                        key={level}
+                        onClick={() => onConfidenceChange(level)}
+                        title={label}
+                        aria-label={`Confidence ${level}: ${label}`}
+                        className={`flex-1 flex flex-col items-center py-2 rounded-xl border-2 text-xl transition
+                          ${selected
+                            ? "border-indigo-500 bg-indigo-50 scale-105 shadow-sm"
+                            : "border-gray-100 hover:border-indigo-200 hover:bg-indigo-50/50"
+                          }`}
+                      >
+                        {emoji}
+                        <span className="text-[10px] font-medium text-gray-400 mt-0.5 leading-none">
+                          {label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Multiple choice — single column on mobile, 2 cols on sm+ */}
             {currentQuestion.type === "multiple_choice" && currentQuestion.options ? (

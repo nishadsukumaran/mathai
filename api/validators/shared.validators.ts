@@ -72,6 +72,7 @@ export const SubmitAnswerSchema = z.object({
   answer:           z.string().min(1, "answer cannot be empty"),
   timeSpentSeconds: z.number().int().min(0).max(3600),
   hintsUsed:        z.number().int().min(0).default(0),
+  hintMaxLevel:     z.number().int().min(1).max(3).optional(),
   confidenceBefore: z.number().int().min(1).max(5).optional(),
 });
 export type SubmitAnswerInput = z.infer<typeof SubmitAnswerSchema>;
