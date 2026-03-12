@@ -1,0 +1,1920 @@
+{\rtf1\ansi\ansicpg1252\deff0
+{\fonttbl
+{\f0\froman\fcharset0 Calibri;}
+{\f1\fmodern\fcharset0 Courier New;}
+}
+{\colortbl ;
+\red30\green58\blue95;
+\red46\green109\blue164;
+\red16\green24\blue40;
+\red102\green112\blue133;
+\red217\green45\blue32;
+\red255\green255\blue255;
+\red242\green244\blue247;
+\red44\green62\blue80;
+\red52\green64\blue84;
+}
+\paperw12240\paperh15840\margl1440\margr1440\margt1440\margb1440
+\widowctrl\hyphauto
+\f0\fs21\cf3
+\pard\qc\sb2880\cf1\fs80\b MathAI\b0\par
+\pard\qc\sb200\sa100\cf2\fs36 Enterprise Technical Documentation\par
+\pard\qc\sb80\sa80\cf4\fs26\i Adaptive Mathematics Learning Platform\i0\par
+\pard\qc\sb280\sa0\cf4\fs21 Version 1.0  \emdash  March 2026\par
+\pard\qc\sb160\sa0\cf5\fs18\b CONFIDENTIAL \emdash INTERNAL USE ONLY\b0\par
+\pard\page\par
+\pard\pagebb\keepn\outlinelevel0\sb480\sa240\cf1\fs36\b 1. System Overview\b0\cf3\fs21\par
+\pard\qj\sb80\sa80\cf3\fs21 MathAI is a full-stack, AI-powered adaptive mathematics learning platform targeting students from Grade 1 through Grade 8. The platform uses a Turborepo monorepo that houses a Next.js 15 frontend (apps/web), an Express 4.18 API backend (api/), and a shared Prisma database layer (database/). The system is deployed split-stack: the frontend on Vercel and the backend API on Render, with Supabase PostgreSQL as the persistent store.\par
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 1.1 Key Capabilities\b0\cf3\fs21\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Adaptive curriculum engine that generates personalised practice problems per student grade and topic\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Spaced-repetition scheduling via an SM-2-variant algorithm for long-term knowledge retention\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Gamification layer: XP points, streaks, level progression, and achievement badges\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Dual-model AI strategy: claude-haiku-4.5 (fast drill) and claude-sonnet-4.5 (step-by-step hints)\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Google OAuth and email/password authentication via NextAuth.js v4\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Role-based access control: student / teacher / admin\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Admin dashboard for user management, content oversight, and analytics\par
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 1.2 High-Level Architecture\b0\cf3\fs21\par
+\trowd\trgaph108
+\clshdng10000\clcbpat1\clcfpat1\cellx2059
+\clshdng10000\clcbpat1\clcfpat1\cellx4680
+\clshdng10000\clcbpat1\clcfpat1\cellx7020
+\clshdng10000\clcbpat1\clcfpat1\cellx9360
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Tier\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Technology\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Hosting\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b URL / Port\b0\cell
+\row
+\trowd\trgaph108
+\cellx2059
+\cellx4680
+\cellx7020
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Frontend (SSR/SPA)\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Next.js 15 App Router\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Vercel\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 https://mathai.aiops.ae\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2059
+\clshdng10000\clcbpat7\clcfpat7\cellx4680
+\clshdng10000\clcbpat7\clcfpat7\cellx7020
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 API Backend\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Express 4.18 + TypeScript\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Render (Free)\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 https://mathai-api.onrender.com\cell
+\row
+\trowd\trgaph108
+\cellx2059
+\cellx4680
+\cellx7020
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Database\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 PostgreSQL 15 via Supabase\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Supabase (ap-south-1)\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 pooler:5432 / 6543\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2059
+\clshdng10000\clcbpat7\clcfpat7\cellx4680
+\clshdng10000\clcbpat7\clcfpat7\cellx7020
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 AI Provider\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Anthropic Claude via Vercel AI SDK\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Anthropic Cloud\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 api.anthropic.com\cell
+\row
+\trowd\trgaph108
+\cellx2059
+\cellx4680
+\cellx7020
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Auth\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 NextAuth.js v4 JWE tokens\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Vercel Edge\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 \u8212?\cell
+\row
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 1.3 Monorepo Structure\b0\cf3\fs21\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 MathAI/\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 \u9500?\u9472?\u9472? apps/\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 \u9474?   \u9492?\u9472?\u9472? web/                  Next.js 15 frontend\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 \u9474?       \u9500?\u9472?\u9472? app/              App Router pages & API routes\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 \u9474?       \u9500?\u9472?\u9472? components/       Shared React components\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 \u9474?       \u9500?\u9472?\u9472? lib/              prisma client, auth, services\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 \u9474?       \u9492?\u9472?\u9472? hooks/            React hooks\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 \u9500?\u9472?\u9472? api/                      Express backend\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 \u9474?   \u9492?\u9472?\u9472? src/\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 \u9474?       \u9500?\u9472?\u9472? routes/           Express routers\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 \u9474?       \u9500?\u9472?\u9472? services/         Business logic\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 \u9474?       \u9500?\u9472?\u9472? middleware/        auth, CORS, rate-limit\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 \u9474?       \u9492?\u9472?\u9472? lib/              aiClient, prisma\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 \u9500?\u9472?\u9472? database/\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 \u9474?   \u9492?\u9472?\u9472? schema/schema.prisma  Single source of truth\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 \u9500?\u9472?\u9472? packages/shared-types/    TypeScript types shared across apps\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 \u9500?\u9472?\u9472? render.yaml               Render Blueprint\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 \u9492?\u9472?\u9472? turbo.json                Turborepo pipeline\par
+\pard\sb0\sa120\par
+\pard\pagebb\keepn\outlinelevel0\sb480\sa240\cf1\fs36\b 2. Technology Stack\b0\cf3\fs21\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 2.1 Frontend (Next.js)\b0\cf3\fs21\par
+\trowd\trgaph108
+\clshdng10000\clcbpat1\clcfpat1\cellx2621
+\clshdng10000\clcbpat1\clcfpat1\cellx4119
+\clshdng10000\clcbpat1\clcfpat1\cellx9361
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Package\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Version\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Purpose\b0\cell
+\row
+\trowd\trgaph108
+\cellx2621
+\cellx4119
+\cellx9361
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 next\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 15.3.1\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 React framework, App Router, SSR/ISR\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2621
+\clshdng10000\clcbpat7\clcfpat7\cellx4119
+\clshdng10000\clcbpat7\clcfpat7\cellx9361
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 react / react-dom\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 19.0.0\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 UI rendering\cell
+\row
+\trowd\trgaph108
+\cellx2621
+\cellx4119
+\cellx9361
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 next-auth\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 4.24.11\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Authentication (JWT + OAuth)\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2621
+\clshdng10000\clcbpat7\clcfpat7\cellx4119
+\clshdng10000\clcbpat7\clcfpat7\cellx9361
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 @prisma/client\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 5.8.1\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Type-safe DB access\cell
+\row
+\trowd\trgaph108
+\cellx2621
+\cellx4119
+\cellx9361
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 @ai-sdk/anthropic\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 1.2.12\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Anthropic streaming chat\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2621
+\clshdng10000\clcbpat7\clcfpat7\cellx4119
+\clshdng10000\clcbpat7\clcfpat7\cellx9361
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 ai (Vercel AI SDK)\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 4.3.16\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 useChat hook, streaming\cell
+\row
+\trowd\trgaph108
+\cellx2621
+\cellx4119
+\cellx9361
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 tailwindcss\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 3.4.1\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Utility-first CSS\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2621
+\clshdng10000\clcbpat7\clcfpat7\cellx4119
+\clshdng10000\clcbpat7\clcfpat7\cellx9361
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 framer-motion\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 11.18.2\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 UI animations\cell
+\row
+\trowd\trgaph108
+\cellx2621
+\cellx4119
+\cellx9361
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 recharts\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 2.15.3\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Analytics charts\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2621
+\clshdng10000\clcbpat7\clcfpat7\cellx4119
+\clshdng10000\clcbpat7\clcfpat7\cellx9361
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 bcryptjs\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 2.4.3\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Password hashing on server\cell
+\row
+\trowd\trgaph108
+\cellx2621
+\cellx4119
+\cellx9361
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 zod\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 3.22.4\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Schema validation\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2621
+\clshdng10000\clcbpat7\clcfpat7\cellx4119
+\clshdng10000\clcbpat7\clcfpat7\cellx9361
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 zustand\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 4.5.2\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Global state management\cell
+\row
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 2.2 Backend (Express API)\b0\cf3\fs21\par
+\trowd\trgaph108
+\clshdng10000\clcbpat1\clcfpat1\cellx2808
+\clshdng10000\clcbpat1\clcfpat1\cellx4212
+\clshdng10000\clcbpat1\clcfpat1\cellx9360
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Package\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Version\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Purpose\b0\cell
+\row
+\trowd\trgaph108
+\cellx2808
+\cellx4212
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 express\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 4.18.2\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 HTTP server framework\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2808
+\clshdng10000\clcbpat7\clcfpat7\cellx4212
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 @prisma/client\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 5.8.1\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Database ORM\cell
+\row
+\trowd\trgaph108
+\cellx2808
+\cellx4212
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 jose\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 5.9.4\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 JWE/JWT decryption for NextAuth tokens\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2808
+\clshdng10000\clcbpat7\clcfpat7\cellx4212
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 @ai-sdk/anthropic\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 1.2.12\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 AI model calls\cell
+\row
+\trowd\trgaph108
+\cellx2808
+\cellx4212
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 ai (Vercel AI SDK)\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 4.3.16\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Streaming text generation\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2808
+\clshdng10000\clcbpat7\clcfpat7\cellx4212
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 cors\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 2.8.5\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 CORS middleware\cell
+\row
+\trowd\trgaph108
+\cellx2808
+\cellx4212
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 helmet\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 8.0.0\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 HTTP security headers\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2808
+\clshdng10000\clcbpat7\clcfpat7\cellx4212
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 express-rate-limit\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 7.5.0\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Rate limiting\cell
+\row
+\trowd\trgaph108
+\cellx2808
+\cellx4212
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 zod\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 3.22.4\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Request body validation\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2808
+\clshdng10000\clcbpat7\clcfpat7\cellx4212
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 winston\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 3.17.0\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Structured logging\cell
+\row
+\trowd\trgaph108
+\cellx2808
+\cellx4212
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 tsx / ts-node\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 4.19.2\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 TypeScript execution\cell
+\row
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 2.3 Database & Tooling\b0\cf3\fs21\par
+\trowd\trgaph108
+\clshdng10000\clcbpat1\clcfpat1\cellx2340
+\clshdng10000\clcbpat1\clcfpat1\cellx4212
+\clshdng10000\clcbpat1\clcfpat1\cellx9360
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Tool\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Version\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Purpose\b0\cell
+\row
+\trowd\trgaph108
+\cellx2340
+\cellx4212
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 PostgreSQL\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 15 (Supabase)\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Primary relational database\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2340
+\clshdng10000\clcbpat7\clcfpat7\cellx4212
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Prisma ORM\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 5.8.1\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Schema management, migrations, client\cell
+\row
+\trowd\trgaph108
+\cellx2340
+\cellx4212
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Turborepo\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 2.3.3\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Monorepo build orchestration\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2340
+\clshdng10000\clcbpat7\clcfpat7\cellx4212
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 TypeScript\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 5.3.3\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Type safety across all packages\cell
+\row
+\trowd\trgaph108
+\cellx2340
+\cellx4212
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Node.js\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 >=18.17.0\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Runtime for both web and API\cell
+\row
+\pard\sb0\sa120\par
+\pard\pagebb\keepn\outlinelevel0\sb480\sa240\cf1\fs36\b 3. Database Schema\b0\cf3\fs21\par
+\pard\qj\sb80\sa80\cf3\fs21 The schema is defined in database/schema/schema.prisma and managed by Prisma Migrate. All tables use UUID primary keys. The database is hosted on Supabase PostgreSQL in the ap-south-1 region.\par
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 3.1 User\b0\cf3\fs21\par
+\trowd\trgaph108
+\clshdng10000\clcbpat1\clcfpat1\cellx2340
+\clshdng10000\clcbpat1\clcfpat1\cellx4399
+\clshdng10000\clcbpat1\clcfpat1\cellx9360
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Field\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Type\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Notes\b0\cell
+\row
+\trowd\trgaph108
+\cellx2340
+\cellx4399
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 id\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 String (UUID)\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Primary key\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2340
+\clshdng10000\clcbpat7\clcfpat7\cellx4399
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 email\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 String\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Unique, indexed\cell
+\row
+\trowd\trgaph108
+\cellx2340
+\cellx4399
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 name\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 String?\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Display name\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2340
+\clshdng10000\clcbpat7\clcfpat7\cellx4399
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 hashedPassword\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 String?\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 bcrypt hash; null for OAuth users\cell
+\row
+\trowd\trgaph108
+\cellx2340
+\cellx4399
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 role\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Enum (Role)\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 student | teacher | admin\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2340
+\clshdng10000\clcbpat7\clcfpat7\cellx4399
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 gradeLevel\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Enum (Grade)\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 K, G1\u8211?G8\cell
+\row
+\trowd\trgaph108
+\cellx2340
+\cellx4399
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 isActive\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Boolean\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Default true; soft-disable accounts\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2340
+\clshdng10000\clcbpat7\clcfpat7\cellx4399
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 avatarUrl\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 String?\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Profile image URL\cell
+\row
+\trowd\trgaph108
+\cellx2340
+\cellx4399
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 lastLoginAt\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 DateTime?\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Updated on every sign-in\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2340
+\clshdng10000\clcbpat7\clcfpat7\cellx4399
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 createdAt / updatedAt\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 DateTime\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Auto-managed timestamps\cell
+\row
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 3.2 StudentProfile  (@@map: student_profiles)\b0\cf3\fs21\par
+\trowd\trgaph108
+\clshdng10000\clcbpat1\clcfpat1\cellx2340
+\clshdng10000\clcbpat1\clcfpat1\cellx4399
+\clshdng10000\clcbpat1\clcfpat1\cellx9360
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Field\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Type\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Notes\b0\cell
+\row
+\trowd\trgaph108
+\cellx2340
+\cellx4399
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 id\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 String (UUID)\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Primary key\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2340
+\clshdng10000\clcbpat7\clcfpat7\cellx4399
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 userId\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 String\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 FK to User.id (unique)\cell
+\row
+\trowd\trgaph108
+\cellx2340
+\cellx4399
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 totalXp\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Int\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Lifetime XP points\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2340
+\clshdng10000\clcbpat7\clcfpat7\cellx4399
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 currentStreak\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Int\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Consecutive days active\cell
+\row
+\trowd\trgaph108
+\cellx2340
+\cellx4399
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 longestStreak\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Int\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Historical best streak\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2340
+\clshdng10000\clcbpat7\clcfpat7\cellx4399
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 lastActivityDate\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 DateTime?\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 For streak calculation\cell
+\row
+\trowd\trgaph108
+\cellx2340
+\cellx4399
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 level\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Int\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Computed from totalXp\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2340
+\clshdng10000\clcbpat7\clcfpat7\cellx4399
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 aiAssignedTopics\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Json\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Array of topic objects; default []\cell
+\row
+\trowd\trgaph108
+\cellx2340
+\cellx4399
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 updatedAt\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 DateTime\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 @updatedAt\cell
+\row
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 3.3 Topic\b0\cf3\fs21\par
+\trowd\trgaph108
+\clshdng10000\clcbpat1\clcfpat1\cellx2340
+\clshdng10000\clcbpat1\clcfpat1\cellx4399
+\clshdng10000\clcbpat1\clcfpat1\cellx9360
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Field\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Type\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Notes\b0\cell
+\row
+\trowd\trgaph108
+\cellx2340
+\cellx4399
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 id\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 String (UUID)\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Primary key\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2340
+\clshdng10000\clcbpat7\clcfpat7\cellx4399
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 name\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 String\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Topic display name\cell
+\row
+\trowd\trgaph108
+\cellx2340
+\cellx4399
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 slug\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 String\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 URL-friendly identifier (unique)\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2340
+\clshdng10000\clcbpat7\clcfpat7\cellx4399
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 description\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 String?\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Extended description\cell
+\row
+\trowd\trgaph108
+\cellx2340
+\cellx4399
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 gradeLevel\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Enum (Grade)\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Target grade\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2340
+\clshdng10000\clcbpat7\clcfpat7\cellx4399
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 subject\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 String\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 e.g. 'mathematics'\cell
+\row
+\trowd\trgaph108
+\cellx2340
+\cellx4399
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 difficulty\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Enum (Difficulty)\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 EASY | MEDIUM | HARD\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2340
+\clshdng10000\clcbpat7\clcfpat7\cellx4399
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 isActive\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Boolean\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Soft-toggle topics on/off\cell
+\row
+\trowd\trgaph108
+\cellx2340
+\cellx4399
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 order\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Int\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Display ordering\cell
+\row
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 3.4 PracticeSession\b0\cf3\fs21\par
+\trowd\trgaph108
+\clshdng10000\clcbpat1\clcfpat1\cellx2340
+\clshdng10000\clcbpat1\clcfpat1\cellx4399
+\clshdng10000\clcbpat1\clcfpat1\cellx9360
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Field\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Type\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Notes\b0\cell
+\row
+\trowd\trgaph108
+\cellx2340
+\cellx4399
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 id\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 String (UUID)\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Primary key\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2340
+\clshdng10000\clcbpat7\clcfpat7\cellx4399
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 userId\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 String\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 FK to User.id\cell
+\row
+\trowd\trgaph108
+\cellx2340
+\cellx4399
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 topicId\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 String\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 FK to Topic.id\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2340
+\clshdng10000\clcbpat7\clcfpat7\cellx4399
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 status\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Enum (SessionStatus)\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 IN_PROGRESS | COMPLETED | ABANDONED\cell
+\row
+\trowd\trgaph108
+\cellx2340
+\cellx4399
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 score\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Int?\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Final score (0-100)\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2340
+\clshdng10000\clcbpat7\clcfpat7\cellx4399
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 xpEarned\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Int\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 XP awarded for this session\cell
+\row
+\trowd\trgaph108
+\cellx2340
+\cellx4399
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 totalQuestions\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Int\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Questions attempted\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2340
+\clshdng10000\clcbpat7\clcfpat7\cellx4399
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 correctAnswers\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Int\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Correct count\cell
+\row
+\trowd\trgaph108
+\cellx2340
+\cellx4399
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 startedAt / completedAt\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 DateTime\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Session timing\cell
+\row
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 3.5 Question\b0\cf3\fs21\par
+\trowd\trgaph108
+\clshdng10000\clcbpat1\clcfpat1\cellx2340
+\clshdng10000\clcbpat1\clcfpat1\cellx4399
+\clshdng10000\clcbpat1\clcfpat1\cellx9360
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Field\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Type\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Notes\b0\cell
+\row
+\trowd\trgaph108
+\cellx2340
+\cellx4399
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 id\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 String (UUID)\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Primary key\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2340
+\clshdng10000\clcbpat7\clcfpat7\cellx4399
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 topicId\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 String\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 FK to Topic.id\cell
+\row
+\trowd\trgaph108
+\cellx2340
+\cellx4399
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 content\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 String\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Question text (supports LaTeX via $...)\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2340
+\clshdng10000\clcbpat7\clcfpat7\cellx4399
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 type\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Enum (QuestionType)\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 MULTIPLE_CHOICE | FREE_RESPONSE\cell
+\row
+\trowd\trgaph108
+\cellx2340
+\cellx4399
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 difficulty\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Enum (Difficulty)\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 EASY | MEDIUM | HARD\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2340
+\clshdng10000\clcbpat7\clcfpat7\cellx4399
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 options\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Json?\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Array of option strings for MC questions\cell
+\row
+\trowd\trgaph108
+\cellx2340
+\cellx4399
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 correctAnswer\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 String\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Answer string or option index\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2340
+\clshdng10000\clcbpat7\clcfpat7\cellx4399
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 explanation\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 String?\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Step-by-step solution text\cell
+\row
+\trowd\trgaph108
+\cellx2340
+\cellx4399
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 aiGenerated\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Boolean\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 True if generated by Claude\cell
+\row
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 3.6 SpacedRepetitionCard\b0\cf3\fs21\par
+\trowd\trgaph108
+\clshdng10000\clcbpat1\clcfpat1\cellx2621
+\clshdng10000\clcbpat1\clcfpat1\cellx4680
+\clshdng10000\clcbpat1\clcfpat1\cellx9360
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Field\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Type\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Notes\b0\cell
+\row
+\trowd\trgaph108
+\cellx2621
+\cellx4680
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 userId + questionId\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Composite PK\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 One card per user per question\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2621
+\clshdng10000\clcbpat7\clcfpat7\cellx4680
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 easeFactor\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Float\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 SM-2 ease factor; initialised at 2.5\cell
+\row
+\trowd\trgaph108
+\cellx2621
+\cellx4680
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 interval\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Int\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Days until next review\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2621
+\clshdng10000\clcbpat7\clcfpat7\cellx4680
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 repetitions\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Int\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Total review count\cell
+\row
+\trowd\trgaph108
+\cellx2621
+\cellx4680
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 nextReviewAt\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 DateTime\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Scheduled next review date\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2621
+\clshdng10000\clcbpat7\clcfpat7\cellx4680
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 lastReviewAt\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 DateTime?\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Last review timestamp\cell
+\row
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 3.7 Enumerations\b0\cf3\fs21\par
+\trowd\trgaph108
+\clshdng10000\clcbpat1\clcfpat1\cellx2340
+\clshdng10000\clcbpat1\clcfpat1\cellx9360
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Enum\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Values\b0\cell
+\row
+\trowd\trgaph108
+\cellx2340
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Role\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 student, teacher, admin\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2340
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Grade\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 K, G1, G2, G3, G4, G5, G6, G7, G8\cell
+\row
+\trowd\trgaph108
+\cellx2340
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Difficulty\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 EASY, MEDIUM, HARD\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2340
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 QuestionType\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 MULTIPLE_CHOICE, FREE_RESPONSE\cell
+\row
+\trowd\trgaph108
+\cellx2340
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 SessionStatus\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 IN_PROGRESS, COMPLETED, ABANDONED\cell
+\row
+\pard\sb0\sa120\par
+\pard\pagebb\keepn\outlinelevel0\sb480\sa240\cf1\fs36\b 4. Authentication & Authorisation\b0\cf3\fs21\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 4.1 Authentication Flow\b0\cf3\fs21\par
+\pard\qj\sb80\sa80\cf3\fs21 MathAI uses NextAuth.js v4 with the JWT session strategy. On successful sign-in the JWT callback embeds gradeLevel, role, and isActive from the database into a JWE-encrypted token. The Express API decrypts this same token on every protected request using the jose library with HKDF key derivation from NEXTAUTH_SECRET.\par
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel2\sb240\sa140\cf9\fs23\b Sign-in Methods\b0\cf3\fs21\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Email + password \u8212? CredentialsProvider; passwords stored as bcrypt-12 hashes\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Google OAuth \u8212? GoogleProvider (requires GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET). Callback URI: \{NEXTAUTH_URL\}/api/auth/callback/google\par
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel2\sb240\sa140\cf9\fs23\b JWT Token Payload\b0\cf3\fs21\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 \{\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17   "sub":      "<user-uuid>",\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17   "email":    "user@example.com",\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17   "grade":    "G4",\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17   "role":     "student",\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17   "isActive": true,\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17   "iat":      1710000000,\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17   "exp":      1710086400\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 \}\par
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 4.2 Express API Auth Middleware\b0\cf3\fs21\par
+\pard\qj\sb80\sa80\cf3\fs21 Every non-public route passes through authMiddleware (api/src/middleware/auth.ts). It extracts the Bearer token, decrypts the JWE using HKDF(SHA-256, NEXTAUTH_SECRET), validates claims, rejects disabled accounts, and attaches the decoded payload to req.user.\par
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel2\sb240\sa140\cf9\fs23\b Internal Service Routes\b0\cf3\fs21\par
+\pard\qj\sb80\sa80\cf3\fs21 Routes under /api/internal/* skip the user JWT check and instead require the X-Service-Secret header to match INTERNAL_SERVICE_SECRET \u8212? a 32-byte cryptographic random value shared between Vercel and Render. Used to trigger AI topic generation post-signup.\par
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 4.3 Role-Based Access Control\b0\cf3\fs21\par
+\trowd\trgaph108
+\clshdng10000\clcbpat1\clcfpat1\cellx1685
+\clshdng10000\clcbpat1\clcfpat1\cellx9360
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Role\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Capabilities\b0\cell
+\row
+\trowd\trgaph108
+\cellx1685
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 student\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Access own practice sessions, profile, leaderboard, AI tutor chat\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx1685
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 teacher\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 View student progress, manage class assignments (future feature)\cell
+\row
+\trowd\trgaph108
+\cellx1685
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 admin\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Full user management, content management, analytics, system config\cell
+\row
+\pard\sb0\sa120\par
+\pard\pagebb\keepn\outlinelevel0\sb480\sa240\cf1\fs36\b 5. Express API Reference\b0\cf3\fs21\par
+\pard\qj\sb80\sa80\cf3\fs21 Base URL: https://mathai-api.onrender.com/api. All protected endpoints require Authorization: Bearer <nextauth-jwt> unless noted.\par
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 5.1 Health\b0\cf3\fs21\par
+\trowd\trgaph108
+\clshdng10000\clcbpat1\clcfpat1\cellx936
+\clshdng10000\clcbpat1\clcfpat1\cellx3744
+\clshdng10000\clcbpat1\clcfpat1\cellx4867
+\clshdng10000\clcbpat1\clcfpat1\cellx9360
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Method\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Path\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Auth\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Description\b0\cell
+\row
+\trowd\trgaph108
+\cellx936
+\cellx3744
+\cellx4867
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 GET\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 /api/health\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 None\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Returns \{status:'ok', timestamp, uptime\}\cell
+\row
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 5.2 Practice\b0\cf3\fs21\par
+\trowd\trgaph108
+\clshdng10000\clcbpat1\clcfpat1\cellx936
+\clshdng10000\clcbpat1\clcfpat1\cellx4212
+\clshdng10000\clcbpat1\clcfpat1\cellx5148
+\clshdng10000\clcbpat1\clcfpat1\cellx9360
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Method\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Path\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Auth\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Description\b0\cell
+\row
+\trowd\trgaph108
+\cellx936
+\cellx4212
+\cellx5148
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 GET\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 /api/practice/menu\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 JWT\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Personalised topic list for user's grade\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx936
+\clshdng10000\clcbpat7\clcfpat7\cellx4212
+\clshdng10000\clcbpat7\clcfpat7\cellx5148
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 POST\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 /api/practice/session\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 JWT\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Start session; body: \{topicId\}\cell
+\row
+\trowd\trgaph108
+\cellx936
+\cellx4212
+\cellx5148
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 GET\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 /api/practice/session/:id\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 JWT\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Get session details and question queue\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx936
+\clshdng10000\clcbpat7\clcfpat7\cellx4212
+\clshdng10000\clcbpat7\clcfpat7\cellx5148
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 POST\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 /api/practice/session/:id/answer\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 JWT\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Submit answer; body: \{questionId, answer\}\cell
+\row
+\trowd\trgaph108
+\cellx936
+\cellx4212
+\cellx5148
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 POST\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 /api/practice/session/:id/complete\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 JWT\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Mark complete, award XP\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx936
+\clshdng10000\clcbpat7\clcfpat7\cellx4212
+\clshdng10000\clcbpat7\clcfpat7\cellx5148
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 GET\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 /api/practice/history\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 JWT\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Paginated session history\cell
+\row
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 5.3 AI Tutor\b0\cf3\fs21\par
+\trowd\trgaph108
+\clshdng10000\clcbpat1\clcfpat1\cellx936
+\clshdng10000\clcbpat1\clcfpat1\cellx3557
+\clshdng10000\clcbpat1\clcfpat1\cellx4493
+\clshdng10000\clcbpat1\clcfpat1\cellx9360
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Method\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Path\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Auth\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Description\b0\cell
+\row
+\trowd\trgaph108
+\cellx936
+\cellx3557
+\cellx4493
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 POST\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 /api/ai/chat\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 JWT\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Streaming chat; body: \{messages, topicId\}\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx936
+\clshdng10000\clcbpat7\clcfpat7\cellx3557
+\clshdng10000\clcbpat7\clcfpat7\cellx4493
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 POST\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 /api/ai/hint\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 JWT\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Hint for a question; body: \{questionId\}\cell
+\row
+\trowd\trgaph108
+\cellx936
+\cellx3557
+\cellx4493
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 POST\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 /api/ai/explain\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 JWT\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Full explanation; body: \{questionId\}\cell
+\row
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 5.4 User & Profile\b0\cf3\fs21\par
+\trowd\trgaph108
+\clshdng10000\clcbpat1\clcfpat1\cellx936
+\clshdng10000\clcbpat1\clcfpat1\cellx3744
+\clshdng10000\clcbpat1\clcfpat1\cellx4680
+\clshdng10000\clcbpat1\clcfpat1\cellx9360
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Method\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Path\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Auth\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Description\b0\cell
+\row
+\trowd\trgaph108
+\cellx936
+\cellx3744
+\cellx4680
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 GET\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 /api/user/profile\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 JWT\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Current user + StudentProfile stats\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx936
+\clshdng10000\clcbpat7\clcfpat7\cellx3744
+\clshdng10000\clcbpat7\clcfpat7\cellx4680
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 PATCH\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 /api/user/profile\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 JWT\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Update name, avatarUrl, gradeLevel\cell
+\row
+\trowd\trgaph108
+\cellx936
+\cellx3744
+\cellx4680
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 GET\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 /api/user/stats\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 JWT\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 XP, streak, level, achievements summary\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx936
+\clshdng10000\clcbpat7\clcfpat7\cellx3744
+\clshdng10000\clcbpat7\clcfpat7\cellx4680
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 GET\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 /api/user/achievements\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 JWT\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Unlocked and pending achievements\cell
+\row
+\trowd\trgaph108
+\cellx936
+\cellx3744
+\cellx4680
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 GET\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 /api/leaderboard\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 JWT\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Top 50 students by XP (weekly / all-time)\cell
+\row
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 5.5 Admin\b0\cf3\fs21\par
+\trowd\trgaph108
+\clshdng10000\clcbpat1\clcfpat1\cellx936
+\clshdng10000\clcbpat1\clcfpat1\cellx3744
+\clshdng10000\clcbpat1\clcfpat1\cellx4867
+\clshdng10000\clcbpat1\clcfpat1\cellx9360
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Method\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Path\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Auth\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Description\b0\cell
+\row
+\trowd\trgaph108
+\cellx936
+\cellx3744
+\cellx4867
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 GET\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 /api/admin/users\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 admin JWT\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Paginated user list with filters\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx936
+\clshdng10000\clcbpat7\clcfpat7\cellx3744
+\clshdng10000\clcbpat7\clcfpat7\cellx4867
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 PATCH\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 /api/admin/users/:id\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 admin JWT\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Update role, isActive, gradeLevel\cell
+\row
+\trowd\trgaph108
+\cellx936
+\cellx3744
+\cellx4867
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 GET\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 /api/admin/stats\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 admin JWT\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Platform-wide analytics\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx936
+\clshdng10000\clcbpat7\clcfpat7\cellx3744
+\clshdng10000\clcbpat7\clcfpat7\cellx4867
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 GET\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 /api/admin/topics\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 admin JWT\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 All topics with usage metrics\cell
+\row
+\trowd\trgaph108
+\cellx936
+\cellx3744
+\cellx4867
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 POST\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 /api/admin/topics\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 admin JWT\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Create new topic\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx936
+\clshdng10000\clcbpat7\clcfpat7\cellx3744
+\clshdng10000\clcbpat7\clcfpat7\cellx4867
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 PATCH\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 /api/admin/topics/:id\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 admin JWT\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Update topic metadata\cell
+\row
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 5.6 Internal (Service-to-Service)\b0\cf3\fs21\par
+\trowd\trgaph108
+\clshdng10000\clcbpat1\clcfpat1\cellx936
+\clshdng10000\clcbpat1\clcfpat1\cellx4212
+\clshdng10000\clcbpat1\clcfpat1\cellx6084
+\clshdng10000\clcbpat1\clcfpat1\cellx9360
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Method\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Path\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Auth\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Description\b0\cell
+\row
+\trowd\trgaph108
+\cellx936
+\cellx4212
+\cellx6084
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 POST\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 /api/internal/generate-topics\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 X-Service-Secret\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Trigger AI topic generation; body: \{userId\}\cell
+\row
+\pard\sb0\sa120\par
+\pard\pagebb\keepn\outlinelevel0\sb480\sa240\cf1\fs36\b 6. Frontend Application\b0\cf3\fs21\par
+\pard\qj\sb80\sa80\cf3\fs21 The frontend is a Next.js 15 App Router application deployed on Vercel at https://mathai.aiops.ae. All routes under (authenticated)/ require an active NextAuth session; unauthenticated users are redirected to /auth/signin.\par
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 6.1 Route Structure\b0\cf3\fs21\par
+\trowd\trgaph108
+\clshdng10000\clcbpat1\clcfpat1\cellx2621
+\clshdng10000\clcbpat1\clcfpat1\cellx3931
+\clshdng10000\clcbpat1\clcfpat1\cellx9360
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Route\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Access\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Description\b0\cell
+\row
+\trowd\trgaph108
+\cellx2621
+\cellx3931
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 /\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Public\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Marketing landing with sign-up CTA\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2621
+\clshdng10000\clcbpat7\clcfpat7\cellx3931
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 /auth/signin\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Public\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Email/password + Google OAuth sign-in\cell
+\row
+\trowd\trgaph108
+\cellx2621
+\cellx3931
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 /auth/signup\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Public\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 New account registration with grade selection\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2621
+\clshdng10000\clcbpat7\clcfpat7\cellx3931
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 /dashboard\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Auth\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Student home: stats, recent sessions, quick-start\cell
+\row
+\trowd\trgaph108
+\cellx2621
+\cellx3931
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 /practice\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Auth\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Topic selection and session launcher\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2621
+\clshdng10000\clcbpat7\clcfpat7\cellx3931
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 /practice/session\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Auth\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Active question/answer UI with AI tutor panel\cell
+\row
+\trowd\trgaph108
+\cellx2621
+\cellx3931
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 /profile\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Auth\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Grade selector, avatar, XP history\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2621
+\clshdng10000\clcbpat7\clcfpat7\cellx3931
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 /achievements\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Auth\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Badge collection and progress\cell
+\row
+\trowd\trgaph108
+\cellx2621
+\cellx3931
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 /leaderboard\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Auth\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Weekly/all-time rankings\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2621
+\clshdng10000\clcbpat7\clcfpat7\cellx3931
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 /admin\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 admin\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Overview metrics dashboard\cell
+\row
+\trowd\trgaph108
+\cellx2621
+\cellx3931
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 /admin/users\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 admin\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 User management table\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2621
+\clshdng10000\clcbpat7\clcfpat7\cellx3931
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 /admin/content\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 admin\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Topic and question management\cell
+\row
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 6.2 Key Components\b0\cf3\fs21\par
+\pard\keepn\outlinelevel2\sb240\sa140\cf9\fs23\b PracticeSession\b0\cf3\fs21\par
+\pard\qj\sb80\sa80\cf3\fs21 Manages the full question-answer-feedback loop using a React state machine (idle > question > answering > feedback > next). Integrates the Vercel AI SDK useChat hook for streaming AI tutor messages in a side panel. Framer Motion powers XP award animations on correct answers.\par
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel2\sb240\sa140\cf9\fs23\b AppNav / AdminNav\b0\cf3\fs21\par
+\pard\qj\sb80\sa80\cf3\fs21 Role-aware navigation bar. AppNav shows standard student links. AdminNav adds content management and analytics links. Both include a sign-out button wired to NextAuth signOut().\par
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 6.3 State Management\b0\cf3\fs21\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Server state: React Query (useQuery / useMutation) for all API calls\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Global client state: Zustand stores for session progress and user preferences\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Form state: uncontrolled inputs with Zod validation on submit\par
+\pard\sb0\sa120\par
+\pard\pagebb\keepn\outlinelevel0\sb480\sa240\cf1\fs36\b 7. AI & Curriculum Engine\b0\cf3\fs21\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 7.1 Model Configuration\b0\cf3\fs21\par
+\pard\qj\sb80\sa80\cf3\fs21 The AI provider is abstracted behind an aiClient factory (api/src/lib/aiClient.ts) controlled by the AI_PROVIDER env var. Two modes are supported:\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  mock \u8212? canned responses; no API key needed; used in local dev and CI\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  anthropic \u8212? routes to Anthropic via @ai-sdk/anthropic\par
+\pard\sb0\sa120\par
+\trowd\trgaph108
+\clshdng10000\clcbpat1\clcfpat1\cellx3557
+\clshdng10000\clcbpat1\clcfpat1\cellx6178
+\clshdng10000\clcbpat1\clcfpat1\cellx9360
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Use Case\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Model\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Mode\b0\cell
+\row
+\trowd\trgaph108
+\cellx3557
+\cellx6178
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Practice question generation\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 claude-haiku-4.5\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Single-shot, structured JSON\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx3557
+\clshdng10000\clcbpat7\clcfpat7\cellx6178
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 AI Tutor chat\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 claude-haiku-4.5\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Streaming, multi-turn\cell
+\row
+\trowd\trgaph108
+\cellx3557
+\cellx6178
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Step-by-step hints\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 claude-sonnet-4.5\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Single-shot, detailed explanation\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx3557
+\clshdng10000\clcbpat7\clcfpat7\cellx6178
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 AI topic assignment (signup)\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 claude-haiku-4.5\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Single-shot, JSON array\cell
+\row
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 7.2 Curriculum Engine\b0\cf3\fs21\par
+\pard\qj\sb80\sa80\cf3\fs21 practiceMenuService reads StudentProfile.aiAssignedTopics (set at signup by Claude), merges with canonical topics for the student's grade, and applies mastery weights from SpacedRepetitionCard records to surface due-for-review topics first.\par
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 7.3 Spaced Repetition (SM-2 Variant)\b0\cf3\fs21\par
+\pard\qj\sb80\sa80\cf3\fs21 After each answer the system updates SpacedRepetitionCard: easeFactor is adjusted by performance quality, interval is computed by the SM-2 formula, and nextReviewAt is scheduled accordingly.\par
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 7.4 XP & Levelling\b0\cf3\fs21\par
+\trowd\trgaph108
+\clshdng10000\clcbpat1\clcfpat1\cellx5616
+\clshdng10000\clcbpat1\clcfpat1\cellx9360
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Event\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b XP Awarded\b0\cell
+\row
+\trowd\trgaph108
+\cellx5616
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Correct answer (EASY)\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 10 XP\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx5616
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Correct answer (MEDIUM)\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 20 XP\cell
+\row
+\trowd\trgaph108
+\cellx5616
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Correct answer (HARD)\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 35 XP\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx5616
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Session completion bonus\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 50 XP\cell
+\row
+\trowd\trgaph108
+\cellx5616
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Perfect session (100%)\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 +25 XP bonus\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx5616
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Streak milestone (7 days)\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 +100 XP\cell
+\row
+\pard\sb0\sa120\par
+\pard\pagebb\keepn\outlinelevel0\sb480\sa240\cf1\fs36\b 8. Environment Variables Reference\b0\cf3\fs21\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 8.1 Vercel (Next.js Frontend)\b0\cf3\fs21\par
+\trowd\trgaph108
+\clshdng10000\clcbpat1\clcfpat1\cellx2808
+\clshdng10000\clcbpat1\clcfpat1\cellx4118
+\clshdng10000\clcbpat1\clcfpat1\cellx9360
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Variable\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Required\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Value / Notes\b0\cell
+\row
+\trowd\trgaph108
+\cellx2808
+\cellx4118
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 DATABASE_URL\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Yes\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Supabase pooler URL \u8212? port 6543 with ?pgbouncer=true in production\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2808
+\clshdng10000\clcbpat7\clcfpat7\cellx4118
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 NEXTAUTH_URL\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Yes\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 https://mathai.aiops.ae \u8212? must match exactly for OAuth callbacks\cell
+\row
+\trowd\trgaph108
+\cellx2808
+\cellx4118
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 NEXTAUTH_SECRET\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Yes\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 32-byte hex: openssl rand -hex 32. Must match Render value\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2808
+\clshdng10000\clcbpat7\clcfpat7\cellx4118
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 GOOGLE_CLIENT_ID\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Yes\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 From Google Cloud Console > Credentials\cell
+\row
+\trowd\trgaph108
+\cellx2808
+\cellx4118
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 GOOGLE_CLIENT_SECRET\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Yes\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 From Google Cloud Console > Credentials\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2808
+\clshdng10000\clcbpat7\clcfpat7\cellx4118
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 NEXT_PUBLIC_APP_URL\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Yes\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 https://mathai.aiops.ae\cell
+\row
+\trowd\trgaph108
+\cellx2808
+\cellx4118
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 NEXT_PUBLIC_API_BASE_URL\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Yes\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 https://mathai-api.onrender.com/api\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2808
+\clshdng10000\clcbpat7\clcfpat7\cellx4118
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 INTERNAL_SERVICE_SECRET\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Yes\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 32-byte hex. Must match Render value exactly\cell
+\row
+\trowd\trgaph108
+\cellx2808
+\cellx4118
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 AI_PROVIDER\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 No\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 anthropic (default: mock for local dev)\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2808
+\clshdng10000\clcbpat7\clcfpat7\cellx4118
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 ANTHROPIC_API_KEY\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 If AI_PROVIDER=anthropic\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 sk-ant-api03-...\cell
+\row
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 8.2 Render (Express API)\b0\cf3\fs21\par
+\trowd\trgaph108
+\clshdng10000\clcbpat1\clcfpat1\cellx2808
+\clshdng10000\clcbpat1\clcfpat1\cellx4118
+\clshdng10000\clcbpat1\clcfpat1\cellx9360
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Variable\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Required\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Value / Notes\b0\cell
+\row
+\trowd\trgaph108
+\cellx2808
+\cellx4118
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 NODE_ENV\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Auto\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 production \u8212? set in render.yaml\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2808
+\clshdng10000\clcbpat7\clcfpat7\cellx4118
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 DATABASE_URL\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Yes\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Same Supabase pooler URL as Vercel\cell
+\row
+\trowd\trgaph108
+\cellx2808
+\cellx4118
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 NEXTAUTH_SECRET\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Yes\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Must match Vercel NEXTAUTH_SECRET exactly\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2808
+\clshdng10000\clcbpat7\clcfpat7\cellx4118
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 CORS_ORIGIN\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Auto\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 https://mathai.aiops.ae \u8212? set in render.yaml\cell
+\row
+\trowd\trgaph108
+\cellx2808
+\cellx4118
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 INTERNAL_SERVICE_SECRET\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Yes\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Must match Vercel INTERNAL_SERVICE_SECRET\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2808
+\clshdng10000\clcbpat7\clcfpat7\cellx4118
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 AI_PROVIDER\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Auto\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 anthropic \u8212? set in render.yaml\cell
+\row
+\trowd\trgaph108
+\cellx2808
+\cellx4118
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 ANTHROPIC_API_KEY\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Yes\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Set manually in Render dashboard\cell
+\row
+\pard\sb0\sa120\par
+\pard\pagebb\keepn\outlinelevel0\sb480\sa240\cf1\fs36\b 9. Deployment Guide\b0\cf3\fs21\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 9.1 Prerequisites\b0\cf3\fs21\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Node.js >= 18.17.0 and npm >= 9\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Supabase project with PostgreSQL provisioned\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Anthropic API key for production AI\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Google Cloud OAuth credentials for Google sign-in\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Vercel account connected to the GitHub repository\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Render account connected to the GitHub repository\par
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 9.2 Database Setup\b0\cf3\fs21\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 # Set DATABASE_URL in your local environment\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 export DATABASE_URL="postgresql://postgres.<ref>:<pw>@aws-1-<region>.pooler.supabase.com:5432/postgres"\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17  \par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 # Generate Prisma client\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 npm run db:generate\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17  \par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 # Push schema to database (creates all tables)\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 npm run db:push\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17  \par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 # Optional: seed with sample topics\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 npm run db:seed\par
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 9.3 Local Development\b0\cf3\fs21\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 # Install all workspace dependencies\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 npm install\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17  \par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 # Copy and fill environment files\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 cp apps/web/.env.example apps/web/.env.local\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17  \par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 # Run frontend + API in parallel (Turborepo)\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 npm run dev\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17  \par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 # Frontend: http://localhost:3002\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 # API:      http://localhost:3001\par
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 9.4 Vercel Deployment\b0\cf3\fs21\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  In Vercel Project Settings > Environment Variables, add all variables from section 8.1\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Set Root Directory to apps/web\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Framework Preset: Next.js\par
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel2\sb240\sa140\cf9\fs23\b Google OAuth Setup (Google Cloud Console)\b0\cf3\fs21\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Authorised JavaScript origins: https://mathai.aiops.ae\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Authorised redirect URIs: https://mathai.aiops.ae/api/auth/callback/google\par
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 9.5 Render Deployment\b0\cf3\fs21\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Render > New > Blueprint > connect GitHub repo > select render.yaml\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Set sync: false variables manually: DATABASE_URL, NEXTAUTH_SECRET, INTERNAL_SERVICE_SECRET, ANTHROPIC_API_KEY\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Build command: npm run render:build\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Start command: npm run render:start\par
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 9.6 Build Commands\b0\cf3\fs21\par
+\trowd\trgaph108
+\clshdng10000\clcbpat1\clcfpat1\cellx3276
+\clshdng10000\clcbpat1\clcfpat1\cellx9360
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Command\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Description\b0\cell
+\row
+\trowd\trgaph108
+\cellx3276
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 npm run dev\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Start all apps in development mode (Turborepo)\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx3276
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 npm run build\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Production build for all apps\cell
+\row
+\trowd\trgaph108
+\cellx3276
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 npm run render:build\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Install deps + build API only (used by Render)\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx3276
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 npm run render:start\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Start Express API in production\cell
+\row
+\trowd\trgaph108
+\cellx3276
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 npm run db:generate\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Regenerate Prisma client from schema\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx3276
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 npm run db:push\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Push schema changes to database\cell
+\row
+\trowd\trgaph108
+\cellx3276
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 npm run db:migrate\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Create and apply a new migration\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx3276
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 npm run db:studio\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Open Prisma Studio (visual DB browser)\cell
+\row
+\trowd\trgaph108
+\cellx3276
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 npm run type-check\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Run tsc --noEmit across all packages\cell
+\row
+\pard\sb0\sa120\par
+\pard\pagebb\keepn\outlinelevel0\sb480\sa240\cf1\fs36\b 10. Security Model\b0\cf3\fs21\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 10.1 Authentication Security\b0\cf3\fs21\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  All session tokens are JWE-encrypted (A256CBC-HS512) using NEXTAUTH_SECRET\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Tokens are short-lived (24h) and httpOnly cookies prevent XSS access\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Disabled accounts (isActive: false) are rejected at NextAuth authorize and Express authMiddleware\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Password hashing uses bcrypt cost factor 12\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  INTERNAL_SERVICE_SECRET is a 32-byte cryptographic random value\par
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 10.2 API Security\b0\cf3\fs21\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Helmet.js sets X-Frame-Options, X-Content-Type-Options, Strict-Transport-Security, etc.\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  CORS restricted to CORS_ORIGIN \u8212? no wildcard origins\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  express-rate-limit applies per-IP limits on auth and AI endpoints\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  All request bodies validated with Zod schemas\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  SQL injection prevented by exclusive use of Prisma parameterised queries\par
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 10.3 Data Handling\b0\cf3\fs21\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  No PII is logged; Winston filters email fields from log output\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  .env.local is gitignored and never committed\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  ANTHROPIC_API_KEY is server-side only, never exposed to the browser\par
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 10.4 Known Gaps & Recommendations\b0\cf3\fs21\par
+\trowd\trgaph108
+\clshdng10000\clcbpat1\clcfpat1\cellx3276
+\clshdng10000\clcbpat1\clcfpat1\cellx4680
+\clshdng10000\clcbpat1\clcfpat1\cellx9360
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Issue\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Severity\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Recommendation\b0\cell
+\row
+\trowd\trgaph108
+\cellx3276
+\cellx4680
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 No email verification on signup\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Medium\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Add Resend/SendGrid magic-link confirmation\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx3276
+\clshdng10000\clcbpat7\clcfpat7\cellx4680
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Supabase RLS not enabled\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Medium\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Enable RLS policies for defense-in-depth\cell
+\row
+\trowd\trgaph108
+\cellx3276
+\cellx4680
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Render free tier cold starts\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Low\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Upgrade to paid or add UptimeRobot keep-alive ping\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx3276
+\clshdng10000\clcbpat7\clcfpat7\cellx4680
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 No refresh token rotation\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Low\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 NextAuth v5 adds automatic rotation\cell
+\row
+\trowd\trgaph108
+\cellx3276
+\cellx4680
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Rate limits per-IP only\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Low\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Add user-ID-based rate limiting for AI endpoints\cell
+\row
+\pard\sb0\sa120\par
+\pard\pagebb\keepn\outlinelevel0\sb480\sa240\cf1\fs36\b 11. External Dependencies & Services\b0\cf3\fs21\par
+\trowd\trgaph108
+\clshdng10000\clcbpat1\clcfpat1\cellx1872
+\clshdng10000\clcbpat1\clcfpat1\cellx4680
+\clshdng10000\clcbpat1\clcfpat1\cellx9360
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Service\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Purpose\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Free Tier Limits\b0\cell
+\row
+\trowd\trgaph108
+\cellx1872
+\cellx4680
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Supabase\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 PostgreSQL database\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 500 MB storage, 2 GB bandwidth/mo\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx1872
+\clshdng10000\clcbpat7\clcfpat7\cellx4680
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Vercel\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Next.js hosting\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 100 GB bandwidth, hobby projects\cell
+\row
+\trowd\trgaph108
+\cellx1872
+\cellx4680
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Render\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Express API hosting\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Free \u8212? cold starts after 15 min inactivity\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx1872
+\clshdng10000\clcbpat7\clcfpat7\cellx4680
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Anthropic\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Claude API (AI + tutor)\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Pay-per-token; no free tier\cell
+\row
+\trowd\trgaph108
+\cellx1872
+\cellx4680
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Google Cloud\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 OAuth 2.0 credentials\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Free for OAuth\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx1872
+\clshdng10000\clcbpat7\clcfpat7\cellx4680
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 GitHub\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Source control + CI/CD\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Free for public repos\cell
+\row
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 11.1 Anthropic API Cost Model\b0\cf3\fs21\par
+\trowd\trgaph108
+\clshdng10000\clcbpat1\clcfpat1\cellx2621
+\clshdng10000\clcbpat1\clcfpat1\cellx4680
+\clshdng10000\clcbpat1\clcfpat1\cellx6739
+\clshdng10000\clcbpat1\clcfpat1\cellx9360
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Model\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Input / 1M tokens\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Output / 1M tokens\b0\cell
+\pard\intbl\sb80\sa80\li80\cf6\f0\fs19\b Typical Use\b0\cell
+\row
+\trowd\trgaph108
+\cellx2621
+\cellx4680
+\cellx6739
+\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 claude-haiku-4.5\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 $0.80\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 $4.00\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Question generation, quick chat\cell
+\row
+\trowd\trgaph108
+\clshdng10000\clcbpat7\clcfpat7\cellx2621
+\clshdng10000\clcbpat7\clcfpat7\cellx4680
+\clshdng10000\clcbpat7\clcfpat7\cellx6739
+\clshdng10000\clcbpat7\clcfpat7\cellx9360
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 claude-sonnet-4.5\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 $3.00\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 $15.00\cell
+\pard\intbl\sb80\sa80\li80\cf3\f0\fs19 Detailed hints, explanations\cell
+\row
+\pard\sb0\sa120\par
+\pard\qj\sb80\sa80\cf3\fs21 A typical student practice session (10 questions + 3 hints) consumes approximately 4,000 input and 2,000 output tokens across haiku calls, costing roughly $0.011 per session.\par
+\pard\sb0\sa120\par
+\pard\pagebb\keepn\outlinelevel0\sb480\sa240\cf1\fs36\b 12. Operational Runbook\b0\cf3\fs21\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 12.1 Health Checks\b0\cf3\fs21\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  API: GET https://mathai-api.onrender.com/api/health \u8212? expect \{status:'ok'\}\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Frontend: https://mathai.aiops.ae \u8212? expect 200 HTML\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Database: Supabase dashboard > Database > Table Editor\par
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 12.2 Common Issues\b0\cf3\fs21\par
+\pard\keepn\outlinelevel2\sb240\sa140\cf9\fs23\b API Cold Start (Render Free Tier)\b0\cf3\fs21\par
+\pard\qj\sb80\sa80\cf3\fs21 Render free tier spins down after 15 minutes of inactivity. First request after cold start can take 30\u8211?60 seconds. Mitigation: configure UptimeRobot to ping /api/health every 14 minutes.\par
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel2\sb240\sa140\cf9\fs23\b Signup 500 Error\b0\cf3\fs21\par
+\pard\qj\sb80\sa80\cf3\fs21 Previously traced to an invalid 'grade' field on studentProfile.create. Fixed in commit: fix(signup): remove invalid grade field. If 500 errors recur, check Render logs for Prisma 'Unknown argument' errors.\par
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel2\sb240\sa140\cf9\fs23\b Google OAuth Redirect URI Mismatch\b0\cf3\fs21\par
+\pard\qj\sb80\sa80\cf3\fs21 Symptom: 'Error 400: redirect_uri_mismatch' on Google sign-in. Fix: ensure NEXTAUTH_URL=https://mathai.aiops.ae is set on Vercel AND https://mathai.aiops.ae/api/auth/callback/google is registered in Google Cloud Console under Authorised redirect URIs.\par
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel2\sb240\sa140\cf9\fs23\b Database Connection Exhaustion\b0\cf3\fs21\par
+\pard\qj\sb80\sa80\cf3\fs21 Always use the Supabase pooler URL (port 6543 with ?pgbouncer=true). The pooler supports up to 200 concurrent clients vs the 20-connection limit on direct connections.\par
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 12.3 Monitoring\b0\cf3\fs21\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Render dashboard: real-time logs, resource metrics, deploy history\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Vercel dashboard: build logs, function invocation metrics, edge network status\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Supabase dashboard: query performance, storage usage, auth logs\par
+\pard\sb60\sa60\li360\fi-180\cf3\fs21 \bullet  Winston logs (API): structured JSON with level, message, userId, path, duration\par
+\pard\sb0\sa120\par
+\pard\keepn\outlinelevel1\sb360\sa200\cf2\fs28\b 12.4 Rolling Back a Deploy\b0\cf3\fs21\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 # Vercel: Deployments tab > click previous deploy > Promote to Production\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17  \par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 # Render: Deploys tab > Manual Deploy > select previous commit SHA\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17  \par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 # Database rollback (if schema changed):\par
+\pard\sb0\sa0\li360\ri360\cf8\f1\fs17 npx prisma migrate resolve --rolled-back <migration-name>\par
+\pard\sb0\sa120\par
+}
