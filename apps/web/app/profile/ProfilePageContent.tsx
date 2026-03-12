@@ -2,13 +2,14 @@
  * @module app/profile/ProfilePageContent
  *
  * Full profile settings page — name, grade, learning pace, explanation style,
- * confidence level. Persists via PATCH /api/profile.
+ * confidence level, password change, and sign-out.
+ * Persists via PATCH /api/profile.
  */
 
 "use client";
 
 import { useState, useEffect }  from "react";
-import { useSession }           from "next-auth/react";
+import { useSession, signOut }  from "next-auth/react";
 import { useQueryClient }       from "@tanstack/react-query";
 import { cn }                   from "@/lib/utils";
 import { useProfile }           from "@/hooks/use-profile";
@@ -20,16 +21,14 @@ import type {
 } from "@/types";
 
 const GRADES: { value: Grade; label: string }[] = [
-  { value: "G1", label: "Grade 1" },
-  { value: "G2", label: "Grade 2" },
-  { value: "G3", label: "Grade 3" },
-  { value: "G4", label: "Grade 4" },
-  { value: "G5", label: "Grade 5" },
-  { value: "G6", label: "Grade 6" },
-  { value: "G7", label: "Grade 7" },
-  { value: "G8", label: "Grade 8" },
-  { value: "G9", label: "Grade 9" },
-  { value: "G10", label: "Grade 10" },
+  { value: "G1",  label: "Grade 1" },
+  { value: "G2",  label: "Grade 2" },
+  { value: "G3",  label: "Grade 3" },
+  { value: "G4",  label: "Grade 4" },
+  { value: "G5",  label: "Grade 5" },
+  { value: "G6",  label: "Grade 6" },
+  { value: "G7",  label: "Grade 7" },
+  { value: "G8",  label: "Grade 8" },
 ];
 
 const PACE_OPTIONS: { value: LearningPace; label: string; icon: string; desc: string }[] = [
@@ -60,6 +59,16 @@ export default function ProfilePageContent() {
   const [confidence, setConfidence] = useState<number>(3);
   const [saved,      setSaved]      = useState(false);
 
+  // Change-password form state
+  const [currentPw,     setCurrentPw]     = useState("");
+  const [newPw,         setNewPw]         = useState("");
+  const [confirmNewPw,  setConfirmNewPw]  = useState("");
+  const [pwLoading,     setPwLoading]     = useState(false);
+  const [pwError,       setPwError]       = useState<string | null>(null);
+  const [pwSuccess,     setPwSuccess]     = useState(false);
+  const [showPwSection, setShowPwSection] = useState(false);
+  const [signOutLoading, setSignOutLoading] = useState(false);
+
   // Populate from loaded profile
   useEffect(() => {
     if (profile) {
@@ -73,6 +82,32 @@ export default function ProfilePageContent() {
       setConfidence(Math.max(1, Math.min(5, Math.round(raw / 20))));
     }
   }, [profile]);
+
+  async function handleChangePassword() {
+    setPwError(null);
+    if (newPw !== confirmNewPw) { setPwError("Passwords don't match."); return; }
+    if (newPw.length < 8 || !/[a-zA-Z]/.test(newPw) || !/[0-9]/.test(newPw)) {
+      setPwError("New password must be at least 8 characters and include a letter and a number.");
+      return;
+    }
+    setPwLoading(true);
+    try {
+      const res  = await fetch("/api/auth/change-password", {
+        method:  "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ currentPassword: currentPw, newPassword: newPw }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setPwError(data.error || "Something went wrong."); return; }
+      setPwSuccess(true);
+      setCurrentPw(""); setNewPw(""); setConfirmNewPw("");
+      setTimeout(() => { setPwSuccess(false); setShowPwSection(false); }, 2500);
+    } catch {
+      setPwError("Could not connect to the server. Please try again.");
+    } finally {
+      setPwLoading(false);
+    }
+  }
 
   async function handleSave() {
     setSaveError(null);
@@ -152,7 +187,7 @@ export default function ProfilePageContent() {
         {/* Grade */}
         <section className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 space-y-3">
           <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">My Grade</p>
-          <div className="grid grid-cols-5 gap-2">
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
             {GRADES.map((g) => (
               <button
                 key={g.value}
@@ -264,6 +299,114 @@ export default function ProfilePageContent() {
         >
           {saving ? "Saving…" : saved ? "✓ Saved!" : "Save Changes"}
         </button>
+
+        {/* ── Security / Change Password ───────────────────────────────── */}
+        <section className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Security</p>
+              <p className="text-sm text-gray-600 mt-0.5">Change your account password</p>
+            </div>
+            <button
+              onClick={() => {
+                setShowPwSection((v) => !v);
+                setPwError(null);
+                setPwSuccess(false);
+              }}
+              className="text-sm font-bold text-indigo-600 hover:text-indigo-800 transition"
+            >
+              {showPwSection ? "Cancel" : "Change Password"}
+            </button>
+          </div>
+
+          {showPwSection && (
+            <div className="space-y-3 pt-2 border-t border-gray-100">
+              {pwError && (
+                <div className="bg-red-50 border border-red-200 rounded-2xl px-4 py-2.5 text-sm text-red-700">
+                  {pwError}
+                </div>
+              )}
+              {pwSuccess && (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-2.5 text-sm text-emerald-700 font-semibold">
+                  ✓ Password changed successfully!
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Current password
+                </label>
+                <input
+                  type="password"
+                  value={currentPw}
+                  onChange={(e) => setCurrentPw(e.target.value)}
+                  placeholder="Your current password"
+                  className="w-full border-2 border-gray-200 rounded-2xl px-4 py-2.5 text-sm focus:border-indigo-500 outline-none transition"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  New password
+                </label>
+                <input
+                  type="password"
+                  value={newPw}
+                  onChange={(e) => setNewPw(e.target.value)}
+                  placeholder="At least 8 chars, letters + numbers"
+                  className="w-full border-2 border-gray-200 rounded-2xl px-4 py-2.5 text-sm focus:border-indigo-500 outline-none transition"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Confirm new password
+                </label>
+                <input
+                  type="password"
+                  value={confirmNewPw}
+                  onChange={(e) => setConfirmNewPw(e.target.value)}
+                  placeholder="Re-enter new password"
+                  className={cn(
+                    "w-full border-2 rounded-2xl px-4 py-2.5 text-sm outline-none transition",
+                    confirmNewPw && confirmNewPw !== newPw
+                      ? "border-red-400 focus:border-red-500"
+                      : "border-gray-200 focus:border-indigo-500"
+                  )}
+                />
+                {confirmNewPw && confirmNewPw !== newPw && (
+                  <p className="text-xs text-red-500 mt-1">Passwords don&apos;t match</p>
+                )}
+              </div>
+
+              <button
+                onClick={() => void handleChangePassword()}
+                disabled={pwLoading || !currentPw || !newPw || newPw !== confirmNewPw}
+                className="w-full py-3 rounded-2xl font-bold text-sm bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition"
+              >
+                {pwLoading ? "Updating…" : "Update Password"}
+              </button>
+            </div>
+          )}
+        </section>
+
+        {/* ── Sign Out ─────────────────────────────────────────────────── */}
+        <section className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Account</p>
+              <p className="text-sm text-gray-600 mt-0.5">Sign out of MathAI</p>
+            </div>
+            <button
+              onClick={async () => {
+                setSignOutLoading(true);
+                await signOut({ callbackUrl: "/auth/signin" });
+              }}
+              disabled={signOutLoading}
+              className="text-sm font-bold text-red-500 hover:text-red-700 border-2 border-red-200 hover:border-red-400 px-4 py-2 rounded-2xl transition disabled:opacity-50"
+            >
+              {signOutLoading ? "Signing out…" : "Sign Out"}
+            </button>
+          </div>
+        </section>
 
       </div>
     </div>

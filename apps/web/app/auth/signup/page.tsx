@@ -32,6 +32,10 @@ export default function SignUpPage() {
       setError("Passwords do not match.");
       return;
     }
+    if (password.length < 8 || !/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+      setError("Password must be at least 8 characters and include a letter and a number.");
+      return;
+    }
 
     setLoading(true);
 
@@ -118,9 +122,9 @@ export default function SignUpPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              minLength={6}
+              minLength={8}
               className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:border-indigo-500 outline-none transition"
-              placeholder="At least 6 characters"
+              placeholder="At least 8 chars, letters + numbers"
             />
           </div>
 
@@ -134,7 +138,7 @@ export default function SignUpPage() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
-              minLength={6}
+              minLength={8}
               className={`w-full border-2 rounded-2xl px-4 py-3 outline-none transition ${
                 confirmPassword && confirmPassword !== password
                   ? "border-red-400 focus:border-red-500"
