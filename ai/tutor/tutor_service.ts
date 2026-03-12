@@ -222,21 +222,32 @@ export class TutorService {
     let similarExample;
 
     if (isHintMode) {
-      // ── AI-first: generate a contextual hint from the actual question text ────
       const hintLevel: 1 | 2 | 3 =
         helpMode === HelpMode.Hint1 ? 1 : helpMode === HelpMode.Hint2 ? 2 : 3;
 
+      // ── Decide whether to call AI or go straight to template ─────────────────
+      // In mock/dev mode the AI provider returns static canned text that is NOT
+      // question-specific. Skip the AI call entirely and let the template engine
+      // produce concept-aware hints. In production (vercel_gateway / anthropic)
+      // the AI reads the actual question text and generates a targeted hint.
+      const providerName = (process.env["AI_PROVIDER"] ?? "mock").toLowerCase();
+      const useAI = providerName !== "mock" && providerName !== "";
+
       let hintText: string | null = null;
-      try {
-        hintText = await generateAIHint({
-          questionText,
-          grade,
-          hintLevel,
-          hintsUsed,
-          misconception,
-        });
-      } catch (aiErr) {
-        console.warn("[tutor_service] AI hint failed — falling back to template:", (aiErr as Error).message);
+
+      if (useAI) {
+        // ── AI-first: generate a contextual hint from the actual question text ──
+        try {
+          hintText = await generateAIHint({
+            questionText,
+            grade,
+            hintLevel,
+            hintsUsed,
+            misconception,
+          });
+        } catch (aiErr) {
+          console.warn("[tutor_service] AI hint failed — falling back to template:", (aiErr as Error).message);
+        }
       }
 
       if (hintText) {
@@ -249,7 +260,7 @@ export class TutorService {
         });
         visualPlan = templateResult.visualPlan;
       } else {
-        // AI failed — fall back fully to template engine
+        // Mock mode or AI failed — use template engine (concept + topic aware)
         const result = this.hintEngine.generate({
           topicId, conceptTags, questionText, studentAnswer,
           helpMode, hintsUsed, grade, misconception: misconception ?? undefined,

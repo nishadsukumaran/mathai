@@ -318,20 +318,19 @@ export default function PracticeView({
                 </p>
                 <p className="text-sm text-gray-600 mt-1">{result.encouragement}</p>
                 {!result.isCorrect && (
-                  <>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Correct answer: <strong>{result.correctAnswer}</strong>
-                    </p>
-                    {/* Teach Me — deep-links to Ask MathAI with this question pre-loaded */}
-                    <button
-                      onClick={onTeachMe}
-                      className="mt-3 flex items-center gap-2 text-sm font-bold text-indigo-600 hover:text-indigo-800 transition"
-                    >
-                      <span className="text-base">📖</span>
-                      Teach me this properly →
-                    </button>
-                  </>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Correct answer: <strong>{result.correctAnswer}</strong>
+                  </p>
                 )}
+                {/* Teach Me — always visible after answer, correct or wrong.
+                    Deep-links to Ask MathAI with this question pre-loaded. */}
+                <button
+                  onClick={onTeachMe}
+                  className="mt-3 flex items-center gap-2 text-sm font-bold text-indigo-600 hover:text-indigo-800 transition"
+                >
+                  <span className="text-base">📖</span>
+                  {result.isCorrect ? "Want to understand why? Teach me →" : "Teach me this properly →"}
+                </button>
               </div>
             )}
 
@@ -354,14 +353,6 @@ export default function PracticeView({
                   >
                     💡 Hint {hintsUsed > 0 ? `(${hintsUsed}/3)` : ""}
                   </button>
-                  <button
-                    onClick={onTeachMe}
-                    disabled={loading}
-                    className="px-4 py-3 rounded-2xl border border-indigo-200 text-indigo-500 font-semibold hover:bg-indigo-50 disabled:opacity-40 transition"
-                    title="Don't know this topic? Let MathAI explain it fully"
-                  >
-                    📖 Teach Me
-                  </button>
                 </>
               ) : (
                 <button
@@ -372,6 +363,20 @@ export default function PracticeView({
                 </button>
               )}
             </div>
+
+            {/* Teach Me — pinned below action bar so it's always reachable.
+                Shows in both pre-answer and post-answer states. */}
+            {!result && (
+              <div className="mt-3 text-center">
+                <button
+                  onClick={onTeachMe}
+                  disabled={loading}
+                  className="text-sm text-indigo-400 hover:text-indigo-600 font-medium transition underline underline-offset-2 disabled:opacity-40"
+                >
+                  📖 Don't understand this topic? Teach me →
+                </button>
+              </div>
+            )}
           </div>
         )}
 
