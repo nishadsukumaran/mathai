@@ -223,6 +223,7 @@ model User {
   lessonProgress   LessonProgress[]
   mistakePatterns  TopicMistakePattern[]
   memorySnapshot   StudentMemorySnapshot?
+  studentPet       StudentPet?
 
   @@index([role])
   @@index([gradeLevel])
