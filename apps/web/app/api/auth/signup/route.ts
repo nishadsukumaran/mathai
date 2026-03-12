@@ -30,9 +30,13 @@ export async function POST(req: Request) {
       ? (grade as string)
       : "G4";
 
-    if (password.length < 6) {
+    if (
+      password.length < 8 ||
+      !/[a-zA-Z]/.test(password) ||
+      !/[0-9]/.test(password)
+    ) {
       return NextResponse.json(
-        { error: "Password must be at least 6 characters" },
+        { error: "Password must be at least 8 characters and include a letter and a number." },
         { status: 400 }
       );
     }
