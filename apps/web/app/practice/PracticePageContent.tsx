@@ -12,7 +12,7 @@
 
 "use client";
 
-import { useState, useRef }   from "react";
+import { useState, useRef, useEffect } from "react";
 import { useSearchParams }    from "next/navigation";
 import Link                   from "next/link";
 import PracticeContainer      from "@/containers/PracticeContainer";
@@ -46,6 +46,25 @@ function PracticeHub() {
 
   const sections  = menu?.sections ?? [];
   const allItems  = sections.flatMap((s) => s.items);
+
+  // Auto-poll every 5 s while topics are empty (background generation in progress).
+  // Gives up after MAX_POLLS attempts to avoid infinite loops on genuine failures.
+  const MAX_POLLS = 10;
+  const pollCount = useRef(0);
+  useEffect(() => {
+    if (loading || allItems.length > 0) {
+      pollCount.current = 0; // reset counter once topics arrive
+      return;
+    }
+    if (pollCount.current >= MAX_POLLS) return;
+
+    const timer = setTimeout(() => {
+      pollCount.current += 1;
+      void refetch();
+    }, 5_000);
+
+    return () => clearTimeout(timer);
+  }, [loading, allItems.length, refetch]);
 
   // Filter by search query
   const filtered = searchQuery.trim()

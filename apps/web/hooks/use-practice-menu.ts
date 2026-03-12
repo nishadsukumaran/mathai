@@ -5,10 +5,14 @@
  * Wraps GET /api/practice/menu via React Query.
  *
  * Caching strategy:
- *   - staleTime: 4 hours — the menu is freshly generated on login and cached
- *     for the session so it doesn't re-call the AI on every navigation.
+ *   - staleTime: 30s — short window so that if the first fetch returns an empty
+ *     menu (e.g. topics not yet generated on a cold Render start), the next
+ *     mount/focus will immediately re-fetch rather than serving stale empty data.
+ *     Once topics exist the response is stable and a 30s window is fine.
  *   - gcTime: 24 hours — keeps the cached result in memory across page transitions.
- *   - Invalidated automatically when a practice session completes via
+ *   - refetchOnMount: "always" — always check for fresh data on mount so users
+ *     returning to /practice after topics finish generating see them immediately.
+ *   - Invalidated explicitly when a practice session completes via
  *     invalidateAfterSession() in query-keys.ts, which triggers a fresh
  *     AI-generated menu based on the newly updated topic progress.
  *
@@ -27,11 +31,14 @@ export function usePracticeMenu() {
   const { data, isLoading, isError, refetch } = useQuery<PracticeMenu | null>({
     queryKey: queryKeys.practiceMenu,
     queryFn:  () => clientGet<PracticeMenu>("/practice/menu"),
-    // Treat as fresh for 4 hours — avoids redundant AI calls on page navigation.
-    // Menu is force-regenerated after topic completion via cache invalidation.
-    staleTime: 4 * 60 * 60 * 1000,
-    gcTime:    24 * 60 * 60 * 1000,
-    retry:     1,
+    // Short stale window: if the menu came back empty (topics not yet generated),
+    // the next mount will re-fetch straight away instead of serving cached empty data.
+    staleTime:       30 * 1000,
+    gcTime:          24 * 60 * 60 * 1000,
+    retry:           2,
+    // Always check on mount so users returning to /practice after sign-up get
+    // their topics as soon as the background job finishes generating them.
+    refetchOnMount:  "always",
   });
 
   return {
