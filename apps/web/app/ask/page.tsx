@@ -20,7 +20,15 @@ export default async function AskPage({ searchParams }: AskPageProps) {
   if (!session) redirect("/auth/signin");
 
   const params = searchParams ? await searchParams : {};
-  const initialQuestion = params?.q ? decodeURIComponent(params.q) : "";
+  const initialQuestion = (() => {
+    if (!params?.q) return "";
+    try {
+      return decodeURIComponent(params.q);
+    } catch {
+      // Malformed percent-encoding (e.g. bare %) — use raw string rather than crashing
+      return params.q;
+    }
+  })();
 
   return <AskPageContent initialQuestion={initialQuestion} />;
 }
