@@ -13,8 +13,6 @@ const GRADES = [
   { value: "G6",  label: "Grade 6" },
   { value: "G7",  label: "Grade 7" },
   { value: "G8",  label: "Grade 8" },
-  { value: "G9",  label: "Grade 9" },
-  { value: "G10", label: "Grade 10" },
 ] as const;
 
 export default function SignUpPage() {
@@ -153,7 +151,7 @@ export default function SignUpPage() {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               My Grade
             </label>
-            <div className="grid grid-cols-5 gap-2">
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
               {GRADES.map((g) => (
                 <button
                   key={g.value}

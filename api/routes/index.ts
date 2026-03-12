@@ -20,9 +20,12 @@
  *   PATCH /api/profile               ← NEW
  *   GET  /api/practice/menu          ← NEW
  *   POST /api/tutor/ask              ← NEW
- *   GET  /api/student/memory         ← Wave 5
- *   POST /api/student/memory/refresh ← Wave 5
- *   PATCH /api/student/interests     ← Wave 5
+ *   GET  /api/student/memory              ← Wave 5
+ *   POST /api/student/memory/refresh     ← Wave 5
+ *   PATCH /api/student/interests         ← Wave 5
+ *   POST /api/internal/generate-topics   ← service-to-service, secret header
+ *   POST /api/profile/regenerate-topics  ← authenticated user action
+ *   POST /api/profile/request-topic      ← authenticated user action
  */
 
 import { Router } from "express";
@@ -39,6 +42,7 @@ import practiceMenuRoutes from "./practiceMenu.routes";
 import tutorRoutes        from "./tutor.routes";
 import studentRoutes      from "./student.routes";
 import adminRoutes        from "./admin.routes";
+import internalRoutes     from "./internal.routes";
 
 const router = Router();
 
@@ -65,6 +69,9 @@ router.get("/health", async (_req, res) => {
     },
   });
 });
+
+// ── Internal service routes (no user JWT — secret header required) ───────────
+router.use("/internal", internalRoutes);
 
 // ── Authenticated routes ──────────────────────────────────────────────────────
 router.use(authMiddleware);

@@ -36,8 +36,9 @@ export default function SignInContent() {
   const [loading, setLoading] = useState(false);
 
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
-  const error = searchParams.get("error");
+  const callbackUrl   = searchParams.get("callbackUrl") || "/dashboard";
+  const error         = searchParams.get("error");
+  const resetSuccess  = searchParams.get("reset") === "success";
 
   useEffect(() => {
     getProviders().then(setProviders);
@@ -63,6 +64,13 @@ export default function SignInContent() {
           <h1 className="text-3xl font-bold text-indigo-700 mb-2">MathAI</h1>
           <p className="text-gray-500">Sign in to start earning XP!</p>
         </div>
+
+        {/* Password reset success banner */}
+        {resetSuccess && (
+          <div className="mb-6 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-2xl px-4 py-3 text-sm font-semibold">
+            ✓ Password updated! Sign in with your new password below.
+          </div>
+        )}
 
         {/* Error message */}
         {error && (

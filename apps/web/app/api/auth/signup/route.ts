@@ -58,25 +58,30 @@ export async function POST(req: Request) {
       },
     });
 
-    // Create a StudentProfile for the new user, seeding the grade immediately
-    // so the practice menu can generate personalised topics right away.
-    await prisma.studentProfile.create({
-      data: {
-        userId: user.id,
-        grade:  gradeLevel as any,
-      },
+    // Create a StudentProfile for the new user.
+    // Grade is stored on User.gradeLevel (set above); StudentProfile has no grade column.
+    // Use upsert so a double-submit race condition doesn't throw a unique-constraint error.
+    await prisma.studentProfile.upsert({
+      where:  { userId: user.id },
+      create: { userId: user.id },
+      update: {},
     });
 
     // Fire-and-forget: kick off AI topic generation for this grade immediately.
     // Non-blocking — practiceMenuService will also retry on the user's first /practice visit.
+    // Uses the internal route (no user JWT needed) authenticated by INTERNAL_SERVICE_SECRET.
     const apiBase =
       process.env["API_BASE_URL"] ??
       process.env["NEXT_PUBLIC_API_BASE_URL"] ??
       "http://localhost:3001/api";
-    void fetch(`${apiBase}/profile/generate-initial-topics`, {
+    const internalSecret = process.env["INTERNAL_SERVICE_SECRET"] ?? "";
+    void fetch(`${apiBase}/internal/generate-topics`, {
       method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ userId: user.id }),
+      headers: {
+        "Content-Type":     "application/json",
+        "X-Service-Secret": internalSecret,
+      },
+      body: JSON.stringify({ userId: user.id }),
     }).catch(() => { /* non-critical — topics will generate on first /practice visit */ });
 
     return NextResponse.json(

@@ -13,8 +13,7 @@
  *     AI-generated menu based on the newly updated topic progress.
  *
  * USAGE:
- *   const { menu, loading } = usePracticeMenu();
- *   const topThree = menu?.sections.flatMap(s => s.items).slice(0, 3) ?? [];
+ *   const { menu, loading, refetch } = usePracticeMenu();
  */
 
 "use client";
@@ -25,7 +24,7 @@ import { queryKeys }        from "@/lib/query-keys";
 import type { PracticeMenu } from "@mathai/shared-types";
 
 export function usePracticeMenu() {
-  const { data, isLoading, isError } = useQuery<PracticeMenu | null>({
+  const { data, isLoading, isError, refetch } = useQuery<PracticeMenu | null>({
     queryKey: queryKeys.practiceMenu,
     queryFn:  () => clientGet<PracticeMenu>("/practice/menu"),
     // Treat as fresh for 4 hours — avoids redundant AI calls on page navigation.
@@ -39,5 +38,6 @@ export function usePracticeMenu() {
     menu:    data ?? null,
     loading: isLoading,
     error:   isError ? "Could not load practice menu" : null,
+    refetch,
   };
 }

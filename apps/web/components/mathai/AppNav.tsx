@@ -4,7 +4,8 @@
  * App-wide navigation for authenticated student users.
  *
  * Mobile  (< md): fixed bottom bar with icon + label per route
- * Desktop (≥ md): fixed left sidebar with icon + label, collapses to icons only
+ *                 + a thin top header bar with brand + sign-out button
+ * Desktop (≥ md): fixed left sidebar with icon + label, sign-out pinned at bottom
  *
  * Hidden automatically on /auth/* routes.
  */
@@ -14,6 +15,8 @@
 import Link               from "next/link";
 import { usePathname }    from "next/navigation";
 import { useSession }     from "next-auth/react";
+import { signOut }        from "next-auth/react";
+import { useState }       from "react";
 import { cn }             from "@/lib/utils";
 
 // ─── Nav items ────────────────────────────────────────────────────────────────
@@ -36,6 +39,7 @@ export function AppNav() {
   const { data: session }   = useSession();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const role                = (session?.user as any)?.role as string | undefined;
+  const [signingOut, setSigningOut] = useState(false);
 
   // Hide on auth routes, landing page, and admin area (admin has its own nav)
   if (
@@ -54,9 +58,26 @@ export function AppNav() {
       ? pathname === "/dashboard" || pathname === "/"
       : pathname.startsWith(href);
 
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    await signOut({ callbackUrl: "/auth/signin" });
+  };
+
   return (
     <>
-      {/* ── Mobile: fixed bottom bar ────────────────────────────────────── */}
+      {/* ── Mobile: thin top header ──────────────────────────────────────── */}
+      <header className="md:hidden fixed top-0 inset-x-0 z-30 bg-white border-b border-gray-100 shadow-sm h-11 flex items-center justify-between px-4">
+        <span className="font-black text-indigo-600 text-base tracking-tight">MathAI</span>
+        <button
+          onClick={() => void handleSignOut()}
+          disabled={signingOut}
+          className="text-xs font-semibold text-gray-400 hover:text-indigo-600 transition disabled:opacity-50"
+        >
+          {signingOut ? "Signing out…" : "Sign out"}
+        </button>
+      </header>
+
+      {/* ── Mobile: fixed bottom bar ─────────────────────────────────────── */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-gray-100 shadow-lg safe-area-pb">
         <div className="flex items-stretch h-16">
           {navItems.map((item) => {
@@ -102,7 +123,7 @@ export function AppNav() {
           </span>
         </div>
 
-        {/* Nav links — all items including Profile */}
+        {/* Nav links */}
         <div className="flex-1 flex flex-col gap-1 px-2">
           {navItems.map((item) => {
             const active = isActive(item.href);
@@ -126,6 +147,21 @@ export function AppNav() {
               </Link>
             );
           })}
+        </div>
+
+        {/* Sign out — pinned to bottom of sidebar */}
+        <div className="px-2 pt-2 border-t border-gray-100 mt-2">
+          <button
+            onClick={() => void handleSignOut()}
+            disabled={signingOut}
+            title="Sign out"
+            className="w-full flex items-center gap-3 px-3 py-3 rounded-2xl font-bold text-sm text-gray-400 hover:bg-red-50 hover:text-red-500 transition-all disabled:opacity-50"
+          >
+            <span className="text-xl shrink-0">🚪</span>
+            <span className="hidden xl:block">
+              {signingOut ? "Signing out…" : "Sign out"}
+            </span>
+          </button>
         </div>
       </aside>
 
