@@ -34,6 +34,7 @@ import { studentMemoryService }    from "../../ai/services/studentMemoryService"
 import { appendAfterCompletion }  from "./topicAssignmentService";
 import { learningMetrics }         from "../../services/analytics/learning_metrics";
 import { NotFoundError, ValidationError } from "../middlewares/error.middleware";
+import { evaluateAndUpdatePersonality } from "./petService";
 
 // ─── In-Memory Session Store ──────────────────────────────────────────────────
 
@@ -435,6 +436,10 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
           data:  { preferredExplanationStyle: style as any },
         }).catch((e) => console.warn("[practiceService] preferredExplanationStyle update failed:", e));
       })(),
+      // Pet personality re-evaluation — runs every 50 questions answered.
+      // Fire-and-forget: never blocks the submission response.
+      evaluateAndUpdatePersonality(session.userId)
+        .catch((e) => console.warn("[practiceService] Pet personality eval failed:", (e as Error).message)),
     ]).catch((e) => console.warn("[practiceService] Post-session update failed:", e));
   }
 

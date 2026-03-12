@@ -35,6 +35,10 @@ interface User {
   disabledReason: string | null;
   _count: { practiceSessions: number };
   studentProfile: StudentProfile | null;
+  petInsight?: {
+    personality: { label: string; icon: string; description: string; isEvolved: boolean };
+    insight:     string;
+  } | null;
 }
 
 interface Props { user: User }
@@ -202,6 +206,20 @@ export default function AdminUserDetailView({ user }: Props) {
           <StatMini label="Last Login" value={user.lastLoginAt ? fmtDate(user.lastLoginAt) : "Never"} />
         )}
       </div>
+
+      {/* ── Pet Personality Insight (parent-facing) ───────────────────────── */}
+      {user.petInsight && user.role === "student" && (
+        <div className="rounded-2xl border border-indigo-100 bg-indigo-50 px-5 py-4 flex gap-3 items-start">
+          <span className="text-2xl mt-0.5">{user.petInsight.personality.icon}</span>
+          <div>
+            <p className="text-xs font-bold text-indigo-600 uppercase tracking-wide mb-0.5">
+              Pet Personality · {user.petInsight.personality.label}
+              {user.petInsight.personality.isEvolved && " ⭐"}
+            </p>
+            <p className="text-sm text-indigo-900 leading-relaxed">{user.petInsight.insight}</p>
+          </div>
+        </div>
+      )}
 
       {/* ── Edit form ────────────────────────────────────────────────────────── */}
       <Card title="Account Details">

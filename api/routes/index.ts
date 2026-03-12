@@ -26,6 +26,11 @@
  *   POST /api/internal/generate-topics   ← service-to-service, secret header
  *   POST /api/profile/regenerate-topics  ← authenticated user action
  *   POST /api/profile/request-topic      ← authenticated user action
+ *   GET  /api/pet                        ← pet system
+ *   POST /api/pet/adopt                  ← adopt/rename pet
+ *   GET  /api/pet/catalog                ← available pets
+ *   GET  /api/pet/insight                ← parent-facing personality insight
+ *   POST /api/pet/evaluate               ← manual personality re-evaluation
  */
 
 import { Router } from "express";
@@ -43,6 +48,7 @@ import tutorRoutes        from "./tutor.routes";
 import studentRoutes      from "./student.routes";
 import adminRoutes        from "./admin.routes";
 import internalRoutes     from "./internal.routes";
+import petRoutes          from "./pet.routes";
 
 const router = Router();
 
@@ -87,5 +93,6 @@ router.use("/profile",        profileRoutes);       // GET+PATCH /profile
 router.use("/tutor",          tutorRoutes);          // POST /tutor/ask
 router.use("/student",        studentRoutes);         // GET /student/memory, POST /student/memory/refresh, PATCH /student/interests
 router.use("/admin",          adminRoutes);           // admin-only; requireAdmin runs inside admin.routes.ts
+router.use("/pet",            petRoutes);             // GET /pet, POST /pet/adopt, GET /pet/catalog, GET /pet/insight
 
 export default router;

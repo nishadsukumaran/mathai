@@ -29,5 +29,6 @@ export default async function AdminUserDetailPage({
   const user = await apiFetch<Record<string, unknown>>(`/admin/users/${id}`);
   if (!user) notFound();
 
+  // petInsight is now embedded in the user response by adminService.getUserById
   return <AdminUserDetailView user={user as never} />;
 }

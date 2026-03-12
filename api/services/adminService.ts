@@ -8,6 +8,11 @@
 
 import { prisma } from "../lib/prisma";
 import bcrypt from "bcryptjs";
+import {
+  petPersonalityEngine,
+  PET_CATALOG,
+} from "../../services/gamification/pet_personality_engine";
+import { PetPersonality } from "@/types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -37,6 +42,16 @@ export interface AdminUserDetail extends AdminUserListItem {
     streakCount:    number;
     learningPace:   string;
     confidenceLevel: number;
+  } | null;
+  // Pet personality insight (null if student has no pet, or user is not a student)
+  petInsight: {
+    personality: {
+      label:       string;
+      icon:        string;
+      description: string;
+      isEvolved:   boolean;
+    };
+    insight: string;
   } | null;
 }
 
@@ -180,10 +195,40 @@ export async function getUserById(id: string): Promise<AdminUserDetail | null> {
           confidenceLevel: true,
         },
       },
+      studentPet: {
+        select: {
+          personality: true,
+          petId:       true,
+          petName:     true,
+        },
+      },
     },
   });
 
   if (!user) return null;
+
+  // Build pet insight if the user has a pet record
+  let petInsight: AdminUserDetail["petInsight"] = null;
+  if (user.studentPet) {
+    const personality = user.studentPet.personality as PetPersonality;
+    const effects     = petPersonalityEngine.getEffects(personality);
+    const catalogEntry = PET_CATALOG.find((p) => p.id === user.studentPet!.petId) ?? PET_CATALOG[0]!;
+    const petDisplayName = user.studentPet.petName ?? catalogEntry.name;
+    const insight    = petPersonalityEngine.formatInsight(
+      personality,
+      user.name,
+      petDisplayName
+    );
+    petInsight = {
+      personality: {
+        label:       effects.label,
+        icon:        effects.icon,
+        description: effects.description,
+        isEvolved:   effects.isEvolved,
+      },
+      insight,
+    };
+  }
 
   return {
     ...user,
@@ -195,6 +240,7 @@ export async function getUserById(id: string): Promise<AdminUserDetail | null> {
     disabledAt:     user.disabledAt?.toISOString()   ?? null,
     disabledReason: user.disabledReason ?? null,
     studentProfile: user.studentProfile ?? null,
+    petInsight,
   };
 }
 

@@ -95,6 +95,27 @@ enum MasteryLevel {
   extended
 }
 
+// ─── Pet System ───────────────────────────────────────────────────────────────
+
+/// Base personality types — reflect dominant student learning behaviour.
+/// Derives from measured metrics (accuracy, speed, streak, hints, retries, mastery).
+enum PetPersonality {
+  fast_thinker       // avg time below speed threshold
+  problem_solver     // high retry_success_rate
+  streak_champion    // long current_streak
+  careful_learner    // high accuracy + low hint usage
+  persistent_explorer // high session_count + retry volume
+  math_wizard        // high concept_mastery_score across topics
+
+  // Evolved forms — unlock at higher metric thresholds
+  lightning_thinker    // fast_thinker evolved
+  legendary_streak     // streak_champion evolved
+  grand_math_wizard    // math_wizard evolved
+  master_solver        // problem_solver evolved
+  zen_learner          // careful_learner evolved
+  relentless_explorer  // persistent_explorer evolved
+}
+
 /// Controls AI tutor behaviour and hint availability for a session.
 enum PracticeMode {
   guided
@@ -828,4 +849,67 @@ model StudentQuestProgress {
   @@index([userId, status])
   @@index([expiresAt])
   @@map("student_quest_progress")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PET SYSTEM
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// A student's companion pet — one per student.
+/// Personality reflects observed learning behaviour and evolves automatically
+/// every PERSONALITY_EVAL_INTERVAL questions answered (currently 50).
+///
+/// Personality NEVER affects core learning logic — only visual effects and
+/// cosmetic traits.
+model StudentPet {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  /// Stable pet slug matching PET_CATALOG — e.g. "spark-owl", "math-fox".
+  petId  String  @default("spark-owl")
+
+  /// Optional nickname chosen by the student.
+  petName String?
+
+  /// Current active personality.
+  personality      PetPersonality @default(careful_learner)
+
+  /// Dominant metric score that determined the current personality (0–100).
+  personalityScore Float @default(0)
+
+  /// Immutable append-only personality change log.
+  /// Each entry: { personality, score, changedAt, reason }
+  /// Kept for parent dashboard insights and progress display.
+  personalityHistory Json @default("[]")
+
+  // ── Cached behaviour metrics (recomputed on every personality evaluation) ──
+
+  /// Rolling accuracy rate 0–1 across all-time attempts.
+  accuracyRate    Float @default(0)
+
+  /// Exponentially-weighted avg seconds per question.
+  avgTimeSeconds  Float @default(0)
+
+  /// Fraction of questions where at least one hint was used.
+  hintUsageRate   Float @default(0)
+
+  /// Fraction of incorrect first attempts eventually solved correctly.
+  retrySuccessRate Float @default(0)
+
+  /// Total questions answered — used to gate evaluation cadence.
+  questionsAnswered Int @default(0)
+
+  /// Concept mastery score 0–1 (average masteryScore across all TopicProgress rows).
+  conceptMasteryScore Float @default(0)
+
+  /// When personality was last re-evaluated. Null = never evaluated.
+  lastEvaluatedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("student_pets")
 }

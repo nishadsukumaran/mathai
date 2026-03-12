@@ -125,6 +125,44 @@ export enum QuestStatus {
   Expired   = "expired",
 }
 
+// ── Pet Personalities ─────────────────────────────────────────────────────────
+
+/**
+ * Pet personality — mirrors schema.prisma `PetPersonality` enum.
+ * Personalities are cosmetic only; they never affect learning logic.
+ *
+ * Base personalities (detected from behaviour metrics):
+ *   fast_thinker        — solves quickly (avg time below threshold)
+ *   problem_solver      — retries until correct
+ *   streak_champion     — long consecutive daily streak
+ *   careful_learner     — high accuracy, low hint usage
+ *   persistent_explorer — high session volume and retry count
+ *   math_wizard         — high concept mastery across topics
+ *
+ * Evolved personalities (unlock at advanced metric thresholds):
+ *   lightning_thinker   — fast_thinker tier 2
+ *   legendary_streak    — streak_champion tier 2
+ *   grand_math_wizard   — math_wizard tier 2
+ *   master_solver       — problem_solver tier 2
+ *   zen_learner         — careful_learner tier 2
+ *   relentless_explorer — persistent_explorer tier 2
+ */
+export enum PetPersonality {
+  FastThinker         = "fast_thinker",
+  ProblemSolver       = "problem_solver",
+  StreakChampion      = "streak_champion",
+  CarefulLearner      = "careful_learner",
+  PersistentExplorer  = "persistent_explorer",
+  MathWizard          = "math_wizard",
+  // Evolved
+  LightningThinker    = "lightning_thinker",
+  LegendaryStreak     = "legendary_streak",
+  GrandMathWizard     = "grand_math_wizard",
+  MasterSolver        = "master_solver",
+  ZenLearner          = "zen_learner",
+  RelentlessExplorer  = "relentless_explorer",
+}
+
 /** AI tutor pacing preference — adjusts hint density and content depth. */
 export enum LearningPace {
   Slow     = "slow",
@@ -421,6 +459,85 @@ export interface GamificationDashboard {
 // ═══════════════════════════════════════════════════════════════════════════════
 // LEVEL THRESHOLDS
 // ═══════════════════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PET SYSTEM
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * One entry in the pet's personality history.
+ * Stored as JSON array in StudentPet.personalityHistory.
+ */
+export interface PersonalityHistoryEntry {
+  personality: PetPersonality;
+  score:       number;         // dominant metric score that triggered this change (0–100)
+  changedAt:   string;         // ISO timestamp
+  reason:      string;         // human-readable e.g. "accuracy_rate 0.93 exceeded threshold"
+}
+
+/**
+ * Cached behaviour metrics stored on StudentPet (recomputed per evaluation).
+ * These are the raw numbers that drive personality detection.
+ */
+export interface PetBehaviorMetrics {
+  accuracyRate:        number;   // 0–1  correct / total
+  avgTimeSeconds:      number;   // avg seconds per question
+  hintUsageRate:       number;   // 0–1  questions with hint / total
+  retrySuccessRate:    number;   // 0–1  (retried + correct) / total incorrect
+  questionsAnswered:   number;   // lifetime total
+  conceptMasteryScore: number;   // 0–1  avg mastery across all practiced topics
+  streakLength:        number;   // current consecutive day streak
+}
+
+/** DB-backed pet record with personality state. */
+export interface StudentPet {
+  id:                  string;
+  userId:              string;
+  petId:               string;       // catalog slug: "spark-owl", "math-fox", ...
+  petName?:            string;       // student nickname
+  personality:         PetPersonality;
+  personalityScore:    number;       // 0–100 dominant metric score
+  personalityHistory:  PersonalityHistoryEntry[];
+  accuracyRate:        number;
+  avgTimeSeconds:      number;
+  hintUsageRate:       number;
+  retrySuccessRate:    number;
+  questionsAnswered:   number;
+  conceptMasteryScore: number;
+  lastEvaluatedAt?:    Date;
+  createdAt:           Date;
+  updatedAt:           Date;
+}
+
+/** Available pet from the catalog. */
+export interface PetCatalogEntry {
+  id:          string;   // slug: "spark-owl"
+  name:        string;   // display name: "Spark Owl"
+  emoji:       string;   // 🦉
+  description: string;
+  rarity:      "common" | "rare" | "legendary";
+}
+
+/** Full API response for GET /api/pet */
+export interface PetResponse {
+  pet:        StudentPet;
+  catalog:    PetCatalogEntry;
+  effects:    PersonalityEffects;
+  insight:    string;  // parent-facing insight message
+}
+
+/** Visual effects driven by personality — consumed by frontend pet component. */
+export interface PersonalityEffects {
+  personality:  PetPersonality;
+  label:        string;       // "Fast Thinker"
+  description:  string;       // "Your pet moves quickly and loves a challenge!"
+  icon:         string;       // emoji icon for personality badge
+  animationClass: string;     // Tailwind CSS class for pet animation
+  auraColor?:   string;       // Tailwind color string for glow effect
+  badgeColor:   string;       // Tailwind bg class for the personality badge
+  streakIcon?:  string;       // extra emoji shown during streak (streak_champion)
+  isEvolved:    boolean;
+}
 
 /** XP thresholds for each gamification level. */
 export interface LevelThreshold {

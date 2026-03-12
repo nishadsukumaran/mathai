@@ -27,6 +27,7 @@ import { AskCard }         from "@/components/mathai/ask-card";
 import { ProfileModal }    from "@/components/mathai/profile-modal";
 import { useProfile }      from "@/hooks/use-profile";
 import { usePracticeMenu } from "@/hooks/use-practice-menu";
+import { PetCard }         from "@/components/mathai/pet";
 
 import type { DashboardViewData } from "@/types/contracts";
 import type { Grade }             from "@/types";
@@ -239,7 +240,21 @@ export default function DashboardView({ data }: Props) {
           )}
         </section>
 
-        {/* ── 5. Progress Summary ─────────────────────────────────────── */}
+        {/* ── 5. My Pet ─────────────────────────────────────────────── */}
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-black text-gray-800">My Pet 🐾</h2>
+            <a
+              href="/profile#pet"
+              className="text-xs font-bold text-indigo-500 hover:text-indigo-700 transition"
+            >
+              Manage →
+            </a>
+          </div>
+          <PetCard />
+        </section>
+
+        {/* ── 6. Progress Summary ─────────────────────────────────────── */}
         {progressSummary && (
           <section>
             <div className="flex items-center justify-between mb-3">
