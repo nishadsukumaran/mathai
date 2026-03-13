@@ -569,6 +569,75 @@ export interface StudentMemorySummary {
   lastRefreshedAt:         string;     // ISO datetime of snapshot build
 }
 
+// ─── Pet system ───────────────────────────────────────────────────────────────
+
+export enum PetPersonality {
+  fast_thinker         = "fast_thinker",
+  problem_solver       = "problem_solver",
+  streak_champion      = "streak_champion",
+  careful_learner      = "careful_learner",
+  persistent_explorer  = "persistent_explorer",
+  math_wizard          = "math_wizard",
+  // Evolved forms
+  lightning_thinker    = "lightning_thinker",
+  master_solver        = "master_solver",
+  legendary_streak     = "legendary_streak",
+  zen_learner          = "zen_learner",
+  relentless_explorer  = "relentless_explorer",
+  grand_math_wizard    = "grand_math_wizard",
+}
+
+export interface StudentPet {
+  id:                  string;
+  userId:              string;
+  petId:               string;
+  petName?:            string;
+  personality:         PetPersonality;
+  personalityScore:    number;
+  accuracyRate:        number;
+  avgTimeSeconds:      number;
+  hintUsageRate:       number;
+  retrySuccessRate:    number;
+  questionsAnswered:   number;
+  conceptMasteryScore: number;
+  lastEvaluatedAt?:    string | null;  // ISO string (serialised from Date)
+  createdAt:           string;
+  updatedAt:           string;
+}
+
+export interface PetCatalogEntry {
+  id:          string;
+  name:        string;
+  emoji:       string;
+  description: string;
+  rarity:      "common" | "rare" | "legendary";
+  /** Minimum player level required to adopt this pet. */
+  unlockLevel: number;
+}
+
+export interface PersonalityEffects {
+  personality:    PetPersonality;
+  label:          string;
+  description:    string;
+  icon:           string;
+  animationClass: string;
+  auraColor?:     string;
+  badgeColor:     string;
+  streakIcon?:    string;
+  isEvolved:      boolean;
+}
+
+export interface PetResponse {
+  pet:          StudentPet;
+  catalog:      PetCatalogEntry;
+  effects:      PersonalityEffects;
+  insight:      string;
+  /** All pets the student has unlocked at their current level. */
+  unlockedPets: PetCatalogEntry[];
+  /** Student's current XP level — drives unlock display. */
+  currentLevel: number;
+}
+
 // ─── Error codes (known) ──────────────────────────────────────────────────────
 
 export const API_ERROR_CODES = {

@@ -82,6 +82,11 @@ export type {
   PracticeMenuItem,
   PracticeMenuSection,
   PracticeMenu,
+
+  // Pet system
+  PetCatalogEntry,
+  PetResponse,
+  PersonalityEffects,
 } from "@mathai/shared-types";
 
 export { API_ERROR_CODES } from "@mathai/shared-types";

@@ -7,7 +7,8 @@
       "Bash(cd \"C:/Users/NishadSukumaran/.claude/projects/MathAI\" && npx tsc --noEmit --project apps/web/tsconfig.json 2>&1 | head -30)",
       "Bash(cd \"C:/Users/NishadSukumaran/.claude/projects/MathAI\" && npx tsc --noEmit --project tsconfig.json 2>&1 | head -40)",
       "Bash(cd \"C:/Users/NishadSukumaran/.claude/projects/MathAI\" && npx tsc --noEmit --project tsconfig.json 2>&1 | grep -v \"studentPet\\\\|adminService\\\\|petService\" | head -20)",
-      "Bash(cd \"C:/Users/NishadSukumaran/.claude/projects/MathAI\" && npx tsc --noEmit --project tsconfig.json 2>&1 | grep -v \"studentPet\\\\|adminService\\\\|petService\" | head -10)"
+      "Bash(cd \"C:/Users/NishadSukumaran/.claude/projects/MathAI\" && npx tsc --noEmit --project tsconfig.json 2>&1 | grep -v \"studentPet\\\\|adminService\\\\|petService\" | head -10)",
+      "Bash(cd \"C:/Users/NishadSukumaran/.claude/projects/MathAI\" && npx tsc --noEmit --project apps/web/tsconfig.json 2>&1 | head -10)"
     ]
   }
 }
