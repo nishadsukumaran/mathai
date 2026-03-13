@@ -29,6 +29,22 @@
 
 import { DailyQuest } from "@/types";
 
+/**
+ * An in-memory quest instance with live progress tracking.
+ * Derived from a DailyQuest template; NOT persisted as-is — progress is
+ * written to the `student_quest_progress` table via questService.
+ */
+export interface QuestInstance {
+  id:           string;
+  title:        string;
+  description:  string;
+  xpReward:     number;
+  targetCount:  number;
+  currentCount: number;
+  expiresAt:    Date;
+  completedAt?: Date;
+}
+
 // ─── Quest Templates ───────────────────────────────────────────────────────────
 
 export interface QuestTemplate {
@@ -128,7 +144,7 @@ export class QuestEngine {
    * Generates today's quests for a student.
    * Selects 3 daily quests (personalised by weak areas in future).
    */
-  generateDailyQuests(studentId: string): DailyQuest[] {
+  generateDailyQuests(studentId: string): QuestInstance[] {
     const templates = this.selectTemplates(DAILY_QUEST_TEMPLATES, 3);
     const expiresAt = this.getMidnight();
 
@@ -138,7 +154,7 @@ export class QuestEngine {
   /**
    * Generates this week's quests.
    */
-  generateWeeklyQuests(studentId: string): DailyQuest[] {
+  generateWeeklyQuests(studentId: string): QuestInstance[] {
     const templates = this.selectTemplates(WEEKLY_QUEST_TEMPLATES, 2);
     const expiresAt = this.getNextMonday();
 
@@ -150,9 +166,9 @@ export class QuestEngine {
    * Returns the updated quest and whether it was completed.
    */
   updateProgress(
-    quest: DailyQuest,
+    quest: QuestInstance,
     incrementBy: number
-  ): { quest: DailyQuest; justCompleted: boolean } {
+  ): { quest: QuestInstance; justCompleted: boolean } {
     if (quest.completedAt) {
       return { quest, justCompleted: false }; // already done
     }
@@ -160,7 +176,7 @@ export class QuestEngine {
     const newCount = Math.min(quest.currentCount + incrementBy, quest.targetCount);
     const justCompleted = newCount >= quest.targetCount;
 
-    const updated: DailyQuest = {
+    const updated: QuestInstance = {
       ...quest,
       currentCount: newCount,
       completedAt: justCompleted ? new Date() : undefined,
@@ -175,14 +191,14 @@ export class QuestEngine {
     template: QuestTemplate,
     _studentId: string,
     expiresAt: Date
-  ): DailyQuest {
+  ): QuestInstance {
     return {
-      id: `${template.id}-${Date.now()}`,
-      title: template.title,
-      description: template.description,
-      targetCount: template.targetCount,
+      id:           `${template.id}-${Date.now()}`,
+      title:        template.title,
+      description:  template.description,
+      targetCount:  template.targetCount,
       currentCount: 0,
-      xpReward: template.xpReward,
+      xpReward:     template.xpReward,
       expiresAt,
     };
   }

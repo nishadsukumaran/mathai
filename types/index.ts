@@ -516,14 +516,20 @@ export interface PetCatalogEntry {
   emoji:       string;   // 🦉
   description: string;
   rarity:      "common" | "rare" | "legendary";
+  /** Minimum player level required to adopt this pet. */
+  unlockLevel: number;
 }
 
 /** Full API response for GET /api/pet */
 export interface PetResponse {
-  pet:        StudentPet;
-  catalog:    PetCatalogEntry;
-  effects:    PersonalityEffects;
-  insight:    string;  // parent-facing insight message
+  pet:          StudentPet;
+  catalog:      PetCatalogEntry;
+  effects:      PersonalityEffects;
+  insight:      string;             // parent-facing insight message
+  /** All pets unlocked at the student's current level. */
+  unlockedPets: PetCatalogEntry[];
+  /** Student's current XP level — drives unlock display. */
+  currentLevel: number;
 }
 
 /** Visual effects driven by personality — consumed by frontend pet component. */

@@ -51,12 +51,11 @@ export function createProvider(override?: ProviderName): AIProvider {
       });
 
     case "openai":
-      // TODO: implement OpenAI provider
-      console.warn(`[ai/providers] OpenAI provider not yet implemented — falling back to mock`);
+      // TODO: implement OpenAI provider — falling back to mock
       return new MockProvider();
 
     default:
-      console.warn(`[ai/providers] Unknown provider "${name}" — falling back to mock`);
+      // Unknown provider — falling back to mock
       return new MockProvider();
   }
 }

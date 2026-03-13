@@ -418,7 +418,7 @@ model Topic {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  strand           CurriculumStrand    @relation(fields: [strandId], references: [id])
+  strand           CurriculumStrand    @relation(fields: [strandId], references: [id], onDelete: Restrict)
   lessons          Lesson[]
   practiceSets     PracticeSet[]
   topicProgress    TopicProgress[]
@@ -542,6 +542,7 @@ model PracticeSession {
 
   @@index([userId, completedAt])
   @@index([practiceSetId])
+  @@index([topicId, completedAt])
   @@map("practice_sessions")
 }
 
@@ -598,6 +599,7 @@ model QuestionAttempt {
   @@index([userId, topicId])
   @@index([topicId, isCorrect])
   @@index([misconceptionTag])
+  @@index([userId, createdAt])
   @@map("question_attempts")
 }
 
@@ -672,6 +674,7 @@ model LessonProgress {
 
   @@unique([userId, lessonId])
   @@index([userId, topicId])
+  @@index([lessonId])
   @@map("lesson_progress")
 }
 

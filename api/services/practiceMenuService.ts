@@ -147,15 +147,11 @@ export async function getPracticeMenu(userId: string): Promise<PracticeMenu> {
     // We need topic names to display — build a name lookup from DB + static tree.
     const allCurrTopics: Array<{ id: string; name: string }> = [];
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const topicModel = (prisma as any).topic;
-      if (topicModel) {
-        const dbTopics = await topicModel.findMany({
-          where:  { id: { in: storedAssigned } },
-          select: { id: true, name: true },
-        }) as { id: string; name: string }[];
-        allCurrTopics.push(...dbTopics);
-      }
+      const dbTopics = await prisma.topic.findMany({
+        where:  { id: { in: storedAssigned } },
+        select: { id: true, name: true },
+      });
+      allCurrTopics.push(...dbTopics);
     } catch { /* DB not seeded */ }
 
     // Fill gaps from static curriculum tree for any IDs not found in DB
@@ -229,13 +225,9 @@ export async function getPracticeMenu(userId: string): Promise<PracticeMenu> {
     // DB + static fallbacks only needed if AI generation above didn't produce topics
     if (gradeTopics.length === 0) {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const topicModel = (prisma as any).topic;
-        if (topicModel) {
-          gradeTopics     = await topicModel.findMany({ where: { gradeBand: grade },     select: { id: true, name: true }, take: 20 });
-          if (prevG) prevGradeTopics = await topicModel.findMany({ where: { gradeBand: prevG }, select: { id: true, name: true }, take: 10 });
-          if (nextG) nextGradeTopics = await topicModel.findMany({ where: { gradeBand: nextG }, select: { id: true, name: true }, take: 10 });
-        }
+        gradeTopics     = await prisma.topic.findMany({ where: { gradeBand: grade as never },     select: { id: true, name: true }, take: 20 });
+        if (prevG) prevGradeTopics = await prisma.topic.findMany({ where: { gradeBand: prevG as never }, select: { id: true, name: true }, take: 10 });
+        if (nextG) nextGradeTopics = await prisma.topic.findMany({ where: { gradeBand: nextG as never }, select: { id: true, name: true }, take: 10 });
       } catch { /* curriculum not seeded */ }
     }
 
@@ -434,9 +426,8 @@ export async function getPracticeMenu(userId: string): Promise<PracticeMenu> {
         }
       }
       aiEnriched = true;
-      console.log(`[practiceMenuService] AI enriched ${aiRecos.length} menu items`);
-    } catch (aiErr) {
-      console.warn("[practiceMenuService] AI enrichment failed — returning algorithmic menu:", (aiErr as Error).message);
+    } catch {
+      // AI enrichment failed — returning algorithmic menu
     }
   }
 

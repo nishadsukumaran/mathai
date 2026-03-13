@@ -36,10 +36,7 @@ async function tick(): Promise<void> {
   let profiles: { userId: string }[] = [];
 
   try {
-    // Find profiles where aiAssignedTopics is the default empty JSON array.
-    // We cast to `any` because Prisma's generated types don't expose JSON filter helpers
-    // for our version — the runtime query still works correctly.
-    profiles = await (prisma as any).studentProfile.findMany({
+    profiles = await prisma.studentProfile.findMany({
       where: {
         aiAssignedTopics: { equals: [] },
       },
@@ -53,18 +50,14 @@ async function tick(): Promise<void> {
 
   if (profiles.length === 0) return;
 
-  console.log(`${LOG_PREFIX} Found ${profiles.length} student(s) with empty topic lists — generating…`);
 
   // Process sequentially within the batch to be gentle on the AI rate-limit.
   for (const { userId } of profiles) {
     try {
       const topics = await generateAndStore(userId);
-      if (topics.length > 0) {
-        console.log(`${LOG_PREFIX} ✓ userId=${userId} — ${topics.length} topics assigned`);
-      } else {
+      if (topics.length === 0) {
         // generateAndStore returned [] — AI + static fallback both failed for this user.
         // Will retry on the next tick.
-        console.warn(`${LOG_PREFIX} ✗ userId=${userId} — generateAndStore returned empty, will retry`);
       }
     } catch (err) {
       // Should not happen (generateAndStore has its own outer try/catch) but guard anyway.
@@ -79,12 +72,10 @@ async function tick(): Promise<void> {
  */
 export function startTopicHealthJob(): void {
   if (_running) {
-    console.warn(`${LOG_PREFIX} Already running — ignoring duplicate startTopicHealthJob() call`);
     return;
   }
 
   _running = true;
-  console.log(`${LOG_PREFIX} Started — polling every ${INTERVAL_MS / 1000}s for students with empty topic lists`);
 
   // Run once immediately on startup, then on the regular interval.
   void tick();

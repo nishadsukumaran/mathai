@@ -193,13 +193,14 @@ export class BadgesEngine {
    */
   toEarnedBadge(definition: BadgeDefinition): Badge {
     return {
-      id: definition.id,
-      name: definition.name,
+      id:          definition.id,
+      code:        definition.id,          // stable machine key
+      title:       definition.name,        // BadgeDefinition.name → Badge.title
       description: definition.description,
-      iconUrl: definition.iconUrl,
-      category: definition.category,
-      xpBonus: definition.xpBonus,
-      earnedAt: new Date(),
+      iconUrl:     definition.iconUrl,
+      category:    definition.category,
+      xpReward:    definition.xpBonus,    // BadgeDefinition.xpBonus → Badge.xpReward
+      createdAt:   new Date(),
     };
   }
 

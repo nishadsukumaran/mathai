@@ -22,7 +22,6 @@
 
 import {
   PracticeQuestion,
-  PracticeSession,
   PracticeMode,
   Difficulty,
   Grade,
@@ -40,8 +39,24 @@ export interface PracticeSessionRequest {
   questionCount?: number;  // default: 10
 }
 
+/**
+ * Lightweight in-memory session record created before DB persistence.
+ * Uses `studentId` (pre-auth field) and `questions` (in-memory list).
+ * Callers map this to `ActivePracticeSession` before passing to the DB layer.
+ */
+export interface GeneratedSession {
+  id:              string;
+  studentId:       string;
+  lessonId:        string;
+  mode:            PracticeMode;
+  startedAt:       Date;
+  questions:       PracticeQuestion[];
+  xpEarned:        number;
+  accuracyPercent: number;
+}
+
 export interface SessionCreationResult {
-  session: Omit<PracticeSession, "responses">;
+  session:   GeneratedSession;
   questions: PracticeQuestion[];
 }
 
@@ -64,7 +79,7 @@ export class PracticeGenerator {
       excludeRecentlySeenBy: request.studentId,
     });
 
-    const session: Omit<PracticeSession, "responses"> = {
+    const session: GeneratedSession = {
       id: this.generateSessionId(),
       studentId: request.studentId,
       lessonId: request.lessonId,
@@ -154,7 +169,6 @@ export class PracticeGenerator {
     //     orderBy: { random: true },  // Prisma extension or raw query
     //   });
 
-    console.log("[practice_generator] selectQuestions stub called", params);
     return STUB_QUESTIONS.slice(0, params.count);
   }
 

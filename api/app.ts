@@ -7,6 +7,7 @@
  */
 
 import express from "express";
+import compression from "compression";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
@@ -19,6 +20,9 @@ const app = express();
 
 // ─── Security ──────────────────────────────────────────────────────────────
 app.use(helmet());
+
+// ─── Compression ───────────────────────────────────────────────────────────
+app.use(compression());
 
 // ─── CORS — accept Vercel frontend + localhost dev ─────────────────────────
 // CORS_ORIGIN may be a comma-separated list of allowed origins, e.g.:

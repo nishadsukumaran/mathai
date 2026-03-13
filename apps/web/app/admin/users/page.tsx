@@ -28,7 +28,6 @@ export default async function AdminUsersPage({
   const resolvedParams = await searchParams;
   const session = await getServerSession(authOptions);
 
-  // @ts-ignore
   if (!session || session.user?.role !== "admin") {
     redirect("/auth/signin?callbackUrl=/admin/users");
   }

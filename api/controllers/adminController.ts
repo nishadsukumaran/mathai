@@ -6,9 +6,38 @@
  */
 
 import { Request, Response, NextFunction } from "express";
+import { z }                                from "zod";
 import { send }                             from "../lib/response";
 import { NotFoundError }                   from "../middlewares/error.middleware";
 import * as adminService                   from "../services/adminService";
+
+// ── Zod schemas ──────────────────────────────────────────────────────────────
+
+const ListUsersSchema = z.object({
+  page:     z.coerce.number().int().min(1).default(1),
+  limit:    z.coerce.number().int().min(1).max(100).default(20),
+  search:   z.string().max(100).optional(),
+  role:     z.enum(["student", "parent", "teacher", "admin"]).optional(),
+  isActive: z.enum(["true", "false"]).transform((v) => v === "true").optional(),
+});
+
+const UpdateUserSchema = z.object({
+  name:       z.string().min(1).max(80).optional(),
+  email:      z.string().email().optional(),
+  role:       z.enum(["student", "parent", "teacher", "admin"]).optional(),
+  gradeLevel: z.string().max(10).nullable().optional(),
+});
+
+const DisableUserSchema = z.object({
+  reason: z.string().max(500).optional(),
+});
+
+const ResetPasswordSchema = z.object({
+  newPassword: z.string().min(8).max(128)
+    .regex(/[a-zA-Z]/, "Must contain at least one letter")
+    .regex(/[0-9]/, "Must contain at least one number")
+    .optional(),
+});
 
 // ── GET /api/admin/dashboard ───────────────────────────────────────────────
 
@@ -33,25 +62,18 @@ export async function listUsers(
   next: NextFunction
 ): Promise<void> {
   try {
-    const page  = Math.max(1, parseInt(req.query["page"]  as string ?? "1",  10) || 1);
-    const limit = Math.min(100, parseInt(req.query["limit"] as string ?? "20", 10) || 20);
-
-    const isActiveParam = req.query["isActive"] as string | undefined;
-    const isActive =
-      isActiveParam === "true"  ? true  :
-      isActiveParam === "false" ? false :
-      undefined;
+    const parsed = ListUsersSchema.parse(req.query);
 
     const { users, total } = await adminService.listUsers({
-      search:   (req.query["search"] as string | undefined)?.trim() || undefined,
-      role:     (req.query["role"]   as string | undefined) || undefined,
-      isActive,
-      page,
-      limit,
+      search:   parsed.search?.trim() || undefined,
+      role:     parsed.role,
+      isActive: parsed.isActive,
+      page:     parsed.page,
+      limit:    parsed.limit,
     });
 
-    const totalPages = Math.ceil(total / limit);
-    send(res, { items: users, total, page, limit, totalPages });
+    const totalPages = Math.ceil(total / parsed.limit);
+    send(res, { items: users, total, page: parsed.page, limit: parsed.limit, totalPages });
   } catch (err) {
     next(err);
   }
@@ -81,13 +103,8 @@ export async function updateUser(
   next: NextFunction
 ): Promise<void> {
   try {
-    const { name, email, role, gradeLevel } = req.body as Record<string, unknown>;
-    const updated = await adminService.updateUser(req.params["id"]!, {
-      ...(name       !== undefined && { name:       String(name) }),
-      ...(email      !== undefined && { email:      String(email) }),
-      ...(role       !== undefined && { role:       String(role) }),
-      ...(gradeLevel !== undefined && { gradeLevel: gradeLevel === null ? null : String(gradeLevel) }),
-    });
+    const parsed = UpdateUserSchema.parse(req.body);
+    const updated = await adminService.updateUser(req.params["id"]!, parsed);
     if (!updated) throw new NotFoundError("User not found");
     send(res, updated);
   } catch (err) {
@@ -103,8 +120,8 @@ export async function disableUser(
   next: NextFunction
 ): Promise<void> {
   try {
-    const { reason } = req.body as { reason?: string };
-    await adminService.disableUser(req.params["id"]!, reason);
+    const parsed = DisableUserSchema.parse(req.body);
+    await adminService.disableUser(req.params["id"]!, parsed.reason);
     send(res, { message: "User disabled" });
   } catch (err) {
     next(err);
@@ -134,26 +151,12 @@ export async function resetPassword(
   next: NextFunction
 ): Promise<void> {
   try {
-    // Optional: admin can supply a specific password instead of auto-generating.
-    const newPassword = (req.body?.newPassword as string | undefined)?.trim() || undefined;
+    const parsed = ResetPasswordSchema.parse(req.body);
 
-    if (newPassword !== undefined) {
-      // Validate complexity: min 8 chars, at least one letter, at least one number
-      if (newPassword.length < 8) {
-        res.status(400).json({ error: "Password must be at least 8 characters." });
-        return;
-      }
-      if (!/[a-zA-Z]/.test(newPassword)) {
-        res.status(400).json({ error: "Password must contain at least one letter." });
-        return;
-      }
-      if (!/[0-9]/.test(newPassword)) {
-        res.status(400).json({ error: "Password must contain at least one number." });
-        return;
-      }
-    }
-
-    const temporaryPassword = await adminService.resetPassword(req.params["id"]!, newPassword);
+    const temporaryPassword = await adminService.resetPassword(
+      req.params["id"]!,
+      parsed.newPassword?.trim()
+    );
     send(res, {
       message: "Password reset successfully",
       temporaryPassword,

@@ -1,24 +1,32 @@
 /**
  * api/middlewares/rateLimit.middleware.ts
  *
- * Lightweight rate-limiting stub.
- * Replace with `express-rate-limit` + Redis store before going to production.
- *
- * Current behaviour: pass-through in all environments.
- * TODO: wire up express-rate-limit once Redis is provisioned.
+ * In-memory rate limiting using express-rate-limit.
+ * For production with multiple instances, swap to a Redis store.
  */
 
-import type { Request, Response, NextFunction } from "express";
+import rateLimit from "express-rate-limit";
 
-// Placeholder — swap this for:
-// import rateLimit from "express-rate-limit";
-// export const rateLimitMiddleware = rateLimit({ windowMs: 60_000, max: 100 });
+// General API rate limit: 200 requests per minute per IP
+export const rateLimitMiddleware = rateLimit({
+  windowMs: 60_000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: { code: "RATE_LIMITED", message: "Too many requests. Please try again later." },
+  },
+});
 
-export function rateLimitMiddleware(
-  _req: Request,
-  _res: Response,
-  next: NextFunction
-): void {
-  // No-op until Redis is available
-  next();
-}
+// Stricter limit for auth endpoints: 10 requests per minute per IP
+export const authRateLimit = rateLimit({
+  windowMs: 60_000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: { code: "RATE_LIMITED", message: "Too many authentication attempts. Please wait." },
+  },
+});

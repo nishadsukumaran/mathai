@@ -4,9 +4,9 @@ const nextConfig: NextConfig = {
   // Strict mode catches common React issues during development
   reactStrictMode: true,
 
-  // Skip TS type-checking during build (types are checked locally / in CI)
+  // Type-check during build to catch errors early
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
 
   // Images — use remotePatterns (domains is deprecated)

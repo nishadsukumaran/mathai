@@ -29,6 +29,5 @@ export async function selectSimilarQuestion(
   params: SelectorParams
 ): Promise<PracticeQuestion | undefined> {
   // Stub — replace with real DB query
-  console.log("[similar_question_selector] Stub called with:", params);
   return undefined;
 }

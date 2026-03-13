@@ -84,7 +84,6 @@ export const authOptions: NextAuthOptions = {
       if (token?.sub) {
         session.user = {
           ...session.user,
-          // @ts-ignore — extend session type
           id:       token.sub,
           grade:    (token["grade"]    as string  | undefined) ?? "G4",
           role:     (token["role"]     as string  | undefined) ?? "student",

@@ -68,6 +68,13 @@ export async function getTopic(req: Request, res: Response, next: NextFunction) 
 export async function getWeakAreasForStudent(req: Request, res: Response, next: NextFunction) {
   try {
     const { studentId } = StudentIdParamSchema.parse(req.params);
+
+    // Authorization: students can only access their own weak areas
+    if (req.student?.id !== studentId && req.student?.role !== "admin") {
+      const { ForbiddenError } = await import("../middlewares/error.middleware");
+      throw new ForbiddenError("Cannot access another student's data");
+    }
+
     const areas = await getWeakAreas(studentId);
     send(res, areas, { count: areas.length });
   } catch (err) {

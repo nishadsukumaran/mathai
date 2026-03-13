@@ -22,7 +22,6 @@ export default function AdminNav() {
   const pathname         = usePathname();
   const { data: session } = useSession();
 
-  // @ts-ignore — extended session type
   const adminName = session?.user?.name ?? "Admin";
 
   return (

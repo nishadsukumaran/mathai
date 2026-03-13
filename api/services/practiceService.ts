@@ -35,8 +35,9 @@ import { appendAfterCompletion }      from "./topicAssignmentService";
 import { getMasteredTopicNamesForGrade } from "./curriculumService";
 import { learningMetrics }             from "../../services/analytics/learning_metrics";
 import { NotFoundError, ValidationError } from "../middlewares/error.middleware";
-import { evaluateAndUpdatePersonality } from "./petService";
+import { evaluateAndUpdatePersonality, getPetForUser } from "./petService";
 import { getTopicById, getCambridgeObjective } from "../../curriculum/topic_tree";
+import { PET_CATALOG } from "../../services/gamification/pet_personality_engine";
 
 // ─── In-Memory Session Store ──────────────────────────────────────────────────
 
@@ -85,10 +86,8 @@ export async function startSession(
   // so difficulty is always appropriate for *the topic*, not the student's school year.
   const effectiveGrade = (staticTopicEntry?.grade ?? grade) as import("@mathai/shared-types").Grade;
   if (staticTopicEntry && staticTopicEntry.grade !== grade) {
-    console.warn(
-      `[practiceService] Grade mismatch: student enrolled in ${grade} but topic "${topicId}" ` +
-      `belongs to ${staticTopicEntry.grade}. Using topic grade for question generation.`
-    );
+    // Grade mismatch: student enrolled in different grade than topic's grade.
+    // Using topic grade for question generation.
   }
 
   // Cambridge objective for this topic — anchors AI to the exact learning objective
@@ -144,15 +143,10 @@ export async function startSession(
       conceptTags:   q.conceptTags,
     } as PracticeQuestion));
 
-    console.log(
-      `[practiceService] AI generated ${questions.length} questions for topic "${topicName}" ` +
-      `(grade ${effectiveGrade}${cambridgeObjective ? `, objective: ${cambridgeObjective.slice(0, 40)}…` : ""})` +
-      `${masteredTopicNames.length ? `, ${masteredTopicNames.length} mastered topics excluded` : ""}`
-    );
 
   } catch (aiError) {
     // ── Fallback: static curriculum generator ──────────────────────────────────
-    console.warn("[practiceService] AI question generation failed — falling back to static curriculum:", (aiError as Error).message);
+    console.error("[practiceService] AI question generation failed — falling back to static curriculum:", (aiError as Error).message);
 
     const result = await practiceGenerator.createSession({
       studentId:     userId,
@@ -179,7 +173,7 @@ export async function startSession(
       questionsCount: questions.length,
     },
   }).catch((e: Error) => {
-    console.warn("[practiceService] PracticeSession create failed — using ephemeral id:", (e as Error).message);
+    console.error("[practiceService] PracticeSession create failed — using ephemeral id:", e);
     return null;
   });
   const sessionId = dbRow?.id ?? `session-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -206,7 +200,7 @@ export async function startSession(
   // Mark lesson started in memory (fire-and-forget)
   if (lessonId) {
     studentMemoryService.markLessonStarted(userId, lessonId, topicId)
-      .catch((e) => console.warn("[practiceService] markLessonStarted failed:", e));
+      .catch((err) => console.error("[practiceService] markLessonStarted failed:", err));
   }
 
   const firstQuestion = questions[0];
@@ -277,12 +271,12 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
   // 4a. Memory: record mistake pattern (fire-and-forget)
   if (!isCorrect && misconceptionTag && (misconceptionTag as string) !== "None" && (misconceptionTag as string) !== "none") {
     studentMemoryService.recordMistake(session.userId, session.topicId, misconceptionTag)
-      .catch((e) => console.warn("[practiceService] recordMistake failed:", e));
+      .catch((err) => console.error("[practiceService] recordMistake failed:", err));
   }
   // 4b. Memory: check if patterns resolved after a correct answer
   if (isCorrect) {
     studentMemoryService.checkAndResolvePatterns(session.userId, session.topicId)
-      .catch((e) => console.warn("[practiceService] checkAndResolvePatterns failed:", e));
+      .catch((err) => console.error("[practiceService] checkAndResolvePatterns failed:", err));
   }
 
   // 4c. Persist QuestionAttempt row (fire-and-forget — session.id is a DB cuid after P2 migration)
@@ -306,7 +300,7 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
         ? null
         : (misconceptionTag as string),
     },
-  }).catch((e: Error) => console.warn("[practiceService] QuestionAttempt persist failed:", e));
+  }).catch((err: Error) => console.error("[practiceService] QuestionAttempt persist failed:", err));
 
   // 5. XP
   const profile = await prisma.studentProfile.findUnique({ where: { userId: session.userId } });
@@ -336,7 +330,40 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
         totalXp:      { increment: xpEarned },
         ...(levelUp && { currentLevel: levelUp.level }),
       },
-    }).catch((e) => console.warn("[practiceService] XP persist failed:", e));
+    }).catch((err) => console.error("[practiceService] XP persist failed:", err));
+  }
+
+  // 6c. Pet unlock on level-up
+  //     Ensures the student_pets row exists (upsert spark-owl if new).
+  //     If the student just hit a new level that unlocks a pet AND they are still
+  //     on the default spark-owl with no custom name, auto-switch to the new pet.
+  if (levelUp) {
+    getPetForUser(session.userId).then((currentPet) => {
+      const newPetEntry = PET_CATALOG
+        .filter((p) => p.unlockLevel === levelUp.level)
+        .at(0);
+      if (
+        newPetEntry &&
+        currentPet.petId === "spark-owl" &&
+        !currentPet.petName              // hasn't been renamed — safe to auto-switch
+      ) {
+        prisma.studentPet.update({
+          where: { userId: session.userId },
+          data:  { petId: newPetEntry.id },
+        }).catch((err) =>
+          console.error("[practiceService] Pet auto-switch failed:", err)
+        );
+        console.info(
+          `[practiceService] User ${session.userId} reached Level ${levelUp.level} — auto-switched to ${newPetEntry.id}`
+        );
+      } else if (newPetEntry) {
+        console.info(
+          `[practiceService] User ${session.userId} reached Level ${levelUp.level} — ${newPetEntry.id} is now available to adopt`
+        );
+      }
+    }).catch((err) =>
+      console.error("[practiceService] Pet unlock check failed:", err)
+    );
   }
 
   // 7. Advance question index
@@ -347,7 +374,7 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
     (prisma.practiceSession.update as any)({
       where: { id: session.id },
       data:  { currentIndex: session.currentIndex },
-    }).catch((e: Error) => console.warn("[practiceService] currentIndex persist failed:", e));
+    }).catch((err: Error) => console.error("[practiceService] currentIndex persist failed:", err));
   }
 
   const sessionComplete = session.currentIndex >= session.questions.length;
@@ -428,7 +455,7 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
         isMastered:        newIsMastered,
         lastPracticedAt:   new Date(),
       },
-    }).catch((e) => console.warn("[practiceService] Mastery persist failed:", e));
+    }).catch((err) => console.error("[practiceService] Mastery persist failed:", err));
 
     // 8a. Memory: update lesson progress + profile counters + refresh snapshot (fire-and-forget)
     const totalHints = session.responses.reduce((sum, r) => sum + (r.hintsUsed ?? 0), 0);
@@ -439,6 +466,8 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
       ? confidenceAfterValues.reduce((a, b) => a + b, 0) / confidenceAfterValues.length
       : undefined;
 
+    // Fire-and-forget: Promise.allSettled never rejects, so we inspect results
+    // to log any individual failures that would otherwise be silently lost.
     Promise.allSettled([
       session.lessonId
         ? studentMemoryService.markLessonProgress(
@@ -462,13 +491,28 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
         await prisma.studentProfile.update({
           where: { userId: session.userId },
           data:  { preferredExplanationStyle: style as any },
-        }).catch((e) => console.warn("[practiceService] preferredExplanationStyle update failed:", e));
+        }).catch((err) => console.error("[practiceService] preferredExplanationStyle update failed:", err));
       })(),
       // Pet personality re-evaluation — runs every 50 questions answered.
       // Fire-and-forget: never blocks the submission response.
       evaluateAndUpdatePersonality(session.userId)
-        .catch((e) => console.warn("[practiceService] Pet personality eval failed:", (e as Error).message)),
-    ]).catch((e) => console.warn("[practiceService] Post-session update failed:", e));
+        .catch((err) => console.error("[practiceService] Pet personality eval failed:", (err as Error).message)),
+    ]).then((results) => {
+      const labels = [
+        "markLessonProgress",
+        "updateProfileCounters",
+        "refreshSnapshot",
+        "appendAfterCompletion",
+        "inferExplanationStyle",
+        "evaluateAndUpdatePersonality",
+      ];
+      for (let i = 0; i < results.length; i++) {
+        const r = results[i];
+        if (r && r.status === "rejected") {
+          console.error(`[practiceService] Post-session task "${labels[i]}" failed:`, r.reason);
+        }
+      }
+    });
   }
 
   // 9. Encouragement
@@ -669,7 +713,7 @@ async function loadSessionFromDB(sessionId: string): Promise<ActivePracticeSessi
       difficulty:      Difficulty.Intermediate,
     };
   } catch (e) {
-    console.warn("[practiceService] loadSessionFromDB failed:", (e as Error).message);
+    console.error("[practiceService] loadSessionFromDB failed:", (e as Error).message);
     return null;
   }
 }

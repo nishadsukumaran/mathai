@@ -54,6 +54,7 @@ export const PET_CATALOG = [
     emoji:       "🦉",
     description: "Wise and energetic — loves discovering new patterns in numbers.",
     rarity:      "common" as const,
+    unlockLevel: 1,
   },
   {
     id:          "math-fox",
@@ -61,6 +62,7 @@ export const PET_CATALOG = [
     emoji:       "🦊",
     description: "Quick and clever — always finds the fastest path to the answer.",
     rarity:      "common" as const,
+    unlockLevel: 3,
   },
   {
     id:          "number-rabbit",
@@ -68,6 +70,7 @@ export const PET_CATALOG = [
     emoji:       "🐰",
     description: "Speedy and curious — bounces through problems with endless energy.",
     rarity:      "common" as const,
+    unlockLevel: 5,
   },
   {
     id:          "logic-dragon",
@@ -75,6 +78,7 @@ export const PET_CATALOG = [
     emoji:       "🐲",
     description: "Powerful and persistent — never gives up on a difficult challenge.",
     rarity:      "rare" as const,
+    unlockLevel: 6,
   },
   {
     id:          "fraction-panda",
@@ -82,6 +86,7 @@ export const PET_CATALOG = [
     emoji:       "🐼",
     description: "Calm and careful — methodical in every step of the solution.",
     rarity:      "rare" as const,
+    unlockLevel: 8,
   },
   {
     id:          "equation-wolf",
@@ -89,6 +94,7 @@ export const PET_CATALOG = [
     emoji:       "🐺",
     description: "Sharp and mastery-driven — hunts down every concept until it's conquered.",
     rarity:      "legendary" as const,
+    unlockLevel: 10,
   },
 ] as const;
 

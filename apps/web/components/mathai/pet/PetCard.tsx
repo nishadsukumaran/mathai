@@ -9,14 +9,16 @@
  *   - Pet name + personality badge
  *   - Short personality description
  *   - Behavior stat bar (accuracy, speed indicator, streak flame)
- *   - "Your pet is evolving" hint when close to next evolution threshold
+ *   - Unlocked pets roster with adopt button
  *
  * Data source: usePet() hook (GET /api/pet).
  */
 
+import { useState }              from "react";
 import { usePet }                from "@/hooks/use-pet";
 import { PetDisplay }            from "./PetDisplay";
 import { PetPersonalityBadge }   from "./PetPersonalityBadge";
+import type { PetCatalogEntry }  from "@/types";
 
 interface Props {
   /** If true, renders a compact single-row widget instead of the full card. */
@@ -24,7 +26,9 @@ interface Props {
 }
 
 export function PetCard({ compact = false }: Props) {
-  const { pet, catalog, effects, loading, error } = usePet();
+  const { pet, catalog, effects, unlockedPets, loading, error, adoptPet } = usePet();
+  const [showRoster, setShowRoster] = useState(false);
+  const [adopting, setAdopting]     = useState<string | null>(null);
 
   // ── Loading ──────────────────────────────────────────────────────────────────
   if (loading) {
@@ -121,6 +125,48 @@ export function PetCard({ compact = false }: Props) {
           <span> · last evaluated {new Date(pet.lastEvaluatedAt).toLocaleDateString()}</span>
         )}
       </p>
+
+      {/* Unlocked pets roster */}
+      {unlockedPets.length > 1 && (
+        <div className="border-t border-indigo-50 pt-3">
+          <button
+            onClick={() => setShowRoster((v) => !v)}
+            className="text-xs text-indigo-500 font-semibold w-full text-left flex items-center justify-between"
+          >
+            <span>🐾 My pets ({unlockedPets.length} unlocked)</span>
+            <span>{showRoster ? "▲" : "▼"}</span>
+          </button>
+
+          {showRoster && (
+            <div className="mt-2 grid grid-cols-3 gap-2">
+              {unlockedPets.map((p: PetCatalogEntry) => {
+                const isActive = p.id === pet.petId;
+                return (
+                  <button
+                    key={p.id}
+                    disabled={isActive || adopting === p.id}
+                    onClick={async () => {
+                      setAdopting(p.id);
+                      try { await adoptPet(p.id); } finally { setAdopting(null); }
+                    }}
+                    title={isActive ? "Active pet" : `Switch to ${p.name}`}
+                    className={`flex flex-col items-center gap-1 p-2 rounded-xl border text-center transition-all ${
+                      isActive
+                        ? "border-indigo-400 bg-indigo-50 cursor-default"
+                        : "border-gray-100 bg-white hover:border-indigo-200 hover:bg-indigo-50 cursor-pointer"
+                    }`}
+                  >
+                    <span className="text-2xl">{p.emoji}</span>
+                    <span className="text-xs font-medium text-gray-700 leading-tight">{p.name}</span>
+                    {isActive && <span className="text-xs text-indigo-500 font-bold">active</span>}
+                    {adopting === p.id && <span className="text-xs text-gray-400">…</span>}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

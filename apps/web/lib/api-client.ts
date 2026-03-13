@@ -32,8 +32,7 @@ function createApiClient(): AxiosInstance {
   client.interceptors.request.use(async (config) => {
     const session = await getSession();
     if (session?.user) {
-      // @ts-ignore — NextAuth token is extended with accessToken
-      const token = session.accessToken as string | undefined;
+      const token = session.accessToken;
       if (token) {
         config.headers["Authorization"] = `Bearer ${token}`;
       }

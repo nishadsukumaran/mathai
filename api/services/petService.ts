@@ -140,24 +140,13 @@ async function computeBehaviorMetrics(userId: string): Promise<PetBehaviorMetric
 
   const total = attemptAgg._count.id;
 
-  // Accuracy — count correct answers separately
-  const correctCount = await prisma.questionAttempt.count({
-    where: { userId, isCorrect: true },
-  });
-
-  // Hint usage — questions where hintsUsed > 0
-  const hintUsedCount = await prisma.questionAttempt.count({
-    where: { userId, hintsUsed: { gt: 0 } },
-  });
-
-  // Retry success — first attempt incorrect but later correct
-  // Approximate: count retrySuccess events via XP reason proxy
-  const retrySuccessCount = await prisma.xPEvent.count({
-    where: { userId, reason: "retry_success" },
-  });
-  const firstAttemptWrong = await prisma.questionAttempt.count({
-    where: { userId, isCorrect: false },
-  });
+  // Run remaining counts in parallel instead of sequentially
+  const [correctCount, hintUsedCount, retrySuccessCount, firstAttemptWrong] = await Promise.all([
+    prisma.questionAttempt.count({ where: { userId, isCorrect: true } }),
+    prisma.questionAttempt.count({ where: { userId, hintsUsed: { gt: 0 } } }),
+    prisma.xPEvent.count({ where: { userId, reason: "retry_success" } }),
+    prisma.questionAttempt.count({ where: { userId, isCorrect: false } }),
+  ]);
 
   const accuracyRate       = total > 0 ? correctCount / total : 0;
   const avgTimeSeconds     = attemptAgg._avg.timeSpentSeconds ?? 0;
@@ -249,10 +238,17 @@ export async function evaluateAndUpdatePersonality(
 }
 
 /**
- * Full API response for the frontend — pet + catalog entry + effects + parent insight.
+ * Full API response for the frontend — pet + catalog entry + effects + parent insight + unlocked pets.
+ *
+ * @param currentLevel - Student's current XP level (from studentProfile.currentLevel).
+ *                       Defaults to 1 if omitted, which unlocks only spark-owl.
  */
-export async function getPetResponse(userId: string, studentName: string): Promise<PetResponse> {
-  const pet = await getPetForUser(userId);
+export async function getPetResponse(
+  userId:       string,
+  studentName:  string,
+  currentLevel: number = 1
+): Promise<PetResponse> {
+  const pet     = await getPetForUser(userId);
   const catalog = PET_CATALOG.find((p) => p.id === pet.petId) ?? PET_CATALOG[0]!;
   const effects = petPersonalityEngine.getEffects(pet.personality);
   const insight = petPersonalityEngine.formatInsight(
@@ -261,10 +257,17 @@ export async function getPetResponse(userId: string, studentName: string): Promi
     pet.petName ?? catalog.name
   );
 
+  // All pets the student has unlocked at their current level
+  const unlockedPets = PET_CATALOG
+    .filter((p) => p.unlockLevel <= currentLevel)
+    .map((p) => ({ ...p }));
+
   return {
     pet,
-    catalog: { ...catalog },
+    catalog:      { ...catalog },
     effects,
     insight,
+    unlockedPets,
+    currentLevel,
   };
 }

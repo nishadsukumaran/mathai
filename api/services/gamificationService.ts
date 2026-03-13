@@ -4,7 +4,7 @@
  * Assembles the gamification dashboard — backed by Prisma.
  */
 
-import { GamificationDashboard, EarnedBadge } from "@/types";
+import { BadgeCategory, GamificationDashboard, EarnedBadge } from "@/types";
 import { prisma } from "../lib/prisma";
 import { xpEngine } from "../../services/gamification/xp_engine";
 import { NotFoundError } from "../middlewares/error.middleware";
@@ -46,7 +46,7 @@ export async function getGamificationDashboard(userId: string, ctx?: Gamificatio
     title:       sb.badge.title,
     description: sb.badge.description,
     iconUrl:     sb.badge.iconUrl ?? undefined,
-    category:    sb.badge.category,
+    category:    sb.badge.category as BadgeCategory,
     xpReward:    sb.badge.xpReward,
     createdAt:   sb.badge.createdAt,
     // EarnedBadge fields
@@ -82,7 +82,7 @@ export async function getEarnedBadges(userId: string): Promise<EarnedBadge[]> {
     title:       sb.badge.title,
     description: sb.badge.description,
     iconUrl:     sb.badge.iconUrl ?? undefined,
-    category:    sb.badge.category,
+    category:    sb.badge.category as BadgeCategory,
     xpReward:    sb.badge.xpReward,
     createdAt:   sb.badge.createdAt,
     // EarnedBadge fields

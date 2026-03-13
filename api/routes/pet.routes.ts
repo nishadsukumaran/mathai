@@ -11,20 +11,30 @@
  */
 
 import { Router } from "express";
+import { z } from "zod";
 import { getPetResponse, adoptPet, evaluateAndUpdatePersonality } from "../services/petService";
 import { PET_CATALOG } from "../../services/gamification/pet_personality_engine";
+import { prisma } from "../lib/prisma";
 
 const router = Router();
+
+// ── Zod schemas ───────────────────────────────────────────────────────────────
+const AdoptPetSchema = z.object({
+  petId:   z.string().min(1, "petId is required"),
+  petName: z.string().max(50).optional(),
+});
 
 // ── GET /api/pet ──────────────────────────────────────────────────────────────
 router.get("/", async (req, res, next) => {
   try {
-    // @ts-ignore — userId injected by authMiddleware
-    const userId = req.userId as string;
-    // @ts-ignore
-    const name   = (req.user?.name as string) ?? "Student";
+    const userId = req.student?.id;
+    if (!userId) { res.status(401).json({ success: false, error: "Unauthorized" }); return; }
 
-    const response = await getPetResponse(userId, name);
+    // Fetch current level for unlock computation (default 1 for new users)
+    const profile      = await prisma.studentProfile.findUnique({ where: { userId } });
+    const currentLevel = profile?.currentLevel ?? 1;
+
+    const response = await getPetResponse(userId, "Student", currentLevel);
     res.json({ success: true, data: response });
   } catch (err) {
     next(err);
@@ -40,12 +50,13 @@ router.get("/catalog", (_req, res) => {
 // Parent-facing: returns just the insight message string
 router.get("/insight", async (req, res, next) => {
   try {
-    // @ts-ignore
-    const userId = req.userId as string;
-    // @ts-ignore
-    const name   = (req.user?.name as string) ?? "your child";
+    const userId = req.student?.id;
+    if (!userId) { res.status(401).json({ success: false, error: "Unauthorized" }); return; }
 
-    const response = await getPetResponse(userId, name);
+    const profile      = await prisma.studentProfile.findUnique({ where: { userId } });
+    const currentLevel = profile?.currentLevel ?? 1;
+
+    const response = await getPetResponse(userId, "your child", currentLevel);
     res.json({ success: true, data: { insight: response.insight, personality: response.effects } });
   } catch (err) {
     next(err);
@@ -55,16 +66,16 @@ router.get("/insight", async (req, res, next) => {
 // ── POST /api/pet/adopt ───────────────────────────────────────────────────────
 router.post("/adopt", async (req, res, next) => {
   try {
-    // @ts-ignore
-    const userId = req.userId as string;
-    const { petId, petName } = req.body as { petId?: string; petName?: string };
+    const userId = req.student?.id;
+    if (!userId) { res.status(401).json({ success: false, error: "Unauthorized" }); return; }
 
-    if (!petId) {
-      res.status(400).json({ success: false, error: { code: "BAD_REQUEST", message: "petId is required" } });
+    const parsed = AdoptPetSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ success: false, error: "Invalid body", details: parsed.error.flatten() });
       return;
     }
 
-    const pet = await adoptPet(userId, petId, petName);
+    const pet = await adoptPet(userId, parsed.data.petId, parsed.data.petName);
     res.json({ success: true, data: pet });
   } catch (err) {
     next(err);
@@ -75,8 +86,9 @@ router.post("/adopt", async (req, res, next) => {
 // Manually trigger a personality evaluation (useful for testing / forced refresh)
 router.post("/evaluate", async (req, res, next) => {
   try {
-    // @ts-ignore
-    const userId = req.userId as string;
+    const userId = req.student?.id;
+    if (!userId) { res.status(401).json({ success: false, error: "Unauthorized" }); return; }
+
     const updated = await evaluateAndUpdatePersonality(userId);
     res.json({ success: true, data: updated ?? { message: "No evaluation needed yet" } });
   } catch (err) {

@@ -37,8 +37,7 @@ const ADMIN_ITEM = { href: "/admin/dashboard", label: "Admin", icon: "⚙️" };
 export function AppNav() {
   const pathname            = usePathname();
   const { data: session }   = useSession();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const role                = (session?.user as any)?.role as string | undefined;
+  const role                = session?.user?.role;
   const [signingOut, setSigningOut] = useState(false);
 
   // Hide on auth routes, landing page, and admin area (admin has its own nav)

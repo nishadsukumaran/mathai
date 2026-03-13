@@ -86,17 +86,13 @@ const SEARCHABLE_GRADES: Grade[] = [
 
 async function fetchTopicsForSearch(grade: Grade): Promise<{ id: string; name: string }[]> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const topicModel = (prisma as any).topic;
-    if (topicModel) {
-      const rows = await topicModel.findMany({
-        where:  { gradeBand: grade },
-        select: { id: true, name: true },
-        take:   50,
-      }) as { id: string; name: string }[];
-      if (rows.length > 0) return rows;
-    }
-  } catch { /* fall through */ }
+    const rows = await prisma.topic.findMany({
+      where:  { gradeBand: grade as never },
+      select: { id: true, name: true },
+      take:   50,
+    });
+    if (rows.length > 0) return rows;
+  } catch { /* fall through to static data */ }
   return getTopicsForGrade(grade as unknown as LocalGrade)
     .map((t) => ({ id: t.id, name: t.name }));
 }
@@ -112,12 +108,11 @@ router.post("/request-topic", async (req: Request, res: Response, next: NextFunc
       return;
     }
 
-    // Collect topics across all grades
-    const allTopics: { id: string; name: string }[] = [];
-    for (const grade of SEARCHABLE_GRADES) {
-      const topics = await fetchTopicsForSearch(grade);
-      allTopics.push(...topics);
-    }
+    // Collect topics across all grades (parallel)
+    const topicsByGrade = await Promise.all(
+      SEARCHABLE_GRADES.map((grade) => fetchTopicsForSearch(grade))
+    );
+    const allTopics = topicsByGrade.flat();
 
     // Find best match (exact first, then contains, then reverse contains)
     const query = topicName.toLowerCase();

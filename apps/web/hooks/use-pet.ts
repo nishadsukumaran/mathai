@@ -61,13 +61,15 @@ export function usePet() {
   }, [fetchPet]);
 
   return {
-    pet:     state.data?.pet     ?? null,
-    catalog: state.data?.catalog ?? null,
-    effects: state.data?.effects ?? null,
-    insight: state.data?.insight ?? null,
-    loading: state.loading,
-    error:   state.error,
-    refetch: fetchPet,
+    pet:          state.data?.pet          ?? null,
+    catalog:      state.data?.catalog      ?? null,
+    effects:      state.data?.effects      ?? null,
+    insight:      state.data?.insight      ?? null,
+    unlockedPets: state.data?.unlockedPets ?? [],
+    currentLevel: state.data?.currentLevel ?? 1,
+    loading:      state.loading,
+    error:        state.error,
+    refetch:      fetchPet,
     adoptPet,
   };
 }

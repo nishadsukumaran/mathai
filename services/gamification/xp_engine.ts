@@ -69,19 +69,20 @@ export class XPEngine {
 
   /**
    * Builds an XP event record ready for DB persistence and analytics.
+   * Returns an Omit<XPEvent, 'id'> since the `id` is assigned by the DB on insert.
    */
   buildEvent(
-    studentId: string,
+    userId: string,
     reason: XPReason,
     amount: number,
     metadata?: Record<string, unknown>
-  ): XPEvent {
+  ): Omit<XPEvent, "id"> {
     return {
-      studentId,
+      userId,
       amount,
       reason,
       metadata,
-      timestamp: new Date(),
+      createdAt: new Date(),
     };
   }
 

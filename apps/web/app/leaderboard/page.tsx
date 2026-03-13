@@ -84,16 +84,16 @@ export default async function LeaderboardPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect("/");
 
-  const userId = (session.user as { id?: string }).id;
+  const userId = session.user.id;
   if (!userId) redirect("/auth/signin");
 
-  const gamification = await fetchGamification(userId);
+  const gamification = await fetchGamification(userId) as Record<string, unknown> | null;
 
   // Build current-user entry and insert into the ranked list at the correct position.
   const userName  = session.user?.name ?? "You";
-  const userXP    = (gamification as any)?.xp ?? 0;
-  const userLevel = (gamification as any)?.level ?? 1;
-  const userStreak = (gamification as any)?.streak ?? 0;
+  const userXP    = (gamification?.["xp"] as number | undefined) ?? 0;
+  const userLevel = (gamification?.["level"] as number | undefined) ?? 1;
+  const userStreak = (gamification?.["streak"] as number | undefined) ?? 0;
 
   const userEntry = {
     rank:   0,         // placeholder — will be overwritten below

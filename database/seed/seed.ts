@@ -20,7 +20,6 @@
 import { PrismaClient } from "@prisma/client";
 import type {
   Grade,
-  Strand,
   Difficulty,
   BadgeCategory,
   QuestType,
@@ -28,6 +27,8 @@ import type {
   PracticeMode,
   LearningPace,
 } from "@prisma/client";
+// Strand is defined in @/types, not yet in the generated Prisma client
+import type { Strand } from "@/types";
 
 const prisma = new PrismaClient();
 
@@ -940,7 +941,7 @@ async function main() {
   console.log("▶ Seeding practice sets...");
   let setCount = 0;
   for (const t of TOPICS) {
-    const topicId = topicIdMap[t.slug];
+    const topicId = topicIdMap[t.slug] ?? "";
     const firstLessonId = lessonIdByTopicSlugAndOrder[`${t.slug}:1`];
     // Practice set
     await prisma.practiceSet.upsert({

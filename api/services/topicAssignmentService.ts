@@ -41,16 +41,12 @@ function nextGrade(g: Grade): Grade | null {
 /** Fetch topics from DB first; fall back to static curriculum tree. */
 async function fetchTopicsForGrade(grade: Grade): Promise<{ id: string; name: string }[]> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const topicModel = (prisma as any).topic;
-    if (topicModel) {
-      const rows = await topicModel.findMany({
-        where:  { gradeBand: grade },
-        select: { id: true, name: true },
-        take:   30,
-      }) as { id: string; name: string }[];
-      if (rows.length > 0) return rows;
-    }
+    const rows = await prisma.topic.findMany({
+      where:  { gradeBand: grade as never },
+      select: { id: true, name: true },
+      take:   30,
+    });
+    if (rows.length > 0) return rows;
   } catch { /* fall through */ }
   // Static fallback
   return getTopicsForGrade(grade as unknown as LocalGrade)
@@ -201,7 +197,6 @@ export async function generateAndStore(userId: string): Promise<string[]> {
       orderedIds = [...orderedIds, ...missing];
 
     } catch (aiErr) {
-      console.warn("[topicAssignmentService] AI failed, using static order:", (aiErr as Error).message);
       orderedIds = staticFallbackOrder(allTopics, progress);
     }
 
@@ -214,7 +209,6 @@ export async function generateAndStore(userId: string): Promise<string[]> {
       } as Record<string, unknown>,
     });
 
-    console.log(`[topicAssignmentService] Assigned ${orderedIds.length} topics for user ${userId} (grade ${grade})`);
     return orderedIds;
 
   } catch (err) {
@@ -277,7 +271,6 @@ export async function appendAfterCompletion(
 
     if (allMastered && gradeTopics.length > 0) {
       // Student has mastered all current grade topics — inject next grade topics
-      console.log(`[topicAssignmentService] All Grade ${grade} topics mastered — regenerating with Grade ${nextG}`);
       void generateAndStore(userId);
     }
 

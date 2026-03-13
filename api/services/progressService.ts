@@ -9,6 +9,21 @@ import { prisma } from "../lib/prisma";
 import { xpEngine } from "../../services/gamification/xp_engine";
 import { NotFoundError } from "../middlewares/error.middleware";
 
+// Simple in-memory cache for topic count (changes rarely, queried on every dashboard load)
+let _cachedTopicCount: number | null = null;
+let _topicCountFetchedAt = 0;
+const TOPIC_COUNT_TTL = 10 * 60 * 1000; // 10 minutes
+
+async function getCachedTopicCount(): Promise<number> {
+  const now = Date.now();
+  if (_cachedTopicCount !== null && now - _topicCountFetchedAt < TOPIC_COUNT_TTL) {
+    return _cachedTopicCount;
+  }
+  _cachedTopicCount = await prisma.topic.count();
+  _topicCountFetchedAt = now;
+  return _cachedTopicCount;
+}
+
 // Pre-fetched data passed from dashboardController to avoid duplicate queries
 type ProgressCtx = {
   profile:           Awaited<ReturnType<typeof prisma.studentProfile.upsert>>;
@@ -25,7 +40,7 @@ export async function getProgressSummary(userId: string, ctx?: ProgressCtx): Pro
     ctx !== undefined ? Promise.resolve(ctx.profile)           : prisma.studentProfile.upsert({ where: { userId }, create: { userId }, update: {} }),
     ctx !== undefined ? Promise.resolve(ctx.streak)            : prisma.streak.findUnique({ where: { userId } }),
     ctx !== undefined ? Promise.resolve(ctx.topicProgressRows) : prisma.topicProgress.findMany({ where: { userId } }),
-    prisma.topic.count(),
+    getCachedTopicCount(),
   ]);
 
   const totalXp        = profile.totalXp;

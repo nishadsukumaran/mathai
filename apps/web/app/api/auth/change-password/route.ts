@@ -20,8 +20,7 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const userId = (session.user as any).id as string | undefined;
+    const userId = session.user?.id;
     if (!userId) {
       return NextResponse.json({ error: "Invalid session." }, { status: 401 });
     }

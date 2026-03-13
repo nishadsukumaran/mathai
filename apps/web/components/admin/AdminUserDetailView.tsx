@@ -207,8 +207,8 @@ export default function AdminUserDetailView({ user }: Props) {
         )}
       </div>
 
-      {/* ── Pet Personality Insight (parent-facing) ───────────────────────── */}
-      {user.petInsight && user.role === "student" && (
+      {/* ── Pet Personality Insight ────────────────────────────────────────── */}
+      {user.petInsight && (
         <div className="rounded-2xl border border-indigo-100 bg-indigo-50 px-5 py-4 flex gap-3 items-start">
           <span className="text-2xl mt-0.5">{user.petInsight.personality.icon}</span>
           <div>

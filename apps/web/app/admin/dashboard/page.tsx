@@ -12,18 +12,20 @@ import { redirect }          from "next/navigation";
 import AdminDashboardView    from "@/components/admin/AdminDashboardView";
 import { apiFetch }          from "@/lib/api";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyStats = any;
+
 export const metadata = { title: "Dashboard — MathAI Admin" };
 
 export default async function AdminDashboardPage() {
   const session = await getServerSession(authOptions);
 
   // Belt-and-suspenders guard (middleware already checks this)
-  // @ts-ignore — extended session type
   if (!session || session.user?.role !== "admin") {
     redirect("/auth/signin?callbackUrl=/admin/dashboard");
   }
 
-  const stats = await apiFetch("/admin/dashboard");
+  const stats = await apiFetch("/admin/dashboard") as AnyStats;
 
   return <AdminDashboardView stats={stats} />;
 }

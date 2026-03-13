@@ -11,11 +11,16 @@ import { getDailyQuests } from "../services/questService";
 import { getProgressSummary } from "../services/progressService";
 import { send } from "../lib/response";
 import { prisma } from "../lib/prisma";
-import { NotFoundError } from "../middlewares/error.middleware";
+import { NotFoundError, ForbiddenError } from "../middlewares/error.middleware";
 
 export async function getDashboard(req: Request, res: Response, next: NextFunction) {
   try {
     const { studentId } = StudentIdParamSchema.parse(req.params);
+
+    // ── Authorization: students can only access their own dashboard ─────────
+    if (req.student?.id !== studentId && req.student?.role !== "admin") {
+      throw new ForbiddenError("Cannot access another student's dashboard");
+    }
 
     // ── 1. Fetch all shared data in a single parallel round-trip ────────────
     // Each service used to independently fetch profile/streak/topicProgress.
