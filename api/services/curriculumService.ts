@@ -14,6 +14,7 @@ import {
   Grade,
   Strand,
   MasteryLevel,
+  Difficulty,
 } from "@/types";
 import { CURRICULUM_TREE, getTopicById } from "../../curriculum/topic_tree";
 import { prisma } from "../lib/prisma";
@@ -88,11 +89,26 @@ export async function getCurriculumTree(params: {
     for (const strandEntry of gradeEntry.strands) {
       if (strand && strandEntry.strand !== strand) continue;
       const topics = strandEntry.topics.map((t) => ({
-        ...t,
-        progress:     progressMap[t.id],
-        masteryLevel: progressMap[t.id] ? getMasteryLevel(progressMap[t.id]!) : MasteryLevel.NotStarted,
-        lessonCount:  5,
-        isUnlocked:   isTopicUnlocked(t, progressMap),
+        // Normalize StaticTopic → Topic field names
+        id:               t.id,
+        strandId:         strandEntry.strand as string,
+        slug:             t.slug,
+        name:             t.name,
+        description:      t.description,
+        gradeBand:        t.grade,
+        difficulty:       Difficulty.Beginner,
+        prerequisites:    t.prerequisites,
+        masteryThreshold: t.masteryThreshold,
+        estimatedMinutes: t.estimatedMinutes,
+        iconEmoji:        t.iconEmoji,
+        sortOrder:        0,
+        createdAt:        new Date(0),
+        updatedAt:        new Date(0),
+        // Enriched runtime fields
+        progress:         progressMap[t.id],
+        masteryLevel:     progressMap[t.id] ? getMasteryLevel(progressMap[t.id]!) : MasteryLevel.NotStarted,
+        lessonCount:      5,
+        isUnlocked:       isTopicUnlocked(t, progressMap),
       }));
       nodes.push({
         strand: {
@@ -131,6 +147,56 @@ export async function getTopicDetail(
     progress:   progressMap[topicId],
     isUnlocked: isTopicUnlocked(topic, progressMap),
   };
+}
+
+/**
+ * Returns the human-readable names of all topics a student has mastered,
+ * optionally filtered to a specific grade.
+ *
+ * Used by practiceService to tell the AI question generator which topics
+ * are already fully learned so it doesn't test them again as the primary skill.
+ */
+export async function getMasteredTopicNamesForGrade(
+  userId: string,
+  grade?: Grade
+): Promise<string[]> {
+  // All mastered topic IDs for this user
+  const masteredRows = await prisma.topicProgress.findMany({
+    where:  { userId, isMastered: true },
+    select: { topicId: true },
+  });
+  if (masteredRows.length === 0) return [];
+
+  const masteredIds = masteredRows.map((r) => r.topicId);
+
+  // Batch fetch names from DB topics table
+  const dbTopics = await prisma.topic.findMany({
+    where: {
+      id: { in: masteredIds },
+      ...(grade ? { gradeBand: grade } : {}),
+    },
+    select: { id: true, name: true },
+  });
+  const dbNameMap: Record<string, string> = {};
+  for (const t of dbTopics) dbNameMap[t.id] = t.name;
+
+  // Fall back to static curriculum tree for any IDs not in the DB
+  const names: string[] = [];
+  const resolvedFromDb = new Set(Object.keys(dbNameMap));
+
+  for (const topicId of masteredIds) {
+    if (resolvedFromDb.has(topicId)) {
+      names.push(dbNameMap[topicId]!);
+    } else {
+      const staticTopic = getTopicById(topicId);
+      // Apply grade filter against the static topic's grade field
+      if (staticTopic && (!grade || staticTopic.grade === grade)) {
+        names.push(staticTopic.name);
+      }
+    }
+  }
+
+  return names;
 }
 
 export async function getWeakAreas(userId: string): Promise<AdaptiveRecommendation[]> {

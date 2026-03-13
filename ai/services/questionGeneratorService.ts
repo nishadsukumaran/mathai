@@ -36,6 +36,13 @@ export interface GenerateQuestionsContext {
   mode:         PracticeMode;
   questionCount: number;
 
+  /**
+   * Cambridge Primary Mathematics / Lower Secondary Mathematics objective code
+   * for this topic (e.g. "3Ni.05 — Know multiplication tables for 2–10").
+   * When present, the AI aligns every question to this objective.
+   */
+  cambridgeObjective?: string;
+
   /** Enriched student context for personalisation */
   studentContext?: {
     learningPace:              string;  // "slow" | "standard" | "fast"
@@ -46,6 +53,12 @@ export interface GenerateQuestionsContext {
     // From full memory snapshot (when available)
     activeMisconceptionsForTopic?: string[];  // mistake tags specific to this topic
     weakTopicNames?:           string[];  // to shape difficulty weighting
+    /**
+     * Topic names the student has already mastered for their current grade.
+     * The AI must NOT make these the primary skill under test — they may appear
+     * as background context in word problems but never as the main challenge.
+     */
+    masteredTopics?:           string[];
   };
 }
 
@@ -65,7 +78,12 @@ export interface AIGeneratedQuestion {
 // ─── System prompt ────────────────────────────────────────────────────────────
 
 const SYSTEM_PROMPT = `You are MathAI, an expert curriculum designer for primary and middle school mathematics.
-Your job is to generate high-quality, engaging, grade-appropriate math practice questions.
+Your job is to generate high-quality, engaging, grade-appropriate math practice questions fully aligned to the Cambridge Mathematics Framework.
+
+Curriculum standard: Cambridge Primary Mathematics Framework (Stages 1–6, ages 5–11) and Cambridge Lower Secondary Mathematics Framework (Stages 7–9, ages 11–14).
+- Use Cambridge-standard vocabulary, notation, and methods appropriate for the stage.
+- Strand naming follows Cambridge conventions: Number, Geometry and Measure, Statistics and Probability, Algebra (Lower Secondary).
+- Do not introduce concepts, symbols, or notation beyond the Cambridge stage for the specified grade.
 
 Tone: child-friendly, encouraging, fun. Use real-world scenarios kids can relate to (sports, food, animals, space, games).
 Language: clear, simple English appropriate for the grade level.
@@ -75,7 +93,7 @@ Variety: mix question types and problem styles within a set.`;
 // ─── Prompt builder ───────────────────────────────────────────────────────────
 
 function buildPrompt(ctx: GenerateQuestionsContext): string {
-  const { topicName, grade, difficulty, mode, questionCount, studentContext } = ctx;
+  const { topicName, grade, difficulty, mode, questionCount, cambridgeObjective, studentContext } = ctx;
 
   const gradeNum = grade.replace("G", "");
   const difficultyHint = {
@@ -93,6 +111,21 @@ function buildPrompt(ctx: GenerateQuestionsContext): string {
     weak_area_booster:  "focused on common mistakes — help them understand the concept deeply",
   }[mode] ?? "standard practice";
 
+  // Cambridge objective block — anchor every question to this framework code
+  const cambridgeSection = cambridgeObjective
+    ? `\nCambridge Framework Objective: ${cambridgeObjective}
+- Every question must directly target this specific objective.
+- Use the vocabulary, methods, and number ranges specified by Cambridge for this stage.
+- Do not stray into adjacent objectives unless they are essential scaffolding for this one.`
+    : "";
+
+  // Mastery exclusion block — tell the AI what's already been learned
+  const masteredSection = studentContext?.masteredTopics?.length
+    ? `\nAlready mastered by this student (DO NOT make these the primary skill under test): ${studentContext.masteredTopics.join(", ")}.
+- These topics must NOT be the focus or main challenge of any question.
+- They may appear as supporting context in word problems (e.g. a student who has mastered addition may see addition in a word problem about fractions) but the tested skill must be the current topic only.`
+    : "";
+
   const personalisation = studentContext
     ? `\nStudent profile:
 - Learning pace: ${studentContext.learningPace}
@@ -100,22 +133,22 @@ function buildPrompt(ctx: GenerateQuestionsContext): string {
 - Prefers: ${studentContext.preferredExplanationStyle} style
 ${studentContext.activeMisconceptionsForTopic?.length ? `- KNOWN MISCONCEPTIONS on this topic: ${studentContext.activeMisconceptionsForTopic.join(", ")} — target these with questions that expose and correct the error` : ""}
 ${studentContext.recentMistakes?.length ? `- Recently struggled with (general): ${studentContext.recentMistakes.join(", ")} — vary question framing to build confidence` : ""}
-${studentContext.interestKeywords?.length ? `- Interests: ${studentContext.interestKeywords.join(", ")} — use these in word problems where natural` : ""}`
-    : "";
+${studentContext.interestKeywords?.length ? `- Interests: ${studentContext.interestKeywords.join(", ")} — use these in word problems where natural` : ""}${masteredSection}`
+    : masteredSection;
 
   return `Generate exactly ${questionCount} math practice questions.
 
 Topic: ${topicName}
-Grade: ${gradeNum} (${grade})
+Grade: ${gradeNum} (${grade}) — Cambridge Stage ${gradeNum}${cambridgeSection}
 Difficulty profile: ${difficultyHint}
 Session mode: ${modeHint}${personalisation}
 
-CRITICAL GRADE REQUIREMENT:
-- ALL questions MUST be appropriate ONLY for Grade ${gradeNum} students (age ~${5 + Number(gradeNum)}–${6 + Number(gradeNum)}).
-- Do NOT go above Grade ${gradeNum} difficulty — no concepts, notation, or operations beyond this grade level.
-- Do NOT go below Grade ${Math.max(1, Number(gradeNum) - 1)} — questions must still be appropriately challenging.
-- If the topic touches concepts beyond Grade ${gradeNum}, simplify them to the grade-appropriate version.
-- Numbers, operations, and vocabulary must all be grade-level appropriate. A Grade 1 student should never see algebra; a Grade 9 student should not be asked basic single-digit arithmetic.
+CRITICAL GRADE & CURRICULUM REQUIREMENT:
+- ALL questions MUST be appropriate ONLY for Cambridge Stage ${gradeNum} students (age ~${5 + Number(gradeNum)}–${6 + Number(gradeNum)}).
+- Do NOT go above Cambridge Stage ${gradeNum} — no concepts, notation, or operations beyond this stage.
+- Do NOT go below Cambridge Stage ${Math.max(1, Number(gradeNum) - 1)} — questions must still be appropriately challenging.
+- If the topic touches concepts beyond Stage ${gradeNum}, simplify them to the stage-appropriate version.
+- Numbers, operations, and vocabulary must all be stage-level appropriate per the Cambridge framework.
 
 RULES:
 - Mix question types: at least 1 fill_in_blank, at least 1 multiple_choice (if count ≥ 3)

@@ -31,10 +31,12 @@ import { masteryEvaluator } from "../../curriculum/mastery_evaluator";
 import { tutorService } from "../../ai/tutor/tutor_service";
 import { questionGeneratorService } from "../../ai/services/questionGeneratorService";
 import { studentMemoryService }    from "../../ai/services/studentMemoryService";
-import { appendAfterCompletion }  from "./topicAssignmentService";
-import { learningMetrics }         from "../../services/analytics/learning_metrics";
+import { appendAfterCompletion }      from "./topicAssignmentService";
+import { getMasteredTopicNamesForGrade } from "./curriculumService";
+import { learningMetrics }             from "../../services/analytics/learning_metrics";
 import { NotFoundError, ValidationError } from "../middlewares/error.middleware";
 import { evaluateAndUpdatePersonality } from "./petService";
+import { getTopicById, getCambridgeObjective } from "../../curriculum/topic_tree";
 
 // ─── In-Memory Session Store ──────────────────────────────────────────────────
 
@@ -65,12 +67,32 @@ export async function startSession(
 ): Promise<{ session: Omit<ActivePracticeSession, "responses">; firstQuestion: PracticeQuestion }> {
   const { userId, topicId, lessonId, mode, difficulty, questionCount, grade, practiceSetId } = params;
 
-  // ── Step 1: Fetch student profile + memory snapshot in parallel ──────────────
-  const [profile, memorySnapshot] = await Promise.all([
+  // ── Step 1: Fetch student profile, memory snapshot, and mastered topics in parallel ──
+  const [profile, memorySnapshot, masteredTopicNames] = await Promise.all([
     prisma.studentProfile.findUnique({ where: { userId } }).catch(() => null),
     studentMemoryService.getSnapshot(userId).catch(() => null),
+    getMasteredTopicNamesForGrade(userId, grade).catch(() => [] as string[]),
   ]);
-  const topicName = topicId.replace(/^g\d+-/, "").replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+  // Derive a readable topic name from the topicId slug (fallback if static tree is unavailable)
+  const staticTopicEntry = getTopicById(topicId);
+  const topicName = staticTopicEntry?.name
+    ?? topicId.replace(/^g\d+-/, "").replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+  // ── Grade-topic alignment guard ───────────────────────────────────────────────
+  // If the topic belongs to a different grade in our curriculum tree (e.g. a teacher
+  // assigned a remedial topic), use the topic's own grade for question generation
+  // so difficulty is always appropriate for *the topic*, not the student's school year.
+  const effectiveGrade = (staticTopicEntry?.grade ?? grade) as import("@mathai/shared-types").Grade;
+  if (staticTopicEntry && staticTopicEntry.grade !== grade) {
+    console.warn(
+      `[practiceService] Grade mismatch: student enrolled in ${grade} but topic "${topicId}" ` +
+      `belongs to ${staticTopicEntry.grade}. Using topic grade for question generation.`
+    );
+  }
+
+  // Cambridge objective for this topic — anchors AI to the exact learning objective
+  const cambridgeObjective = getCambridgeObjective(topicId) || undefined;
 
   // ── Step 2: AI-first question generation via Vercel AI Gateway ──────────────
   let questions: PracticeQuestion[];
@@ -91,10 +113,11 @@ export async function startSession(
     const aiQuestions = await questionGeneratorService.generate({
       topicId,
       topicName,
-      grade: grade as import("@mathai/shared-types").Grade,
-      difficulty:    difficulty ?? Difficulty.Intermediate,
-      mode: mode as import("@mathai/shared-types").PracticeMode,
-      questionCount: questionCount ?? 10,
+      grade:             effectiveGrade,
+      difficulty:        difficulty ?? Difficulty.Intermediate,
+      mode:              mode as import("@mathai/shared-types").PracticeMode,
+      questionCount:     questionCount ?? 10,
+      cambridgeObjective,
       studentContext: {
         learningPace:              memorySnapshot?.learningPace ?? String(profileAny?.learningPace ?? "standard"),
         confidenceLevel:           memorySnapshot?.avgConfidenceScore ?? Number(profile?.confidenceLevel ?? 50),
@@ -102,6 +125,7 @@ export async function startSession(
         recentMistakes:            recentMistakeTags,
         interestKeywords:          memorySnapshot?.interests ?? [],
         activeMisconceptionsForTopic: topicMisconceptions,
+        masteredTopics:            masteredTopicNames,
       },
     });
 
@@ -120,7 +144,11 @@ export async function startSession(
       conceptTags:   q.conceptTags,
     } as PracticeQuestion));
 
-    console.log(`[practiceService] AI generated ${questions.length} questions for topic "${topicName}" (grade ${grade})`);
+    console.log(
+      `[practiceService] AI generated ${questions.length} questions for topic "${topicName}" ` +
+      `(grade ${effectiveGrade}${cambridgeObjective ? `, objective: ${cambridgeObjective.slice(0, 40)}…` : ""})` +
+      `${masteredTopicNames.length ? `, ${masteredTopicNames.length} mastered topics excluded` : ""}`
+    );
 
   } catch (aiError) {
     // ── Fallback: static curriculum generator ──────────────────────────────────
