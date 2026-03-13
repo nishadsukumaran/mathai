@@ -14,7 +14,7 @@
     "build": "turbo run build",
     "build:api": "npx tsc --project tsconfig.json --noEmit || echo 'Type errors found (non-blocking for runtime)'",
     "start:api": "node --import tsx/esm api/server.ts",
-    "render:build": "npm install --include=dev && npx prisma generate --schema=database/schema/schema.prisma && npx prisma migrate deploy --schema=database/schema/schema.prisma",
+    "render:build": "npm install --include=dev && npx prisma generate --schema=database/schema/schema.prisma && DIRECT_URL=${DIRECT_URL:-$DATABASE_URL} npx prisma migrate deploy --schema=database/schema/schema.prisma",
     "render:start": "npx tsx api/server.ts",
     "test": "turbo run test",
     "test:unit": "jest --testPathPattern=tests/unit",

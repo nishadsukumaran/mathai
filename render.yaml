@@ -23,6 +23,8 @@ services:
       # ── Database ────────────────────────────────────────────────────────────
       - key: DATABASE_URL
         sync: false              # Supabase pooler URL (with ?pgbouncer=true)
+      - key: DIRECT_URL
+        sync: false              # Supabase direct URL (no pooler) — used by prisma migrate; falls back to DATABASE_URL if omitted
 
       # ── Auth ────────────────────────────────────────────────────────────────
       - key: NEXTAUTH_SECRET
