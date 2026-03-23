@@ -4,17 +4,37 @@
  * Generates educational concept images via Vercel AI Gateway,
  * caches them in Vercel Blob + PostgreSQL to avoid regeneration.
  *
+ * Uses the same gateway instance as all other AI calls in the project.
+ * Model: google/gemini-3.1-flash-image-preview (cost-effective multimodal).
+ *
  * Cache key: conceptKey + grade (one image per concept per grade level).
  * Rate limit: 10 generations per student per day.
  */
 
 import { generateText } from "ai";
+import { createGateway } from "@ai-sdk/gateway";
 import { put } from "@vercel/blob";
 import { prisma } from "../../api/lib/prisma";
 
+// Cost-effective image model via AI Gateway
 const IMAGE_MODEL = "google/gemini-3.1-flash-image-preview";
 const MAX_DAILY_GENS = 10;
-const TIMEOUT_MS = 15_000;
+const TIMEOUT_MS = 20_000;
+
+// Reuse the same gateway config as vercel_gateway.ts
+function getGateway() {
+  const apiKey = process.env["AI_GATEWAY_API_KEY"];
+  const baseURL = process.env["AI_GATEWAY_BASE_URL"];
+  if (!apiKey) {
+    throw new Error(
+      "[imageGen] AI_GATEWAY_API_KEY is not set. Cannot generate images."
+    );
+  }
+  return createGateway({
+    apiKey,
+    ...(baseURL ? { baseURL } : {}),
+  });
+}
 
 interface GenerateImageRequest {
   imagePrompt: string;
@@ -99,31 +119,41 @@ export async function generateConceptImage(
     return null;
   }
 
-  // 3. Generate image via AI Gateway
+  // 3. Generate image via AI Gateway (same gateway as all other AI calls)
   try {
+    const gateway = getGateway();
     const prompt = `Educational illustration for children (grade ${req.grade}): ${req.imagePrompt}. Simple, colorful, clear. White background. No text in image.`;
 
     const result = await generateText({
-      model: IMAGE_MODEL as any,
+      model: gateway(IMAGE_MODEL),
       prompt,
+      providerOptions: {
+        google: { responseModalities: ["TEXT", "IMAGE"] },
+      },
       abortSignal: AbortSignal.timeout(TIMEOUT_MS),
     });
 
-    const imageFile = (result as any).files?.[0];
+    // Gemini returns images in result.files
+    const imageFile = result.files?.[0];
     if (!imageFile) {
-      console.error("[imageGen] No image file in AI response");
+      console.error("[imageGen] No image file in AI response. Model may not support image output.");
       return null;
     }
 
     // 4. Upload to Vercel Blob
     const imageData = imageFile.base64
       ? Buffer.from(imageFile.base64, "base64")
-      : imageFile.data;
+      : (imageFile as any).data;
+
+    if (!imageData) {
+      console.error("[imageGen] Image file has no data");
+      return null;
+    }
 
     const blob = await put(
       `concept-images/${req.conceptKey}-${prismaGrade}.png`,
       imageData,
-      { access: "public", contentType: "image/png" }
+      { access: "public", contentType: imageFile.mimeType ?? "image/png" }
     );
 
     // 5. Cache in DB
