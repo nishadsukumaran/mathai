@@ -286,11 +286,88 @@ function renderMd(text: string): React.ReactNode {
 // ─── Response card sub-component ─────────────────────────────────────────────
 
 function ResponseCard({ response }: { response: AskMathAIResponse }) {
+  const [visualPlan, setVisualPlan] = useState(response.visualPlan ?? null);
+  const [visualLoading, setVisualLoading] = useState(false);
+  const [visualError, setVisualError] = useState<string | null>(null);
+
+  // Show existing static diagrams (number_line, fraction_bar, etc.) automatically
+  const hasStaticDiagram = visualPlan &&
+    visualPlan.diagramType !== "none" &&
+    visualPlan.diagramType !== "concept_image" &&
+    visualPlan.diagramType !== "animated_walkthrough";
+
+  // Show concept_image or animated_walkthrough only after generation
+  const hasGeneratedVisual = visualPlan &&
+    (visualPlan.diagramType === "concept_image" || visualPlan.diagramType === "animated_walkthrough");
+
+  // Can generate a visual on demand if AI suggested concept_image
+  const canGenerateVisual = (response as any).visualStrategy === "concept_image" &&
+    (response as any).imagePrompt &&
+    (response as any).conceptKey &&
+    !hasGeneratedVisual;
+
+  const handleGenerateVisual = useCallback(async () => {
+    const r = response as any;
+    if (!r.imagePrompt || !r.conceptKey) return;
+
+    setVisualLoading(true);
+    setVisualError(null);
+    try {
+      const res = await clientPost("/tutor/generate-visual", {
+        imagePrompt: r.imagePrompt,
+        conceptKey: r.conceptKey,
+        altText: r.imagePrompt,
+        caption: r.imagePrompt,
+      });
+      const json = await res.json();
+      if (json.success) {
+        setVisualPlan(json.data);
+      } else {
+        setVisualError(json.error ?? "Failed to generate visual");
+      }
+    } catch {
+      setVisualError("Failed to generate visual. Please try again.");
+    } finally {
+      setVisualLoading(false);
+    }
+  }, [response]);
+
   return (
     <div className="space-y-4">
-      {/* Visual — VisualRenderer manages its own container; no wrapper div needed */}
-      {response.visualPlan && response.visualPlan.diagramType !== "none" && (
-        <VisualRenderer plan={response.visualPlan} animated />
+      {/* Static diagrams render automatically */}
+      {hasStaticDiagram && (
+        <VisualRenderer plan={visualPlan!} animated />
+      )}
+
+      {/* Generated visuals (concept_image, animated_walkthrough) render after button click */}
+      {hasGeneratedVisual && (
+        <VisualRenderer plan={visualPlan!} animated />
+      )}
+
+      {/* "Show Visual" button — appears when AI suggests a concept image */}
+      {canGenerateVisual && !visualLoading && (
+        <button
+          onClick={handleGenerateVisual}
+          className="w-full py-3 rounded-2xl border-2 border-dashed border-indigo-300 text-indigo-600 font-semibold text-sm hover:bg-indigo-50 hover:border-indigo-400 transition flex items-center justify-center gap-2"
+        >
+          <span>Show Visual Explanation</span>
+        </button>
+      )}
+
+      {/* Loading state */}
+      {visualLoading && (
+        <div className="w-full py-4 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center gap-3">
+          <div className="w-4 h-4 rounded-full border-2 border-indigo-400 border-t-indigo-700 animate-spin" />
+          <span className="text-indigo-600 text-sm font-medium">Generating visual...</span>
+        </div>
+      )}
+
+      {/* Error state */}
+      {visualError && (
+        <div className="w-full py-3 rounded-2xl bg-red-50 border border-red-200 text-center">
+          <p className="text-red-600 text-sm">{visualError}</p>
+          <button onClick={handleGenerateVisual} className="text-red-500 text-xs underline mt-1">Try again</button>
+        </div>
       )}
 
       {/* Explanation */}

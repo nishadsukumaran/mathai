@@ -70,35 +70,71 @@ router.post("/ask", async (req: Request, res: Response, next: NextFunction) => {
       } : undefined,
     });
 
-    // If AI chose concept_image, generate/cache the image
-    if (response.visualStrategy === "concept_image" && response.imagePrompt && response.conceptKey) {
-      const imageResult = await generateConceptImage({
-        imagePrompt: response.imagePrompt,
-        conceptKey: response.conceptKey,
-        grade: resolvedGrade,
-        altText: response.imagePrompt,
-        caption: response.imagePrompt,
-        userId,
-      });
+    // Pass visualStrategy + image metadata to frontend (generation is on-demand via /generate-visual)
+    res.json({ success: true, data: response });
+  } catch (err) { next(err); }
+});
 
-      if (imageResult) {
-        response.visualPlan = {
-          diagramType: "concept_image",
-          data: {
-            imageUrl: imageResult.imageUrl,
-            altText: imageResult.altText,
-            caption: imageResult.caption,
-            prompt: imageResult.prompt,
-            cached: imageResult.cached,
-          },
-        };
-      } else {
-        // Fallback: remove placeholder visual plan
-        response.visualPlan = undefined;
+// ─── On-demand visual generation ─────────────────────────────────────────────
+
+const GenerateVisualSchema = z.object({
+  imagePrompt: z.string().min(1).max(500),
+  conceptKey:  z.string().min(1).max(100),
+  grade:       z.string().regex(/^G\d+$/).optional(),
+  altText:     z.string().max(300).optional(),
+  caption:     z.string().max(300).optional(),
+});
+
+router.post("/generate-visual", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.student?.id;
+    if (!userId) { res.status(401).json({ success: false, error: "Unauthorized" }); return; }
+
+    const parsed = GenerateVisualSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ success: false, error: "Invalid body", details: parsed.error.flatten() });
+      return;
+    }
+
+    const { imagePrompt, conceptKey, altText, caption } = parsed.data;
+
+    // Resolve grade
+    let grade = parsed.data.grade as Grade | undefined;
+    if (!grade) {
+      try {
+        const studentProfile = await getProfile(userId);
+        grade = studentProfile.grade as Grade;
+      } catch {
+        grade = "G4" as Grade;
       }
     }
 
-    res.json({ success: true, data: response });
+    const result = await generateConceptImage({
+      imagePrompt,
+      conceptKey,
+      grade,
+      altText:  altText ?? imagePrompt,
+      caption:  caption ?? imagePrompt,
+      userId,
+    });
+
+    if (result) {
+      res.json({
+        success: true,
+        data: {
+          diagramType: "concept_image" as const,
+          data: {
+            imageUrl: result.imageUrl,
+            altText:  result.altText,
+            caption:  result.caption,
+            prompt:   result.prompt,
+            cached:   result.cached,
+          },
+        },
+      });
+    } else {
+      res.status(503).json({ success: false, error: "Image generation unavailable. Try again later." });
+    }
   } catch (err) { next(err); }
 });
 
