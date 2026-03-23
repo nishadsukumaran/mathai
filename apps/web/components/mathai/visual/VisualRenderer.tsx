@@ -16,6 +16,8 @@ import { FractionBar }     from "./FractionBar";
 import { ArrayDiagram }    from "./ArrayDiagram";
 import { BarModel }        from "./BarModel";
 import { PlaceValueChart } from "./PlaceValueChart";
+import { StepPlayer }      from "./StepPlayer";
+import { ConceptImage }    from "./ConceptImage";
 
 interface VisualRendererProps {
   plan:      VisualPlan;
@@ -56,6 +58,14 @@ export function VisualRenderer({ plan, animated = true, className }: VisualRende
     case "place_value_chart":
       diagram = <PlaceValueChart data={data} animated={animated} />;
       break;
+
+    case "animated_walkthrough":
+      // StepPlayer renders its own container — return directly
+      return <StepPlayer data={data} className={className} />;
+
+    case "concept_image":
+      // ConceptImage renders its own container — return directly
+      return <ConceptImage data={data} className={className} />;
 
     case "coordinate_grid":
     case "none":
