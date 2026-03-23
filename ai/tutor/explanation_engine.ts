@@ -36,9 +36,10 @@ export interface ExplanationRequest {
 }
 
 export interface ExplanationResult {
-  content:      TutorContent;
-  visualPlan?:  VisualPlanPayload;
-  example?:     TutorExample;
+  content:        TutorContent;
+  visualPlan?:    VisualPlanPayload;
+  example?:       TutorExample;
+  visualStrategy: "diagram" | "animated_diagram" | "concept_image" | "none";
 }
 
 // ─── Explanation Library ──────────────────────────────────────────────────────
@@ -49,6 +50,7 @@ interface ExplanationTemplate {
   steps:          TutorStep[];
   keyInsight:     string;
   visualType:     VisualPlanPayload["diagramType"];
+  visualStrategy: "diagram" | "animated_diagram" | "concept_image" | "none";
   similarExample: TutorExample;
 }
 
@@ -58,6 +60,7 @@ const EXPLANATIONS: Record<string, ExplanationTemplate> = {
     conceptSummary: "To add fractions, the pieces must be the same size. We call this having a *common denominator*.",
     keyInsight:     "The denominator tells you the piece size. You can only add pieces of the same size!",
     visualType:     "fraction_bar",
+    visualStrategy: "animated_diagram",
     steps: [
       { stepNumber: 1, instruction: "Look at the denominators (bottom numbers). Are they the same?",                                             formula: undefined, visualCue: "compare denominators" },
       { stepNumber: 2, instruction: "If they are different, find the Lowest Common Denominator (LCD) — the smallest number both denominators divide into.", formula: "\\text{LCD}(a, b) = \\text{LCM}(a, b)",  visualCue: "find LCD" },
@@ -82,6 +85,7 @@ const EXPLANATIONS: Record<string, ExplanationTemplate> = {
     conceptSummary: "Multiplication is a fast way to add the same number many times. 3 × 4 = 4 + 4 + 4.",
     keyInsight:     "Multiplication counts equal groups. The × sign means 'groups of'.",
     visualType:     "array",
+    visualStrategy: "animated_diagram",
     steps: [
       { stepNumber: 1, instruction: "Identify the two factors (the numbers being multiplied).",                                    formula: "a \\times b",          visualCue: "identify factors" },
       { stepNumber: 2, instruction: "Think of the first factor as the number of groups, and the second as how many in each group.", formula: undefined,              visualCue: "groups of" },
@@ -104,6 +108,7 @@ const EXPLANATIONS: Record<string, ExplanationTemplate> = {
     conceptSummary: "Every digit in a number has a *place* — and that place tells you its value.",
     keyInsight:     "A '3' in the hundreds column means 300, not 3!",
     visualType:     "place_value_chart",
+    visualStrategy: "diagram",
     steps: [
       { stepNumber: 1, instruction: "Write your number in a place value chart: Hundreds | Tens | Ones.",  formula: undefined,                           visualCue: "place value chart" },
       { stepNumber: 2, instruction: "The value of each digit = digit × place value.",                     formula: "\\text{value} = \\text{digit} \\times \\text{place}", visualCue: "calculate value" },
@@ -125,6 +130,7 @@ const EXPLANATIONS: Record<string, ExplanationTemplate> = {
     conceptSummary: "Every math problem can be solved by breaking it into smaller steps.",
     keyInsight:     "Read → Identify → Plan → Calculate → Check",
     visualType:     "none",
+    visualStrategy: "none",
     steps: [
       { stepNumber: 1, instruction: "Read the question carefully. What is it asking for?",         formula: undefined, visualCue: "read" },
       { stepNumber: 2, instruction: "Identify what you know (given information).",                 formula: undefined, visualCue: "given" },
@@ -194,6 +200,7 @@ export class ExplanationEngine {
       visualPlan: t.visualType !== "none"
         ? { diagramType: t.visualType, data: {}, caption: `Visual: ${t.conceptTitle}` }
         : undefined,
+      visualStrategy: t.visualStrategy,
     };
   }
 
@@ -207,6 +214,7 @@ export class ExplanationEngine {
       visualPlan: t.visualType !== "none"
         ? { diagramType: t.visualType, data: {}, caption: t.conceptTitle }
         : undefined,
+      visualStrategy: t.visualStrategy,
     };
   }
 
@@ -217,6 +225,7 @@ export class ExplanationEngine {
         steps: t.similarExample.workingSteps,
       },
       example: t.similarExample,
+      visualStrategy: t.visualStrategy,
     };
   }
 }
