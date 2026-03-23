@@ -1,19 +1,17 @@
 /**
  * @module ai/services/imageGenerationService
  *
- * Generates educational concept images via Vercel AI Gateway,
- * caches them in Vercel Blob + PostgreSQL to avoid regeneration.
+ * Generates educational concept images via Vercel AI Gateway.
+ * Returns base64 data URLs — no external storage needed.
+ * Caches generated images as base64 in PostgreSQL to avoid regeneration.
  *
- * Uses the same gateway instance as all other AI calls in the project.
  * Model: google/gemini-3.1-flash-image-preview (cost-effective multimodal).
- *
  * Cache key: conceptKey + grade (one image per concept per grade level).
  * Rate limit: 10 generations per student per day.
  */
 
 import { generateText } from "ai";
 import { createGateway } from "@ai-sdk/gateway";
-import { put } from "@vercel/blob";
 import { prisma } from "../../api/lib/prisma";
 
 // Cost-effective image model via AI Gateway
@@ -46,7 +44,7 @@ interface GenerateImageRequest {
 }
 
 interface GenerateImageResult {
-  imageUrl: string;
+  imageUrl: string;  // base64 data URL (data:image/png;base64,...)
   altText: string;
   caption: string;
   prompt: string;
@@ -95,7 +93,7 @@ export async function generateConceptImage(
 ): Promise<GenerateImageResult | null> {
   const prismaGrade = toPrismaGrade(req.grade);
 
-  // 1. Check cache
+  // 1. Check cache (imageUrl stores base64 data URL)
   const cached = await prisma.conceptImage.findUnique({
     where: {
       conceptKey_grade: { conceptKey: req.conceptKey, grade: prismaGrade as any },
@@ -119,7 +117,7 @@ export async function generateConceptImage(
     return null;
   }
 
-  // 3. Generate image via AI Gateway (same gateway as all other AI calls)
+  // 3. Generate image via AI Gateway
   try {
     const gateway = getGateway();
     const prompt = `Educational illustration for children (grade ${req.grade}): ${req.imagePrompt}. Simple, colorful, clear. White background. No text in image.`;
@@ -140,36 +138,30 @@ export async function generateConceptImage(
       return null;
     }
 
-    // 4. Upload to Vercel Blob
-    const imageData = imageFile.base64
-      ? Buffer.from(imageFile.base64, "base64")
-      : (imageFile as any).data;
-
-    if (!imageData) {
-      console.error("[imageGen] Image file has no data");
+    // 4. Convert to base64 data URL
+    const base64 = imageFile.base64;
+    if (!base64) {
+      console.error("[imageGen] Image file has no base64 data");
       return null;
     }
 
-    const blob = await put(
-      `concept-images/${req.conceptKey}-${prismaGrade}.png`,
-      imageData,
-      { access: "public", contentType: imageFile.mimeType ?? "image/png" }
-    );
+    const mimeType = imageFile.mimeType ?? "image/png";
+    const dataUrl = `data:${mimeType};base64,${base64}`;
 
-    // 5. Cache in DB
+    // 5. Cache in DB (store the full data URL)
     await prisma.conceptImage.create({
       data: {
         conceptKey: req.conceptKey,
         grade: prismaGrade as any,
         prompt,
-        imageUrl: blob.url,
+        imageUrl: dataUrl,
         altText: req.altText,
         caption: req.caption,
       },
     });
 
     return {
-      imageUrl: blob.url,
+      imageUrl: dataUrl,
       altText: req.altText,
       caption: req.caption,
       prompt,

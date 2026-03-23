@@ -54,7 +54,6 @@
     "@panva/hkdf": "^1.1.0",
     "@paralleldrive/cuid2": "^3.3.0",
     "@prisma/client": "^6.19.2",
-    "@vercel/blob": "^2.3.1",
     "ai": "^6.0.116",
     "bcryptjs": "^2.4.3",
     "compression": "^1.8.1",
