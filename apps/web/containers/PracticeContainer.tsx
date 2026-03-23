@@ -26,6 +26,7 @@ import { useQueryClient }                            from "@tanstack/react-query
 import PracticeView from "@/components/mathai/practice/PracticeView";
 import { queryKeys }   from "@/lib/query-keys";
 import type { PracticeQuestionItem, SubmitResultView } from "@/types/contracts";
+import type { VisualPlan } from "@mathai/shared-types";
 
 const API_BASE = process.env["NEXT_PUBLIC_API_BASE_URL"] ?? "http://localhost:3001/api";
 
@@ -69,6 +70,7 @@ export default function PracticeContainer({ topicId, mode }: Props) {
   const [answer,           setAnswer]           = useState("");
   const [result,           setResult]           = useState<SubmitResultView | null>(null);
   const [hint,             setHint]             = useState<string | null>(null);
+  const [hintVisualPlan,   setHintVisualPlan]   = useState<VisualPlan | null>(null);
   const [loading,          setLoading]          = useState(false);
   const [error,            setError]            = useState<string | null>(null);
   const [xpAnim,           setXpAnim]           = useState<number | null>(null);
@@ -132,6 +134,7 @@ export default function PracticeContainer({ topicId, mode }: Props) {
     setLoading(true);
     setResult(null);
     setHint(null);
+    setHintVisualPlan(null);
     try {
       const headers = await getAuthHeaders();
       const controller = new AbortController();
@@ -192,6 +195,7 @@ export default function PracticeContainer({ topicId, mode }: Props) {
     setAnswer("");
     setResult(null);
     setHint(null);
+    setHintVisualPlan(null);
     setHintsUsed(0);
     setConfidenceBefore(null);
   }, [session, result]);
@@ -222,6 +226,7 @@ export default function PracticeContainer({ topicId, mode }: Props) {
       const json = await res.json();
       if (json.success) {
         setHint(json.data.content?.text ?? "Think carefully about what you know!");
+        setHintVisualPlan(json.data.visualPlan ?? null);
         setHintsUsed((h) => h + 1);
       }
     } catch {
@@ -271,6 +276,7 @@ export default function PracticeContainer({ topicId, mode }: Props) {
       answer={answer}
       result={result}
       hint={hint}
+      hintVisualPlan={hintVisualPlan}
       loading={loading}
       error={error}
       xpAnim={xpAnim}

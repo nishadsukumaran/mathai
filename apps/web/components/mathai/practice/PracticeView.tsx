@@ -10,6 +10,8 @@
 
 import { useRouter } from "next/navigation";
 import type { PracticeQuestionItem, SubmitResultView } from "@/types/contracts";
+import type { VisualPlan } from "@mathai/shared-types";
+import { VisualRenderer } from "@/components/mathai/visual/VisualRenderer";
 
 interface SessionState {
   id:           string;
@@ -24,6 +26,7 @@ interface Props {
   answer:            string;
   result:            SubmitResultView | null;
   hint:              string | null;
+  hintVisualPlan:    VisualPlan | null;
   loading:           boolean;
   error:             string | null;
   xpAnim:            number | null;
@@ -55,6 +58,7 @@ export default function PracticeView({
   answer,
   result,
   hint,
+  hintVisualPlan,
   loading,
   error,
   xpAnim,
@@ -301,6 +305,11 @@ export default function PracticeView({
             {hint && !loading && (
               <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4 text-amber-800 text-sm">
                 💡 {hint}
+              </div>
+            )}
+            {hintVisualPlan && !loading && (
+              <div className="mb-4">
+                <VisualRenderer plan={hintVisualPlan} animated />
               </div>
             )}
 
