@@ -612,7 +612,7 @@ export interface ExplanationStep {
 
 /** Instructions for the frontend to render a visual math aid. */
 export interface VisualPlanPayload {
-  diagramType: "number_line" | "array" | "bar_model" | "fraction_bar" | "place_value_chart" | "coordinate_grid" | "area_model" | "graph" | "table" | "none";
+  diagramType: "number_line" | "array" | "bar_model" | "fraction_bar" | "place_value_chart" | "coordinate_grid" | "area_model" | "graph" | "table" | "animated_walkthrough" | "concept_image" | "none";
   data:        Record<string, unknown>;
   caption:     string;
 }
@@ -823,6 +823,7 @@ export interface TutorHelpResponse {
   content:       TutorContent;
   visualPlan?:   VisualPlanPayload;
   similarExample?: TutorExample;
+  visualStrategy?: "diagram" | "animated_diagram" | "concept_image" | "none";
 }
 
 /** The main textual content of a tutor response — shape varies by help mode. */

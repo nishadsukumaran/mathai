@@ -309,6 +309,7 @@ export interface TutorResponse {
   };
   visualPlan?: VisualPlan;
   similarExample?: TutorExample;
+  visualStrategy?: "diagram" | "animated_diagram" | "concept_image" | "none";
 }
 
 export interface TutorStep {
@@ -323,6 +324,35 @@ export interface TutorExample {
   workingSteps: TutorStep[];
   answer:       string;
   keyInsight:   string;
+}
+
+// ─── Animated Walkthrough ────────────────────────────────────────────────────
+
+export interface WalkthroughStep {
+  stepNumber: number;
+  label: string;
+  /** Shallow-merged with baseData for this step's render. */
+  visibleState: Record<string, unknown>;
+  highlightElements?: string[];
+}
+
+export interface AnimatedWalkthroughData {
+  title: string;
+  steps: WalkthroughStep[];
+  baseDiagram: "number_line" | "fraction_bar" | "array" | "bar_model" | "place_value_chart";
+  baseData: NumberLineData | FractionBarData | ArrayData | BarModelData | PlaceValueChartData;
+  autoPlay?: boolean;
+  stepDurationMs?: number;
+}
+
+// ─── AI-Generated Concept Image ──────────────────────────────────────────────
+
+export interface ConceptImageData {
+  imageUrl: string;
+  altText: string;
+  caption: string;
+  prompt?: string;
+  cached: boolean;
 }
 
 // ─── Visual plan — typed data per diagramType ────────────────────────────────
@@ -363,13 +393,15 @@ export interface PlaceValueChartData {
 }
 
 export type VisualPlan =
-  | { diagramType: "number_line";       data: NumberLineData }
-  | { diagramType: "fraction_bar";      data: FractionBarData }
-  | { diagramType: "array";             data: ArrayData }
-  | { diagramType: "bar_model";         data: BarModelData }
-  | { diagramType: "place_value_chart"; data: PlaceValueChartData }
-  | { diagramType: "coordinate_grid";   data: Record<string, unknown> }
-  | { diagramType: "none";              data: Record<string, unknown> };
+  | { diagramType: "number_line";           data: NumberLineData }
+  | { diagramType: "fraction_bar";          data: FractionBarData }
+  | { diagramType: "array";                 data: ArrayData }
+  | { diagramType: "bar_model";             data: BarModelData }
+  | { diagramType: "place_value_chart";     data: PlaceValueChartData }
+  | { diagramType: "animated_walkthrough";  data: AnimatedWalkthroughData }
+  | { diagramType: "concept_image";         data: ConceptImageData }
+  | { diagramType: "coordinate_grid";       data: Record<string, unknown> }
+  | { diagramType: "none";                  data: Record<string, unknown> };
 
 // ─── Ask MathAI ───────────────────────────────────────────────────────────────
 
@@ -407,6 +439,7 @@ export interface AskMathAIResponse {
   visualPlan?:   VisualPlan;
   followUp:      string;
   encouragement: string;
+  visualStrategy?: "diagram" | "animated_diagram" | "concept_image" | "none";
 }
 
 // ─── AI-generated practice questions ─────────────────────────────────────────
