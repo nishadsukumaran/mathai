@@ -313,17 +313,16 @@ function ResponseCard({ response }: { response: AskMathAIResponse }) {
     setVisualLoading(true);
     setVisualError(null);
     try {
-      const res = await clientPost("/tutor/generate-visual", {
+      const result = await clientPost<{ diagramType: string; data: any }>("/tutor/generate-visual", {
         imagePrompt: r.imagePrompt,
         conceptKey: r.conceptKey,
         altText: r.imagePrompt,
         caption: r.imagePrompt,
       });
-      const json = await res.json();
-      if (json.success) {
-        setVisualPlan(json.data);
+      if (result) {
+        setVisualPlan(result as any);
       } else {
-        setVisualError(json.error ?? "Failed to generate visual");
+        setVisualError("Failed to generate visual. Please try again.");
       }
     } catch {
       setVisualError("Failed to generate visual. Please try again.");
