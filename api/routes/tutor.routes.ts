@@ -14,6 +14,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { z }                   from "zod";
 import { askMathAIService }    from "../../ai/services/askMathAIService";
+import { generateConceptImage } from "../../ai/services/imageGenerationService";
 import { getProfile }          from "../services/profileService";
 import type { Grade, ExplanationStyle, LearningPace } from "@mathai/shared-types";
 
@@ -68,6 +69,34 @@ router.post("/ask", async (req: Request, res: Response, next: NextFunction) => {
         learningPace:              (profile.learningPace              ?? "standard") as LearningPace,
       } : undefined,
     });
+
+    // If AI chose concept_image, generate/cache the image
+    if (response.visualStrategy === "concept_image" && response.imagePrompt && response.conceptKey) {
+      const imageResult = await generateConceptImage({
+        imagePrompt: response.imagePrompt,
+        conceptKey: response.conceptKey,
+        grade: resolvedGrade,
+        altText: response.imagePrompt,
+        caption: response.imagePrompt,
+        userId,
+      });
+
+      if (imageResult) {
+        response.visualPlan = {
+          diagramType: "concept_image",
+          data: {
+            imageUrl: imageResult.imageUrl,
+            altText: imageResult.altText,
+            caption: imageResult.caption,
+            prompt: imageResult.prompt,
+            cached: imageResult.cached,
+          },
+        };
+      } else {
+        // Fallback: remove placeholder visual plan
+        response.visualPlan = undefined;
+      }
+    }
 
     res.json({ success: true, data: response });
   } catch (err) { next(err); }
