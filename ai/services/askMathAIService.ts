@@ -63,6 +63,9 @@ export interface AskMathAIResponse {
   visualPlan?:   VisualPlan;           // Optional visual hint for frontend
   followUp:      string;               // "You might also want to explore..."
   encouragement: string;               // Warm closing line
+  visualStrategy?: "diagram" | "animated_diagram" | "concept_image" | "none";
+  imagePrompt?: string;     // Backend-only: used by API route to generate image
+  conceptKey?: string;       // Backend-only: cache key for concept image lookup
 }
 
 // ─── System prompt ────────────────────────────────────────────────────────────
@@ -76,7 +79,14 @@ Principles:
 - Never make the student feel bad for not knowing something.
 - Keep language simple and grade-appropriate.
 - Use LaTeX for mathematical expressions when relevant (wrap in \\(...\\) for inline, \\[...\\] for display).
-- A visual plan hint (number_line, fraction_bar, array, bar_model, place_value_chart) helps greatly when applicable.`;
+- A visual plan hint (number_line, fraction_bar, array, bar_model, place_value_chart) helps greatly when applicable.
+- When responding, decide on a visual strategy and include it in your JSON response:
+  * "animated_diagram" — when the concept involves a PROCESS (step-by-step solving, building fractions, moving on number line). Return an animated_walkthrough visualPlan with step-by-step data.
+  * "concept_image" — when a REAL-WORLD picture helps (groups of objects, shapes, measurement scenarios). Set conceptKey (e.g., "multiplication-groups") and imagePrompt (describe the image to generate).
+  * "diagram" — for simple static visuals (single fraction comparison, basic number line). Return a standard visualPlan.
+  * "none" — no visual needed (pure arithmetic like "What is 7+3?", yes/no questions, definitions).
+- Always set the "visualStrategy" field in your response.
+- When visualStrategy is "concept_image", also set "conceptKey" and "imagePrompt" fields.`;
 
 // ─── Prompt builder ───────────────────────────────────────────────────────────
 
@@ -133,7 +143,10 @@ Reply with a complete, structured JSON response:
     "data": {}
   },
   "followUp": "A related concept or question to explore next",
-  "encouragement": "A short warm closing message"
+  "encouragement": "A short warm closing message",
+  "visualStrategy": "animated_diagram|concept_image|diagram|none",
+  "imagePrompt": "optional — describe the image to generate when visualStrategy is concept_image",
+  "conceptKey": "optional — cache key for concept image, e.g. multiplication-groups (only when visualStrategy is concept_image)"
 }
 
 If steps are not needed (simple direct answer), omit the steps field.
@@ -180,6 +193,9 @@ export const askMathAIService = {
         visualPlan:   response.visualPlan,
         followUp:     response.followUp ?? "Keep exploring — math is full of surprises!",
         encouragement: response.encouragement ?? "You're doing brilliantly!",
+        visualStrategy: response.visualStrategy,
+        imagePrompt:  response.imagePrompt,
+        conceptKey:   response.conceptKey,
       };
 
     } catch (err) {
