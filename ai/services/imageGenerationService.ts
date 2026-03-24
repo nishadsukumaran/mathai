@@ -173,33 +173,45 @@ export async function generateConceptImage(
 ): Promise<GenerateImageResult | null> {
   const prismaGrade = toPrismaGrade(req.grade);
 
-  // 1. Check cache
-  const cached = await prisma.conceptImage.findUnique({
-    where: {
-      conceptKey_grade: { conceptKey: req.conceptKey, grade: prismaGrade as any },
-    },
-  });
+  // 1. Check cache (graceful — skip if table doesn't exist yet)
+  try {
+    const cached = await prisma.conceptImage.findUnique({
+      where: {
+        conceptKey_grade: { conceptKey: req.conceptKey, grade: prismaGrade as any },
+      },
+    });
 
-  if (cached) {
-    return {
-      imageUrl: cached.imageUrl,
-      altText: cached.altText,
-      caption: cached.caption,
-      prompt: cached.prompt,
-      cached: true,
-    };
+    if (cached) {
+      return {
+        imageUrl: cached.imageUrl,
+        altText: cached.altText,
+        caption: cached.caption,
+        prompt: cached.prompt,
+        cached: true,
+      };
+    }
+  } catch (cacheErr) {
+    // Table may not exist if migration hasn't run — skip cache, proceed to generate
+    console.warn("[imageGen] Cache lookup failed (table may not exist):", (cacheErr as Error).message);
   }
 
-  // 2. Check rate limit
-  const withinLimit = await checkRateLimit(req.userId);
-  if (!withinLimit) {
-    console.warn(`[imageGen] Rate limit reached for user ${req.userId}`);
-    return null;
+  // 2. Check rate limit (graceful — skip if columns don't exist yet)
+  try {
+    const withinLimit = await checkRateLimit(req.userId);
+    if (!withinLimit) {
+      console.warn(`[imageGen] Rate limit reached for user ${req.userId}`);
+      return null;
+    }
+  } catch (rlErr) {
+    // Rate limit columns may not exist — skip check, allow generation
+    console.warn("[imageGen] Rate limit check failed (columns may not exist):", (rlErr as Error).message);
   }
 
   // 3. Generate — try Gemini first, fall back to Claude SVG
   const gateway = getGateway();
   const prompt = `Educational illustration for children (grade ${req.grade}): ${req.imagePrompt}. Simple, colorful, clear. White background. No text overlay on the image.`;
+
+  console.log(`[imageGen] Generating visual for "${req.conceptKey}" (${req.grade})`);
 
   let dataUrl = await tryGeminiImage(gateway, prompt);
 
@@ -209,11 +221,13 @@ export async function generateConceptImage(
   }
 
   if (!dataUrl) {
-    console.error("[imageGen] All generation methods failed");
+    console.error("[imageGen] All generation methods failed for:", req.conceptKey);
     return null;
   }
 
-  // 4. Cache in DB
+  console.log(`[imageGen] Successfully generated visual for "${req.conceptKey}"`);
+
+  // 4. Cache in DB (non-fatal if it fails)
   try {
     await prisma.conceptImage.create({
       data: {
@@ -226,7 +240,6 @@ export async function generateConceptImage(
       },
     });
   } catch (dbErr) {
-    // Cache write failure is non-fatal — image still returned
     console.warn("[imageGen] Cache write failed (image still returned):", (dbErr as Error).message);
   }
 
