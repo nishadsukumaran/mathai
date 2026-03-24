@@ -1,45 +1,39 @@
 /**
  * @module ai/services/imageGenerationService
  *
- * Generates educational concept images via Vercel AI Gateway.
+ * Generates educational concept images for visual explanations.
  * Returns base64 data URLs — no external storage needed.
  * Caches generated images as base64 in PostgreSQL to avoid regeneration.
  *
- * SMART MODEL ROUTING:
- *   Simple visuals (basic shapes, number concepts) → gemini-3.1-flash (cheapest)
- *   Complex visuals (multi-step diagrams, real-world scenes) → gemini-3.1-flash (still cheap, good quality)
- *   Fallback if Google unavailable → generates SVG via Anthropic Claude
+ * STRATEGY:
+ *   1. Try Gemini via AI Gateway (if AI_GATEWAY_API_KEY is set) → raster image
+ *   2. Fall back to SVG generation via the project's existing AI provider
+ *      (works with whatever AI_PROVIDER is configured — Anthropic, Gateway, etc.)
  *
- * Cache key: conceptKey + grade (one image per concept per grade level).
+ * Cache key: conceptKey + grade.
  * Rate limit: 10 generations per student per day.
- *
- * PREREQUISITE: Add Google as a provider in Vercel AI Gateway:
- *   vercel.com/dashboard → AI → your gateway → Providers → Add Google
- *   Get a free API key at aistudio.google.com/apikey
  */
 
 import { generateText } from "ai";
 import { createGateway } from "@ai-sdk/gateway";
+import { callAIModel } from "../ai_client";
 import { prisma } from "../../api/lib/prisma";
 
-// ─── Model routing ───────────────────────────────────────────────────────────
-// Gemini Flash is the sweet spot: cheap ($0.075/1M input tokens) + image output.
-// Falls back to Claude for SVG generation if Google provider isn't configured.
-
-const IMAGE_MODEL_PRIMARY   = "google/gemini-3.1-flash-image-preview";
-const FALLBACK_MODEL        = process.env["AI_MODEL_DEFAULT"] ?? "anthropic/claude-haiku-4.5";
+const IMAGE_MODEL_PRIMARY = "google/gemini-3.1-flash-image-preview";
 const MAX_DAILY_GENS = 10;
-const TIMEOUT_MS     = 25_000;
+const TIMEOUT_MS = 25_000;
 
-let _gateway: ReturnType<typeof createGateway> | null = null;
+// Singleton gateway — only created if AI_GATEWAY_API_KEY is available
+let _gateway: ReturnType<typeof createGateway> | null | undefined;
 
-function getGateway() {
-  if (_gateway) return _gateway;
+function getGateway(): ReturnType<typeof createGateway> | null {
+  if (_gateway !== undefined) return _gateway;
   const apiKey = process.env["AI_GATEWAY_API_KEY"];
-  const baseURL = process.env["AI_GATEWAY_BASE_URL"];
   if (!apiKey) {
-    throw new Error("[imageGen] AI_GATEWAY_API_KEY is not set.");
+    _gateway = null;
+    return null;
   }
+  const baseURL = process.env["AI_GATEWAY_BASE_URL"];
   _gateway = createGateway({ apiKey, ...(baseURL ? { baseURL } : {}) });
   return _gateway;
 }
@@ -54,7 +48,7 @@ interface GenerateImageRequest {
 }
 
 interface GenerateImageResult {
-  imageUrl: string;  // base64 data URL or SVG data URL
+  imageUrl: string;
   altText: string;
   caption: string;
   prompt: string;
@@ -96,12 +90,12 @@ async function checkRateLimit(userId: string): Promise<boolean> {
   return true;
 }
 
-// ─── Primary: Gemini image generation ────────────────────────────────────────
+// ─── Strategy 1: Gemini raster image (needs AI Gateway + Google provider) ────
 
-async function tryGeminiImage(
-  gateway: ReturnType<typeof createGateway>,
-  prompt: string,
-): Promise<string | null> {
+async function tryGeminiImage(prompt: string): Promise<string | null> {
+  const gateway = getGateway();
+  if (!gateway) return null; // No gateway key — skip
+
   try {
     const result = await generateText({
       model: gateway(IMAGE_MODEL_PRIMARY),
@@ -118,50 +112,49 @@ async function tryGeminiImage(
     const mimeType = imageFile.mimeType ?? "image/png";
     return `data:${mimeType};base64,${imageFile.base64}`;
   } catch (err) {
-    console.warn("[imageGen] Gemini failed, trying fallback:", (err as Error).message);
+    console.warn("[imageGen] Gemini failed:", (err as Error).message);
     return null;
   }
 }
 
-// ─── Fallback: Claude SVG generation ─────────────────────────────────────────
-// If Google provider isn't in the gateway, use Claude to generate an SVG.
-// SVGs are lightweight, render perfectly, and Claude is great at them.
+// ─── Strategy 2: SVG via existing AI provider (always available) ─────────────
+// Uses callAIModel which works with whatever AI_PROVIDER is configured.
 
-async function tryClaudeSvg(
-  gateway: ReturnType<typeof createGateway>,
-  prompt: string,
-): Promise<string | null> {
+async function trySvgFallback(prompt: string): Promise<string | null> {
   try {
-    const result = await generateText({
-      model: gateway(FALLBACK_MODEL),
+    const svg = await callAIModel(prompt, {
       system: `You are an educational illustrator. Generate a clean SVG image for children.
 Rules:
-- Output ONLY the SVG markup, nothing else. No markdown, no explanation.
+- Output ONLY the SVG markup, nothing else. No markdown, no explanation, no backticks.
 - Start with <svg and end with </svg>
 - Use viewBox="0 0 400 300" with width="400" height="300"
 - Use bright, friendly colors (blues, greens, oranges, purples)
-- Keep it simple — bold shapes, thick strokes, large text
-- Make it educational and clear
-- No external images or fonts`,
-      prompt,
-      maxOutputTokens: 2000,
+- Keep it simple — bold shapes, thick strokes, large labels
+- Make it educational and clear for the given grade level`,
+      maxTokens: 2000,
       temperature: 0.3,
-      abortSignal: AbortSignal.timeout(TIMEOUT_MS),
+      callSite: "imageGen.svgFallback",
     });
 
-    const svg = result.text.trim();
-    if (!svg.startsWith("<svg")) {
-      // Try to extract SVG from response
-      const match = svg.match(/<svg[\s\S]*<\/svg>/);
-      if (!match) return null;
-      const encoded = Buffer.from(match[0]).toString("base64");
-      return `data:image/svg+xml;base64,${encoded}`;
+    // Extract SVG from response (AI may wrap it in markdown)
+    const trimmed = svg.trim();
+    let svgContent: string;
+
+    if (trimmed.startsWith("<svg")) {
+      svgContent = trimmed;
+    } else {
+      const match = trimmed.match(/<svg[\s\S]*<\/svg>/);
+      if (!match) {
+        console.error("[imageGen] SVG fallback returned no valid SVG");
+        return null;
+      }
+      svgContent = match[0];
     }
 
-    const encoded = Buffer.from(svg).toString("base64");
+    const encoded = Buffer.from(svgContent).toString("base64");
     return `data:image/svg+xml;base64,${encoded}`;
   } catch (err) {
-    console.error("[imageGen] SVG fallback also failed:", (err as Error).message);
+    console.error("[imageGen] SVG fallback failed:", (err as Error).message);
     return null;
   }
 }
@@ -173,14 +166,13 @@ export async function generateConceptImage(
 ): Promise<GenerateImageResult | null> {
   const prismaGrade = toPrismaGrade(req.grade);
 
-  // 1. Check cache (graceful — skip if table doesn't exist yet)
+  // 1. Check cache (graceful — skip if table doesn't exist)
   try {
     const cached = await prisma.conceptImage.findUnique({
       where: {
         conceptKey_grade: { conceptKey: req.conceptKey, grade: prismaGrade as any },
       },
     });
-
     if (cached) {
       return {
         imageUrl: cached.imageUrl,
@@ -190,44 +182,40 @@ export async function generateConceptImage(
         cached: true,
       };
     }
-  } catch (cacheErr) {
-    // Table may not exist if migration hasn't run — skip cache, proceed to generate
-    console.warn("[imageGen] Cache lookup failed (table may not exist):", (cacheErr as Error).message);
+  } catch {
+    // Table may not exist — skip cache
   }
 
-  // 2. Check rate limit (graceful — skip if columns don't exist yet)
+  // 2. Check rate limit (graceful — skip if columns don't exist)
   try {
-    const withinLimit = await checkRateLimit(req.userId);
-    if (!withinLimit) {
+    const ok = await checkRateLimit(req.userId);
+    if (!ok) {
       console.warn(`[imageGen] Rate limit reached for user ${req.userId}`);
       return null;
     }
-  } catch (rlErr) {
-    // Rate limit columns may not exist — skip check, allow generation
-    console.warn("[imageGen] Rate limit check failed (columns may not exist):", (rlErr as Error).message);
+  } catch {
+    // Columns may not exist — allow generation
   }
 
-  // 3. Generate — try Gemini first, fall back to Claude SVG
-  const gateway = getGateway();
-  const prompt = `Educational illustration for children (grade ${req.grade}): ${req.imagePrompt}. Simple, colorful, clear. White background. No text overlay on the image.`;
-
+  // 3. Generate image
+  const prompt = `Educational illustration for children (grade ${req.grade}): ${req.imagePrompt}. Simple, colorful, clear. White background.`;
   console.log(`[imageGen] Generating visual for "${req.conceptKey}" (${req.grade})`);
 
-  let dataUrl = await tryGeminiImage(gateway, prompt);
-
+  // Try Gemini first (best quality), fall back to SVG (always works)
+  let dataUrl = await tryGeminiImage(prompt);
   if (!dataUrl) {
-    console.log("[imageGen] Gemini unavailable, falling back to Claude SVG");
-    dataUrl = await tryClaudeSvg(gateway, prompt);
+    console.log("[imageGen] Falling back to SVG generation");
+    dataUrl = await trySvgFallback(prompt);
   }
 
   if (!dataUrl) {
-    console.error("[imageGen] All generation methods failed for:", req.conceptKey);
+    console.error("[imageGen] All methods failed for:", req.conceptKey);
     return null;
   }
 
-  console.log(`[imageGen] Successfully generated visual for "${req.conceptKey}"`);
+  console.log(`[imageGen] Success for "${req.conceptKey}"`);
 
-  // 4. Cache in DB (non-fatal if it fails)
+  // 4. Cache (non-fatal)
   try {
     await prisma.conceptImage.create({
       data: {
@@ -239,8 +227,8 @@ export async function generateConceptImage(
         caption: req.caption,
       },
     });
-  } catch (dbErr) {
-    console.warn("[imageGen] Cache write failed (image still returned):", (dbErr as Error).message);
+  } catch {
+    // Cache write failure is fine — image still returned
   }
 
   return {
