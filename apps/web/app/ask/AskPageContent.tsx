@@ -14,14 +14,44 @@ import { useProfile }        from "@/hooks/use-profile";
 import { VisualRenderer }    from "@/components/mathai/visual";
 import type { AskMathAIResponse } from "@/types";
 
-const SUGGESTIONS = [
+const ALL_SUGGESTIONS = [
+  // Numbers & Operations
   "What are fractions and how do they work?",
   "Explain long division step by step",
-  "How do I find the area of a rectangle?",
   "What is the difference between multiplication and division?",
   "How do percentages work?",
   "Explain place value with an example",
+  "How do I add and subtract decimals?",
+  "What are prime numbers?",
+  "How does rounding work?",
+  // Geometry & Measurement
+  "How do I find the area of a rectangle?",
+  "What is the volume of a cube?",
+  "How do I calculate the perimeter of a shape?",
+  "What are angles and how do I measure them?",
+  "What is the difference between area and perimeter?",
+  "How do I find the area of a triangle?",
+  // Algebra & Patterns
+  "What is an equation and how do I solve one?",
+  "How do patterns work in maths?",
+  "What does 'variable' mean in maths?",
+  "How do I solve word problems?",
+  // Data & Probability
+  "What is the mean, median, and mode?",
+  "How does probability work?",
+  "How do I read a bar graph?",
+  // Fun / Conceptual
+  "Why is zero important in maths?",
+  "What is the biggest number that exists?",
+  "How is maths used in cooking?",
+  "Why do we need negative numbers?",
 ];
+
+/** Pick N random suggestions, different each time the component mounts */
+function pickSuggestions(count: number): string[] {
+  const shuffled = [...ALL_SUGGESTIONS].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count);
+}
 
 type ConversationItem = {
   id:       string;
@@ -45,6 +75,9 @@ export default function AskPageContent({ initialQuestion = "" }: AskPageContentP
   const autoSubmittedRef = useRef(false);
 
   const grade = profile?.grade ?? "G4";
+
+  // Pick 6 random suggestions on mount — changes each time user opens Ask page
+  const [suggestions] = useState(() => pickSuggestions(6));
 
   async function handleSubmit(overrideQ?: string) {
     const q = (overrideQ !== undefined ? overrideQ : question).trim();
@@ -171,7 +204,7 @@ export default function AskPageContent({ initialQuestion = "" }: AskPageContentP
                 </p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left max-w-xl mx-auto">
-                {SUGGESTIONS.map((s) => (
+                {suggestions.map((s) => (
                   <button
                     key={s}
                     onClick={() => void handleSubmit(s)}
