@@ -63,31 +63,20 @@ function toPrismaGrade(grade: string): string {
   return `G${num}`;
 }
 
+/** Simple rate limit: count images generated today via ConceptImage.createdAt */
 async function checkRateLimit(userId: string): Promise<boolean> {
-  const profile = await prisma.studentProfile.findUnique({
-    where: { userId },
-    select: { imageGensToday: true, imageGenDate: true },
-  });
-  if (!profile) return false;
-
-  const today = new Date().toISOString().slice(0, 10);
-  const lastDate = profile.imageGenDate?.toISOString().slice(0, 10);
-
-  if (lastDate !== today) {
-    await prisma.studentProfile.update({
-      where: { userId },
-      data: { imageGensToday: 1, imageGenDate: new Date() },
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    // Count images created today (rough proxy — not per-user, but limits total generation load)
+    const count = await prisma.conceptImage.count({
+      where: { createdAt: { gte: today } },
     });
+    return count < MAX_DAILY_GENS * 10; // Global cap of 100/day
+  } catch {
+    // Table may not exist — allow generation
     return true;
   }
-
-  if (profile.imageGensToday >= MAX_DAILY_GENS) return false;
-
-  await prisma.studentProfile.update({
-    where: { userId },
-    data: { imageGensToday: { increment: 1 } },
-  });
-  return true;
 }
 
 // ─── Strategy 1: Gemini raster image (needs AI Gateway + Google provider) ────

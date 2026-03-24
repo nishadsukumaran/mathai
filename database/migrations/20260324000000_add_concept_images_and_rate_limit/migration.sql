@@ -1,9 +1,5 @@
--- AlterTable: add image generation rate limit fields to student_profiles
-ALTER TABLE "student_profiles" ADD COLUMN "imageGensToday" INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE "student_profiles" ADD COLUMN "imageGenDate" TIMESTAMP(3);
-
 -- CreateTable: concept_images cache
-CREATE TABLE "concept_images" (
+CREATE TABLE IF NOT EXISTS "concept_images" (
     "id" TEXT NOT NULL,
     "conceptKey" TEXT NOT NULL,
     "grade" "Grade" NOT NULL,
@@ -17,7 +13,7 @@ CREATE TABLE "concept_images" (
 );
 
 -- CreateIndex
-CREATE INDEX "concept_images_conceptKey_idx" ON "concept_images"("conceptKey");
+CREATE INDEX IF NOT EXISTS "concept_images_conceptKey_idx" ON "concept_images"("conceptKey");
 
 -- CreateUniqueIndex
-CREATE UNIQUE INDEX "concept_images_conceptKey_grade_key" ON "concept_images"("conceptKey", "grade");
+CREATE UNIQUE INDEX IF NOT EXISTS "concept_images_conceptKey_grade_key" ON "concept_images"("conceptKey", "grade");
