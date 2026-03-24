@@ -14,42 +14,99 @@ import { useProfile }        from "@/hooks/use-profile";
 import { VisualRenderer }    from "@/components/mathai/visual";
 import type { AskMathAIResponse } from "@/types";
 
-const ALL_SUGGESTIONS = [
-  // Numbers & Operations
-  "What are fractions and how do they work?",
-  "Explain long division step by step",
-  "What is the difference between multiplication and division?",
-  "How do percentages work?",
-  "Explain place value with an example",
-  "How do I add and subtract decimals?",
-  "What are prime numbers?",
-  "How does rounding work?",
-  // Geometry & Measurement
-  "How do I find the area of a rectangle?",
-  "What is the volume of a cube?",
-  "How do I calculate the perimeter of a shape?",
-  "What are angles and how do I measure them?",
-  "What is the difference between area and perimeter?",
-  "How do I find the area of a triangle?",
-  // Algebra & Patterns
-  "What is an equation and how do I solve one?",
-  "How do patterns work in maths?",
-  "What does 'variable' mean in maths?",
-  "How do I solve word problems?",
-  // Data & Probability
-  "What is the mean, median, and mode?",
-  "How does probability work?",
-  "How do I read a bar graph?",
-  // Fun / Conceptual
-  "Why is zero important in maths?",
-  "What is the biggest number that exists?",
-  "How is maths used in cooking?",
-  "Why do we need negative numbers?",
-];
+// ─── Grade-based suggestions aligned to Cambridge Primary/Lower Secondary ────
+// Each grade maps to Cambridge stage topics so students see relevant questions.
 
-/** Pick N random suggestions, different each time the component mounts */
-function pickSuggestions(count: number): string[] {
-  const shuffled = [...ALL_SUGGESTIONS].sort(() => Math.random() - 0.5);
+const SUGGESTIONS_BY_GRADE: Record<string, string[]> = {
+  G1: [
+    "How do I count to 100?",
+    "What are tens and ones?",
+    "How do I add numbers to 20?",
+    "What are number bonds to 10?",
+    "How do I take away numbers?",
+    "What are 2D shapes like circles and squares?",
+    "How do I compare which number is bigger?",
+    "How do I use a number line?",
+  ],
+  G2: [
+    "How do I add two-digit numbers?",
+    "What is subtraction with regrouping?",
+    "How do I count in 2s, 5s, and 10s?",
+    "What are halves and quarters?",
+    "How do I tell the time on a clock?",
+    "What are 3D shapes?",
+    "How do I measure length in centimetres?",
+    "How do I solve simple word problems?",
+  ],
+  G3: [
+    "How do I multiply numbers?",
+    "What are multiplication tables?",
+    "How does division work?",
+    "What are fractions like 1/2, 1/3, and 1/4?",
+    "How do I measure in metres and kilometres?",
+    "What are right angles?",
+    "How do I read a bar chart?",
+    "How do I round numbers to the nearest 10?",
+  ],
+  G4: [
+    "How do I do long multiplication?",
+    "What are equivalent fractions?",
+    "How do I add and subtract fractions?",
+    "What are decimal numbers?",
+    "How do I find the perimeter of a shape?",
+    "What are lines of symmetry?",
+    "How do I read and plot coordinates?",
+    "What are factors and multiples?",
+  ],
+  G5: [
+    "How do I multiply and divide decimals?",
+    "What are improper fractions and mixed numbers?",
+    "How do I calculate the area of a rectangle?",
+    "What are percentages and how do they work?",
+    "How do I convert between fractions, decimals, and percentages?",
+    "What are angles in a triangle?",
+    "How do I calculate the mean of a set of numbers?",
+    "What are prime numbers and composite numbers?",
+  ],
+  G6: [
+    "How do I divide fractions?",
+    "What is ratio and proportion?",
+    "How do I calculate the area of a triangle?",
+    "What is the order of operations (BODMAS)?",
+    "How do I work with negative numbers?",
+    "What are algebraic expressions?",
+    "How do I calculate the volume of a cuboid?",
+    "How does probability work with dice and coins?",
+  ],
+  G7: [
+    "How do I solve linear equations?",
+    "What are integers and how do I add/subtract them?",
+    "How do I calculate with percentages (increase/decrease)?",
+    "What are the properties of parallel and perpendicular lines?",
+    "How do I plot and interpret line graphs?",
+    "What is the circumference of a circle?",
+    "How do I simplify algebraic expressions?",
+    "What is the difference between theoretical and experimental probability?",
+  ],
+  G8: [
+    "How do I solve simultaneous equations?",
+    "What are indices and powers?",
+    "How do I factorise algebraic expressions?",
+    "What is Pythagoras' theorem?",
+    "How do I calculate the area of a circle?",
+    "What are inequalities and how do I solve them?",
+    "How do I construct and interpret pie charts?",
+    "What are standard form and scientific notation?",
+  ],
+};
+
+// Fallback for grades not in the map
+const FALLBACK_SUGGESTIONS = SUGGESTIONS_BY_GRADE["G4"];
+
+/** Pick N random suggestions based on student's grade, fresh each mount */
+function pickSuggestions(grade: string, count: number): string[] {
+  const pool = SUGGESTIONS_BY_GRADE[grade] ?? FALLBACK_SUGGESTIONS;
+  const shuffled = [...pool].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, count);
 }
 
@@ -76,8 +133,11 @@ export default function AskPageContent({ initialQuestion = "" }: AskPageContentP
 
   const grade = profile?.grade ?? "G4";
 
-  // Pick 6 random suggestions on mount — changes each time user opens Ask page
-  const [suggestions] = useState(() => pickSuggestions(6));
+  // Pick 6 random suggestions based on grade — refreshes when grade changes
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  useEffect(() => {
+    setSuggestions(pickSuggestions(grade, 6));
+  }, [grade]);
 
   async function handleSubmit(overrideQ?: string) {
     const q = (overrideQ !== undefined ? overrideQ : question).trim();
