@@ -204,10 +204,14 @@ export async function generateConceptImage(
 
   console.log(`[imageGen] Success for "${req.conceptKey}"`);
 
-  // 4. Cache (non-fatal)
+  // 4. Cache with upsert (non-fatal — handles duplicates and missing table)
   try {
-    await prisma.conceptImage.create({
-      data: {
+    await prisma.conceptImage.upsert({
+      where: {
+        conceptKey_grade: { conceptKey: req.conceptKey, grade: prismaGrade as any },
+      },
+      update: { imageUrl: dataUrl, altText: req.altText, caption: req.caption, prompt },
+      create: {
         conceptKey: req.conceptKey,
         grade: prismaGrade as any,
         prompt,
