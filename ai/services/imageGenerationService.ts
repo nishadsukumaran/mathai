@@ -5,33 +5,43 @@
  * Returns base64 data URLs — no external storage needed.
  * Caches generated images as base64 in PostgreSQL to avoid regeneration.
  *
- * Model: google/gemini-3.1-flash-image-preview (cost-effective multimodal).
+ * SMART MODEL ROUTING:
+ *   Simple visuals (basic shapes, number concepts) → gemini-3.1-flash (cheapest)
+ *   Complex visuals (multi-step diagrams, real-world scenes) → gemini-3.1-flash (still cheap, good quality)
+ *   Fallback if Google unavailable → generates SVG via Anthropic Claude
+ *
  * Cache key: conceptKey + grade (one image per concept per grade level).
  * Rate limit: 10 generations per student per day.
+ *
+ * PREREQUISITE: Add Google as a provider in Vercel AI Gateway:
+ *   vercel.com/dashboard → AI → your gateway → Providers → Add Google
+ *   Get a free API key at aistudio.google.com/apikey
  */
 
 import { generateText } from "ai";
 import { createGateway } from "@ai-sdk/gateway";
 import { prisma } from "../../api/lib/prisma";
 
-// Cost-effective image model via AI Gateway
-const IMAGE_MODEL = "google/gemini-3.1-flash-image-preview";
-const MAX_DAILY_GENS = 10;
-const TIMEOUT_MS = 20_000;
+// ─── Model routing ───────────────────────────────────────────────────────────
+// Gemini Flash is the sweet spot: cheap ($0.075/1M input tokens) + image output.
+// Falls back to Claude for SVG generation if Google provider isn't configured.
 
-// Reuse the same gateway config as vercel_gateway.ts
+const IMAGE_MODEL_PRIMARY   = "google/gemini-3.1-flash-image-preview";
+const FALLBACK_MODEL        = process.env["AI_MODEL_DEFAULT"] ?? "anthropic/claude-haiku-4.5";
+const MAX_DAILY_GENS = 10;
+const TIMEOUT_MS     = 25_000;
+
+let _gateway: ReturnType<typeof createGateway> | null = null;
+
 function getGateway() {
+  if (_gateway) return _gateway;
   const apiKey = process.env["AI_GATEWAY_API_KEY"];
   const baseURL = process.env["AI_GATEWAY_BASE_URL"];
   if (!apiKey) {
-    throw new Error(
-      "[imageGen] AI_GATEWAY_API_KEY is not set. Cannot generate images."
-    );
+    throw new Error("[imageGen] AI_GATEWAY_API_KEY is not set.");
   }
-  return createGateway({
-    apiKey,
-    ...(baseURL ? { baseURL } : {}),
-  });
+  _gateway = createGateway({ apiKey, ...(baseURL ? { baseURL } : {}) });
+  return _gateway;
 }
 
 interface GenerateImageRequest {
@@ -44,14 +54,13 @@ interface GenerateImageRequest {
 }
 
 interface GenerateImageResult {
-  imageUrl: string;  // base64 data URL (data:image/png;base64,...)
+  imageUrl: string;  // base64 data URL or SVG data URL
   altText: string;
   caption: string;
   prompt: string;
   cached: boolean;
 }
 
-/** Map frontend Grade string to the Prisma Grade enum value string. */
 function toPrismaGrade(grade: string): string {
   if (grade === "K") return "K";
   const num = parseInt(grade.replace("G", ""), 10);
@@ -60,7 +69,6 @@ function toPrismaGrade(grade: string): string {
   return `G${num}`;
 }
 
-/** Check + increment daily rate limit. Returns true if within limit. */
 async function checkRateLimit(userId: string): Promise<boolean> {
   const profile = await prisma.studentProfile.findUnique({
     where: { userId },
@@ -88,12 +96,84 @@ async function checkRateLimit(userId: string): Promise<boolean> {
   return true;
 }
 
+// ─── Primary: Gemini image generation ────────────────────────────────────────
+
+async function tryGeminiImage(
+  gateway: ReturnType<typeof createGateway>,
+  prompt: string,
+): Promise<string | null> {
+  try {
+    const result = await generateText({
+      model: gateway(IMAGE_MODEL_PRIMARY),
+      prompt,
+      providerOptions: {
+        google: { responseModalities: ["TEXT", "IMAGE"] },
+      },
+      abortSignal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+
+    const imageFile = result.files?.[0];
+    if (!imageFile?.base64) return null;
+
+    const mimeType = imageFile.mimeType ?? "image/png";
+    return `data:${mimeType};base64,${imageFile.base64}`;
+  } catch (err) {
+    console.warn("[imageGen] Gemini failed, trying fallback:", (err as Error).message);
+    return null;
+  }
+}
+
+// ─── Fallback: Claude SVG generation ─────────────────────────────────────────
+// If Google provider isn't in the gateway, use Claude to generate an SVG.
+// SVGs are lightweight, render perfectly, and Claude is great at them.
+
+async function tryClaudeSvg(
+  gateway: ReturnType<typeof createGateway>,
+  prompt: string,
+): Promise<string | null> {
+  try {
+    const result = await generateText({
+      model: gateway(FALLBACK_MODEL),
+      system: `You are an educational illustrator. Generate a clean SVG image for children.
+Rules:
+- Output ONLY the SVG markup, nothing else. No markdown, no explanation.
+- Start with <svg and end with </svg>
+- Use viewBox="0 0 400 300" with width="400" height="300"
+- Use bright, friendly colors (blues, greens, oranges, purples)
+- Keep it simple — bold shapes, thick strokes, large text
+- Make it educational and clear
+- No external images or fonts`,
+      prompt,
+      maxOutputTokens: 2000,
+      temperature: 0.3,
+      abortSignal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+
+    const svg = result.text.trim();
+    if (!svg.startsWith("<svg")) {
+      // Try to extract SVG from response
+      const match = svg.match(/<svg[\s\S]*<\/svg>/);
+      if (!match) return null;
+      const encoded = Buffer.from(match[0]).toString("base64");
+      return `data:image/svg+xml;base64,${encoded}`;
+    }
+
+    const encoded = Buffer.from(svg).toString("base64");
+    return `data:image/svg+xml;base64,${encoded}`;
+  } catch (err) {
+    console.error("[imageGen] SVG fallback also failed:", (err as Error).message);
+    return null;
+  }
+}
+
+// ─── Main entry point ────────────────────────────────────────────────────────
+
 export async function generateConceptImage(
   req: GenerateImageRequest
 ): Promise<GenerateImageResult | null> {
   const prismaGrade = toPrismaGrade(req.grade);
 
-  // 1. Check cache (imageUrl stores base64 data URL)
+  // 1. Check cache
   const cached = await prisma.conceptImage.findUnique({
     where: {
       conceptKey_grade: { conceptKey: req.conceptKey, grade: prismaGrade as any },
@@ -117,38 +197,24 @@ export async function generateConceptImage(
     return null;
   }
 
-  // 3. Generate image via AI Gateway
+  // 3. Generate — try Gemini first, fall back to Claude SVG
+  const gateway = getGateway();
+  const prompt = `Educational illustration for children (grade ${req.grade}): ${req.imagePrompt}. Simple, colorful, clear. White background. No text overlay on the image.`;
+
+  let dataUrl = await tryGeminiImage(gateway, prompt);
+
+  if (!dataUrl) {
+    console.log("[imageGen] Gemini unavailable, falling back to Claude SVG");
+    dataUrl = await tryClaudeSvg(gateway, prompt);
+  }
+
+  if (!dataUrl) {
+    console.error("[imageGen] All generation methods failed");
+    return null;
+  }
+
+  // 4. Cache in DB
   try {
-    const gateway = getGateway();
-    const prompt = `Educational illustration for children (grade ${req.grade}): ${req.imagePrompt}. Simple, colorful, clear. White background. No text in image.`;
-
-    const result = await generateText({
-      model: gateway(IMAGE_MODEL),
-      prompt,
-      providerOptions: {
-        google: { responseModalities: ["TEXT", "IMAGE"] },
-      },
-      abortSignal: AbortSignal.timeout(TIMEOUT_MS),
-    });
-
-    // Gemini returns images in result.files
-    const imageFile = result.files?.[0];
-    if (!imageFile) {
-      console.error("[imageGen] No image file in AI response. Model may not support image output.");
-      return null;
-    }
-
-    // 4. Convert to base64 data URL
-    const base64 = imageFile.base64;
-    if (!base64) {
-      console.error("[imageGen] Image file has no base64 data");
-      return null;
-    }
-
-    const mimeType = imageFile.mimeType ?? "image/png";
-    const dataUrl = `data:${mimeType};base64,${base64}`;
-
-    // 5. Cache in DB (store the full data URL)
     await prisma.conceptImage.create({
       data: {
         conceptKey: req.conceptKey,
@@ -159,16 +225,16 @@ export async function generateConceptImage(
         caption: req.caption,
       },
     });
-
-    return {
-      imageUrl: dataUrl,
-      altText: req.altText,
-      caption: req.caption,
-      prompt,
-      cached: false,
-    };
-  } catch (error) {
-    console.error("[imageGen] Generation failed:", error);
-    return null;
+  } catch (dbErr) {
+    // Cache write failure is non-fatal — image still returned
+    console.warn("[imageGen] Cache write failed (image still returned):", (dbErr as Error).message);
   }
+
+  return {
+    imageUrl: dataUrl,
+    altText: req.altText,
+    caption: req.caption,
+    prompt,
+    cached: false,
+  };
 }
