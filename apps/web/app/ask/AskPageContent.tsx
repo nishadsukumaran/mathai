@@ -101,11 +101,11 @@ const SUGGESTIONS_BY_GRADE: Record<string, string[]> = {
 };
 
 // Fallback for grades not in the map
-const FALLBACK_SUGGESTIONS = SUGGESTIONS_BY_GRADE["G4"];
+const FALLBACK_SUGGESTIONS: string[] = SUGGESTIONS_BY_GRADE["G4"] ?? [];
 
 /** Pick N random suggestions based on student's grade, fresh each mount */
 function pickSuggestions(grade: string, count: number): string[] {
-  const pool = SUGGESTIONS_BY_GRADE[grade] ?? FALLBACK_SUGGESTIONS;
+  const pool: string[] = SUGGESTIONS_BY_GRADE[grade] ?? FALLBACK_SUGGESTIONS;
   const shuffled = [...pool].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, count);
 }
