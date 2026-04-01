@@ -36,6 +36,20 @@ import { getMasteredTopicNamesForGrade } from "./curriculumService";
 import { learningMetrics }             from "../../services/analytics/learning_metrics";
 import { NotFoundError, ValidationError } from "../middlewares/error.middleware";
 import { evaluateAndUpdatePersonality, getPetForUser } from "./petService";
+import { decideSessionNextStep }                       from "./sessionAdaptationService";
+import {
+  createDifficultyState,
+  resolveNextDifficulty,
+  getNextFromPool,
+  advancePoolIndex,
+  populatePool,
+  poolNeedsGeneration,
+  POOL_TO_ENGINE_DIFFICULTY,
+  ENGINE_TO_POOL_DIFFICULTY,
+  type DifficultyState,
+  type PoolDifficulty,
+  type QuestionPoolEntry,
+} from "./questionPoolManager";
 import { getTopicById, getCambridgeObjective } from "../../curriculum/topic_tree";
 import { PET_CATALOG } from "../../services/gamification/pet_personality_engine";
 
@@ -178,6 +192,23 @@ export async function startSession(
   });
   const sessionId = dbRow?.id ?? `session-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
+  // Initialize the adaptive difficulty pool from the generated questions
+  const poolEntries: QuestionPoolEntry[] = questions.map((q) => ({
+    id:            q.id,
+    type:          q.type,
+    prompt:        q.prompt,
+    options:       q.options,
+    correctAnswer: q.correctAnswer,
+    explanation:   q.explanation ?? "",
+    difficulty:    q.difficulty,
+    grade:         q.grade as string,
+    conceptTags:   q.conceptTags ?? [],
+    xpReward:      q.xpReward,
+    topicId,
+  }));
+  const startingPool = ENGINE_TO_POOL_DIFFICULTY[difficulty ?? Difficulty.Intermediate] ?? "medium";
+  const difficultyState = createDifficultyState(poolEntries, startingPool);
+
   const session: ActivePracticeSession = {
     id:              sessionId,
     userId,
@@ -193,6 +224,7 @@ export async function startSession(
     xpEarned:        0,
     accuracyPercent: 0,
     difficulty:      difficulty ?? Difficulty.Intermediate,
+    difficultyState,
   };
 
   ACTIVE_SESSIONS.set(sessionId, session);
@@ -524,6 +556,41 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
   else if (sessionComplete) nextAction = "session_complete";
   else if (!isCorrect && hintsUsed === 0) nextAction = "hint_available";
 
+  // 11. Session Adaptation Engine — decide what should happen next in the session
+  const sessionAdaptation = decideSessionNextStep(
+    {
+      topicId:        session.topicId,
+      totalQuestions:  session.questions.length,
+      currentIndex:   session.currentIndex,
+      responses:      session.responses.map((r) => ({
+        questionId:        r.questionId,
+        isCorrect:         r.isCorrect,
+        attemptCount:      r.attemptCount,
+        hintsUsed:         r.hintsUsed ?? 0,
+        timeSpentSeconds:  r.timeSpentSeconds,
+        misconceptionTag:  r.misconceptionTag,
+        confidenceBefore:  r.confidenceBefore,
+      })),
+      sessionComplete,
+    },
+    {
+      questionId:        questionId,
+      isCorrect,
+      attemptCount,
+      hintsUsed,
+      timeSpentSeconds,
+      misconceptionTag:  misconceptionTag === MisconceptionCategory.None ? undefined : misconceptionTag,
+      confidenceBefore:  params.confidenceBefore,
+    },
+  );
+
+  // Override encouragement with the adaptation engine's message when it has
+  // a specific insight (struggle recovery, momentum, etc.)
+  const adaptiveEncouragement =
+    sessionAdaptation.action !== "next_question"
+      ? sessionAdaptation.encouragement
+      : encouragement;
+
   return {
     isCorrect,
     correctAnswer:    question.correctAnswer,
@@ -531,13 +598,14 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
     misconceptionTag: misconceptionTag === MisconceptionCategory.None
       ? undefined
       : misconceptionTag,
-    encouragement,
+    encouragement: adaptiveEncouragement,
     nextAction,
     levelUp: levelUp
       ? { newLevel: levelUp.level, title: levelUp.label ?? "" }
       : undefined,
     sessionComplete,
     masteryUpdate,
+    sessionAdaptation,
   };
 }
 
@@ -555,6 +623,110 @@ export async function getNextQuestion(sessionId: string): Promise<PracticeQuesti
  */
 export async function getTutorHelp(request: TutorHelpRequest): Promise<TutorHelpResponse> {
   return tutorService.handleHelpRequest(request);
+}
+
+// ─── Adaptive Question Selection ─────────────────────────────────────────────
+
+/**
+ * Generate questions for a specific difficulty tier on-demand.
+ * Called when the adaptation engine requests a difficulty not yet in the pool.
+ * Returns the questions (also populates the pool in the session's difficultyState).
+ */
+async function generatePoolForDifficulty(
+  session: ActivePracticeSession,
+  targetDifficulty: PoolDifficulty,
+): Promise<void> {
+  const ds = session.difficultyState;
+  if (!ds || !poolNeedsGeneration(ds, targetDifficulty)) return;
+
+  const engineDifficulty = POOL_TO_ENGINE_DIFFICULTY[targetDifficulty];
+  const staticTopicEntry = getTopicById(session.topicId);
+  const topicName = staticTopicEntry?.name
+    ?? session.topicId.replace(/^g\d+-/, "").replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  const cambridgeObjective = getCambridgeObjective(session.topicId) || undefined;
+
+  try {
+    const aiQuestions = await questionGeneratorService.generate({
+      topicId:            session.topicId,
+      topicName,
+      grade:              session.grade as import("@mathai/shared-types").Grade,
+      difficulty:         engineDifficulty,
+      mode:               session.mode as import("@mathai/shared-types").PracticeMode,
+      questionCount:      5,
+      cambridgeObjective,
+    });
+
+    const poolEntries: QuestionPoolEntry[] = aiQuestions.map((q) => ({
+      id:            q.id,
+      type:          q.type,
+      prompt:        q.prompt,
+      options:       q.options,
+      correctAnswer: q.correctAnswer,
+      explanation:   "",
+      difficulty:    q.difficulty as Difficulty,
+      grade:         session.grade as string,
+      conceptTags:   q.conceptTags,
+      xpReward:      q.xpReward,
+      topicId:       session.topicId,
+    }));
+
+    populatePool(ds, targetDifficulty, poolEntries);
+  } catch (err) {
+    console.warn(`[practiceService] On-demand ${targetDifficulty} generation failed:`, (err as Error).message);
+    // Pool stays empty — fallback to medium handled by getNextFromPool
+  }
+}
+
+/**
+ * Select the next question using the adaptive difficulty pool.
+ * Maps the adaptation engine's recommendation to an actual difficulty tier,
+ * generates questions on-demand if needed, and returns the next question.
+ *
+ * Falls back to the linear question list if difficultyState is not initialized.
+ */
+export async function getNextAdaptiveQuestion(
+  sessionId: string,
+  adaptAction: import("@mathai/shared-types").SessionAdaptiveAction,
+): Promise<PracticeQuestion | null> {
+  const session = ACTIVE_SESSIONS.get(sessionId);
+  if (!session) throw new NotFoundError("PracticeSession", sessionId);
+
+  const ds = session.difficultyState;
+
+  // No pool — fall back to linear question list
+  if (!ds) {
+    return session.questions[session.currentIndex] ?? null;
+  }
+
+  // Resolve the target difficulty from the adaptation action
+  const targetDifficulty = resolveNextDifficulty(ds, adaptAction);
+
+  // Generate on-demand if the target pool is empty
+  if (poolNeedsGeneration(ds, targetDifficulty)) {
+    await generatePoolForDifficulty(session, targetDifficulty);
+  }
+
+  // Fetch from pool
+  const { question, fromDifficulty } = getNextFromPool(ds, targetDifficulty);
+  if (!question) return null;
+
+  // Advance the pool index
+  advancePoolIndex(ds, fromDifficulty);
+
+  // Map pool entry back to PracticeQuestion
+  return {
+    id:            question.id,
+    topicId:       question.topicId,
+    type:          question.type as import("@/types").QuestionType,
+    prompt:        question.prompt,
+    options:       question.options,
+    correctAnswer: question.correctAnswer,
+    explanation:   question.explanation ?? "",
+    difficulty:    question.difficulty,
+    grade:         session.grade,
+    conceptTags:   question.conceptTags,
+    xpReward:      question.xpReward,
+  } as PracticeQuestion;
 }
 
 // ─── Private Helpers ──────────────────────────────────────────────────────────

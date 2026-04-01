@@ -25,6 +25,8 @@
 
 import { callAIModelJSON } from "../ai_client";
 import { studentMemoryService, type MemorySnapshot } from "./studentMemoryService";
+import { getVisualExplanation, isValidPlan }         from "./visualExplanationEngine";
+import { verifyAlignment }                           from "./visualExplanationEngine/alignmentVerifier";
 import type { Grade, VisualPlan } from "@mathai/shared-types";
 
 // ─── Input / Output types ──────────────────────────────────────────────────────
@@ -66,6 +68,8 @@ export interface AskMathAIResponse {
   visualStrategy?: "diagram" | "animated_diagram" | "concept_image" | "none";
   imagePrompt?: string;     // Backend-only: used by API route to generate image
   conceptKey?: string;       // Backend-only: cache key for concept image lookup
+  /** Structured math understanding — used by the Visual Plan Builder for precise visuals */
+  mathData?: import("@mathai/shared-types").MathData;
 }
 
 // ─── System prompt ────────────────────────────────────────────────────────────
@@ -144,6 +148,16 @@ Reply with a complete, structured JSON response:
     "solution": "Full step-by-step solution written out",
     "keyInsight": "The most important thing to understand — one sentence"
   },
+  "mathData": {
+    "type": "addition|subtraction|multiplication|division|fraction_addition|fraction_subtraction|fraction_equivalence|fraction_comparison|place_value|word_problem|equation|comparison",
+    "values": [3, 5],
+    "fractions": [{"numerator": 1, "denominator": 4}],
+    "result": 8,
+    "steps": ["3 + 5 = 8"],
+    "structure": {"groups": 3, "itemsPerGroup": 4, "total": 12},
+    "equation": {"lhs": "x + 3", "rhs": "10", "variable": "x", "solution": "7"},
+    "wordProblem": {"known": [{"label": "apples", "value": 15}], "unknown": {"label": "total"}, "operation": "addition"}
+  },
   "visualPlan": {
     "diagramType": "number_line|fraction_bar|array|bar_model|place_value_chart|none",
     "data": {}
@@ -155,8 +169,17 @@ Reply with a complete, structured JSON response:
   "conceptKey": "optional — cache key for concept image, e.g. multiplication-groups (only when visualStrategy is concept_image)"
 }
 
+MATHDATA RULES (important):
+- mathData captures the MATH STRUCTURE of the problem, not the visual.
+- Only include fields that apply. For "3 + 5": type="addition", values=[3,5], result=8.
+- For fractions: include fractions array. For equations: include equation object. For word problems: include wordProblem object.
+- For multiplication "3 × 4": type="multiplication", values=[3,4], result=12, structure={groups:3, itemsPerGroup:4, total:12}.
+- For place value: type="place_value", values=[345] (the number being analysed).
+- steps should be compact solving expressions, NOT prose (e.g. ["x + 3 = 10", "x = 7"]).
+- Keep mathData minimal — only include what's needed to understand the problem structure.
+
 If steps are not needed (simple direct answer), omit the steps field.
-Always include example and encouragement.
+Always include example, encouragement, and mathData.
 Return ONLY the JSON object — no markdown, no commentary.`;
 }
 
@@ -179,29 +202,90 @@ export const askMathAIService = {
     const prompt = buildPrompt(req, memory);
 
     try {
-      const response = await callAIModelJSON<AskMathAIResponse>(prompt, {
-        system:      SYSTEM_PROMPT,
-        maxTokens:   1500,
-        temperature: 0.5,
-        callSite:    "ask_mathai.answer",
-      });
+      // Run AI response generation and visual engine classification in parallel
+      const [response, visualResult] = await Promise.all([
+        callAIModelJSON<AskMathAIResponse>(prompt, {
+          system:      SYSTEM_PROMPT,
+          maxTokens:   1800,    // slightly more to accommodate mathData
+          temperature: 0.5,
+          callSite:    "ask_mathai.answer",
+        }),
+        getVisualExplanation(req.question, req.grade, true, undefined).catch(() => null),
+      ]);
 
       // Validate core fields
       if (!response.explanation || !response.example) {
         throw new Error("AI response missing required fields");
       }
 
+      // Validate and sanitize mathData from AI response
+      const mathData = validateMathData(response.mathData);
+
+      // Visual plan priority:
+      // 1. Visual Engine with mathData (precise, AI-driven structure)
+      // 2. Visual Engine heuristic plan (regex-based fallback)
+      // 3. AI's own visualPlan (if it has a valid diagramType)
+      // 4. null (no visual)
+      let finalVisualPlan: VisualPlan | undefined = response.visualPlan;
+
+      // Re-run the visual engine with mathData if available — produces more precise plans
+      if (mathData) {
+        const mathDrivenResult = await getVisualExplanation(req.question, req.grade, false, mathData).catch(() => null);
+        if (mathDrivenResult?.plan && isValidPlan(mathDrivenResult.plan)) {
+          finalVisualPlan = mathDrivenResult.plan;
+        }
+      } else if (visualResult?.plan && isValidPlan(visualResult.plan)) {
+        finalVisualPlan = visualResult.plan;
+      }
+
+      // ── Alignment verification ──────────────────────────────────────────
+      // Cross-check explanation, mathData, and visual plan for consistency.
+      // If misaligned, fall back to the heuristic (regex) plan or no visual.
+      if (finalVisualPlan && mathData) {
+        const alignment = verifyAlignment(
+          response.explanation,
+          req.question,
+          mathData,
+          finalVisualPlan,
+        );
+
+        if (alignment.fallbackRecommended) {
+          // Mismatch detected — discard mathData-driven plan, try regex fallback
+          console.warn(
+            `[askMathAIService] Visual alignment check failed (${alignment.issues.length} issues). Falling back.`,
+            alignment.issues,
+          );
+          // Use the heuristic-only plan if available, otherwise no visual
+          finalVisualPlan = (visualResult?.plan && isValidPlan(visualResult.plan))
+            ? visualResult.plan
+            : undefined;
+        } else if (alignment.confidence === "medium") {
+          console.info(
+            `[askMathAIService] Visual alignment partial (${alignment.issues.join("; ")}). Using plan with reduced confidence.`,
+          );
+        }
+      }
+
+      // Determine visual strategy from the engine's intent
+      const engineStrategy = visualResult?.intent.visualType;
+      const visualStrategy = engineStrategy && engineStrategy !== "worked_steps_only"
+        ? (engineStrategy === "logic_flow" || engineStrategy === "equation_steps"
+            ? "animated_diagram" as const
+            : "diagram" as const)
+        : (response.visualStrategy ?? "none");
+
       return {
         question:     req.question,
         explanation:  response.explanation,
         steps:        Array.isArray(response.steps) ? response.steps : undefined,
         example:      response.example,
-        visualPlan:   response.visualPlan,
+        visualPlan:   finalVisualPlan,
         followUp:     response.followUp ?? "Keep exploring — math is full of surprises!",
         encouragement: response.encouragement ?? "You're doing brilliantly!",
-        visualStrategy: response.visualStrategy,
+        visualStrategy,
         imagePrompt:  response.imagePrompt,
         conceptKey:   response.conceptKey,
+        mathData,
       };
 
     } catch (err) {
@@ -221,3 +305,103 @@ export const askMathAIService = {
     }
   },
 };
+
+// ─── MathData validation ─────────────────────────────────────────────────────
+
+const VALID_MATH_TYPES = new Set([
+  "addition", "subtraction", "multiplication", "division",
+  "fraction_addition", "fraction_subtraction", "fraction_equivalence", "fraction_comparison",
+  "place_value", "word_problem", "equation", "comparison",
+]);
+
+/**
+ * Validate and sanitize mathData from the AI response.
+ * Returns null if the data is missing, malformed, or has an unknown type.
+ * Never throws — bad data is silently discarded (fallback to regex).
+ */
+function validateMathData(raw: unknown): import("@mathai/shared-types").MathData | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const d = raw as Record<string, unknown>;
+
+  // Type must be valid
+  if (typeof d.type !== "string" || !VALID_MATH_TYPES.has(d.type)) return undefined;
+
+  const result: import("@mathai/shared-types").MathData = {
+    type: d.type as import("@mathai/shared-types").MathDataType,
+  };
+
+  // Values: array of numbers
+  if (Array.isArray(d.values)) {
+    const nums = d.values.filter((v): v is number => typeof v === "number" && isFinite(v));
+    if (nums.length > 0) result.values = nums;
+  }
+
+  // Fractions: array of {numerator, denominator}
+  if (Array.isArray(d.fractions)) {
+    const fracs = d.fractions.filter(
+      (f): f is { numerator: number; denominator: number } =>
+        typeof f === "object" && f !== null &&
+        typeof (f as any).numerator === "number" &&
+        typeof (f as any).denominator === "number" &&
+        (f as any).denominator !== 0
+    );
+    if (fracs.length > 0) result.fractions = fracs;
+  }
+
+  // Result
+  if (typeof d.result === "number" && isFinite(d.result)) result.result = d.result;
+  else if (typeof d.result === "string" && d.result.length > 0 && d.result.length < 50) result.result = d.result;
+
+  // Steps: array of strings
+  if (Array.isArray(d.steps)) {
+    const steps = d.steps.filter((s): s is string => typeof s === "string" && s.length > 0 && s.length < 200);
+    if (steps.length > 0) result.steps = steps;
+  }
+
+  // Structure
+  if (typeof d.structure === "object" && d.structure !== null) {
+    const s = d.structure as Record<string, unknown>;
+    const structure: NonNullable<import("@mathai/shared-types").MathData["structure"]> = {};
+    if (typeof s.groups === "number" && s.groups > 0) structure.groups = s.groups;
+    if (typeof s.itemsPerGroup === "number" && s.itemsPerGroup > 0) structure.itemsPerGroup = s.itemsPerGroup;
+    if (typeof s.total === "number" && s.total > 0) structure.total = s.total;
+    if (Object.keys(structure).length > 0) result.structure = structure;
+  }
+
+  // Equation
+  if (typeof d.equation === "object" && d.equation !== null) {
+    const e = d.equation as Record<string, unknown>;
+    if (typeof e.lhs === "string" && typeof e.rhs === "string") {
+      result.equation = {
+        lhs:      e.lhs,
+        rhs:      e.rhs,
+        variable: typeof e.variable === "string" ? e.variable : undefined,
+        solution: typeof e.solution === "string" ? e.solution : undefined,
+      };
+    }
+  }
+
+  // Word problem
+  if (typeof d.wordProblem === "object" && d.wordProblem !== null) {
+    const w = d.wordProblem as Record<string, unknown>;
+    if (Array.isArray(w.known)) {
+      const known = w.known.filter(
+        (k): k is { label: string; value: number } =>
+          typeof k === "object" && k !== null &&
+          typeof (k as any).label === "string" &&
+          typeof (k as any).value === "number"
+      );
+      if (known.length > 0) {
+        result.wordProblem = {
+          known,
+          unknown:   typeof w.unknown === "object" && w.unknown && typeof (w.unknown as any).label === "string"
+                       ? { label: (w.unknown as any).label }
+                       : undefined,
+          operation: typeof w.operation === "string" ? w.operation : undefined,
+        };
+      }
+    }
+  }
+
+  return result;
+}

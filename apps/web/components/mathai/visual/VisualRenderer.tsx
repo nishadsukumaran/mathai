@@ -18,6 +18,8 @@ import { BarModel }        from "./BarModel";
 import { PlaceValueChart } from "./PlaceValueChart";
 import { StepPlayer }      from "./StepPlayer";
 import { ConceptImage }    from "./ConceptImage";
+import { EquationSteps }   from "./EquationSteps";
+import { LogicFlow }       from "./LogicFlow";
 
 interface VisualRendererProps {
   plan:      VisualPlan;
@@ -57,6 +59,14 @@ export function VisualRenderer({ plan, animated = true, className }: VisualRende
 
     case "place_value_chart":
       diagram = <PlaceValueChart data={data} animated={animated} />;
+      break;
+
+    case "equation_steps":
+      diagram = <EquationSteps data={data} animated={animated} />;
+      break;
+
+    case "logic_flow":
+      diagram = <LogicFlow data={data} animated={animated} />;
       break;
 
     case "animated_walkthrough":

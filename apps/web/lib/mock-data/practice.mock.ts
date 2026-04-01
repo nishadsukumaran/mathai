@@ -12,6 +12,7 @@ import type {
   SubmissionResult,
   TutorResponse,
   SessionSummary,
+  SessionNextStep,
 } from "@mathai/shared-types";
 
 // ── Practice Start ─────────────────────────────────────────────────────────────
@@ -109,6 +110,76 @@ export const MOCK_LEVEL_UP_RESULT: SubmissionResult = {
   levelUp: {
     newLevel: 3,
     newTitle: "Fraction Fighter",
+  },
+};
+
+// ── Session Adaptation Mocks ──────────────────────────────────────────────────
+
+export const MOCK_ADAPTATION_STRUGGLE: SessionNextStep = {
+  action:                "easier_question",
+  reason:                "Let's try a slightly easier version to build your confidence.",
+  encouragement:         "It's okay — tricky problems help you grow!",
+  difficulty:            "easy",
+  explanationPreference: "step_by_step",
+  sourceSignals:         { consecutiveWrong: true },
+};
+
+export const MOCK_ADAPTATION_RECOVERY: SessionNextStep = {
+  action:        "celebrate_and_continue",
+  reason:        "You worked through the tough part and got it right! That's real learning.",
+  encouragement: "See? You CAN do it! Keep going!",
+  sourceSignals: { sessionRecovery: true },
+};
+
+export const MOCK_ADAPTATION_MOMENTUM: SessionNextStep = {
+  action:        "harder_question",
+  reason:        "You're crushing it! Let's see if you're ready for a bigger challenge.",
+  encouragement: "You're on fire! Keep this up!",
+  difficulty:    "hard",
+  sourceSignals: { consecutiveCorrect: true, masteryProgressing: true },
+};
+
+export const MOCK_ADAPTATION_FATIGUE: SessionNextStep = {
+  action:                             "end_session_positive",
+  reason:                             "You've had a great session. Let's wrap up on a positive note!",
+  encouragement:                      "You've been working hard! Great effort today.",
+  sourceSignals:                      { fatigueRisk: true },
+  recommendedQuestionCountRemaining:  0,
+};
+
+// ── Difficulty-Adaptive Question Mocks ───────────────────────────────────────
+
+/** Easy question served when student struggles */
+export const MOCK_EASY_QUESTION: SubmissionResult = {
+  isCorrect:     false,
+  correctAnswer: "3/4",
+  xpEarned:      0,
+  encouragement: "Let's try a slightly easier version to build your confidence.",
+  nextAction:    "retry",
+  sessionAdaptation: MOCK_ADAPTATION_STRUGGLE,
+  nextQuestion: {
+    id:         "q-easy-01",
+    type:       "fill_in_blank",
+    prompt:     "What is 1/4 + 1/4?",
+    difficulty: "beginner",
+    xpReward:   10,
+  },
+};
+
+/** Hard question served when student is on a streak */
+export const MOCK_HARD_QUESTION: SubmissionResult = {
+  isCorrect:     true,
+  correctAnswer: "4/5",
+  xpEarned:      15,
+  encouragement: "You're on fire! Keep this up!",
+  nextAction:    "next_question",
+  sessionAdaptation: MOCK_ADAPTATION_MOMENTUM,
+  nextQuestion: {
+    id:         "q-hard-01",
+    type:       "fill_in_blank",
+    prompt:     "A baker uses 3/8 of a bag of flour for bread and 2/5 for cookies. How much flour was used in total?",
+    difficulty: "advanced",
+    xpReward:   20,
   },
 };
 

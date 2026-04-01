@@ -26,7 +26,7 @@ import { useQueryClient }                            from "@tanstack/react-query
 import PracticeView from "@/components/mathai/practice/PracticeView";
 import { queryKeys }   from "@/lib/query-keys";
 import type { PracticeQuestionItem, SubmitResultView } from "@/types/contracts";
-import type { VisualPlan } from "@mathai/shared-types";
+import type { VisualPlan, SessionNextStep } from "@mathai/shared-types";
 
 const API_BASE = process.env["NEXT_PUBLIC_API_BASE_URL"] ?? "http://localhost:3001/api";
 
@@ -78,6 +78,9 @@ export default function PracticeContainer({ topicId, mode }: Props) {
   // confidenceBefore: student self-rates 1–5 before answering each question.
   // Sent to the API and written to QuestionAttempt for mastery analytics.
   const [confidenceBefore, setConfidenceBefore] = useState<number | null>(null);
+
+  // Session Adaptation Engine — adaptive coaching state
+  const [adaptation, setAdaptation]     = useState<SessionNextStep | null>(null);
 
   // ── Start session ────────────────────────────────────────────────────────────
 
@@ -169,6 +172,50 @@ export default function PracticeContainer({ topicId, mode }: Props) {
         if (r.sessionComplete) {
           void queryClient.invalidateQueries({ queryKey: queryKeys.practiceMenu });
         }
+
+        // Session Adaptation Engine — read and act on the adaptive recommendation
+        const adapt = r.sessionAdaptation ?? null;
+        setAdaptation(adapt);
+
+        // Auto-trigger hint/explanation when the engine recommends proactive support
+        if (adapt && !r.isCorrect) {
+          const autoHelpActions = ["show_hint", "show_step_by_step", "show_visual_explanation"];
+          if (autoHelpActions.includes(adapt.action) && session) {
+            // Auto-fetch a hint/explanation after a short delay so the student
+            // sees the wrong-answer feedback first, then gets help
+            const currentQ = session.questions[session.currentIndex];
+            if (currentQ) {
+              setTimeout(async () => {
+                try {
+                  const hdr = await getAuthHeaders();
+                  const ctrl = new AbortController();
+                  const tm = setTimeout(() => ctrl.abort(), 15_000);
+                  const hintRes = await fetch(`${API_BASE}/practice/hint`, {
+                    method: "POST",
+                    headers: hdr,
+                    signal: ctrl.signal,
+                    body: JSON.stringify({
+                      sessionId:      session.id,
+                      questionId:     currentQ.id,
+                      questionText:   currentQ.prompt,
+                      topicId:        session.topicId,
+                      hintsUsedSoFar: hintsUsed,
+                    }),
+                  });
+                  clearTimeout(tm);
+                  const hintJson = await hintRes.json();
+                  if (hintJson.success) {
+                    setHint(hintJson.data.content?.text ?? "Let me help you think about this...");
+                    setHintVisualPlan(hintJson.data.visualPlan ?? null);
+                    setHintsUsed((h) => h + 1);
+                  }
+                } catch {
+                  // Auto-hint failed — student can still manually request one
+                }
+              }, 800);
+            }
+          }
+        }
       } else {
         // API returned success:false — surface the error so the spinner clears
         setError(json.error?.message ?? "Could not submit your answer. Please try again.");
@@ -198,6 +245,7 @@ export default function PracticeContainer({ topicId, mode }: Props) {
     setHintVisualPlan(null);
     setHintsUsed(0);
     setConfidenceBefore(null);
+    setAdaptation(null);
   }, [session, result]);
 
   // ── Get hint ──────────────────────────────────────────────────────────────────
@@ -290,6 +338,7 @@ export default function PracticeContainer({ topicId, mode }: Props) {
       onRetry={startSession}
       confidenceBefore={confidenceBefore}
       onConfidenceChange={setConfidenceBefore}
+      adaptation={adaptation}
       onRestart={() => {
         setSession(null);
         hasAttemptedRef.current = false;

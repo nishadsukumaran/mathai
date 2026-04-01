@@ -22,6 +22,7 @@ import type {
   WeakArea,
   PracticeMenu,
   StudentProfileResponse,
+  SessionNextStep,
 } from "@mathai/shared-types";
 
 // ─── Dashboard ─────────────────────────────────────────────────────────────────
@@ -133,6 +134,8 @@ export interface SubmitResultView {
   encouragement: string;
   sessionComplete: boolean;
   nextAction:    string;
+  /** In-session adaptive guidance from the Session Adaptation Engine */
+  sessionAdaptation?: SessionNextStep;
 }
 
 // ─── Profile ──────────────────────────────────────────────────────────────────

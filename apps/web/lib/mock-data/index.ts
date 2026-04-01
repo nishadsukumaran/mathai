@@ -19,6 +19,8 @@ export * from "./dashboard.mock";
 export * from "./curriculum.mock";
 export * from "./progress.mock";
 export * from "./practice.mock";
+export * from "./learning.mock";
+export * from "./parent.mock";
 
 // ─── Mock router ──────────────────────────────────────────────────────────────
 // Simulates network delay in development to catch loading state issues.

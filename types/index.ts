@@ -741,6 +741,8 @@ export interface ActivePracticeSession {
   xpEarned:        number;
   accuracyPercent: number;
   difficulty:      Difficulty;
+  /** Dynamic difficulty state for adaptive question pool (optional — present when pool is active) */
+  difficultyState?: import("../api/services/questionPoolManager").DifficultyState;
 }
 
 /**
@@ -758,6 +760,8 @@ export interface SubmissionResult {
   sessionComplete?:  boolean;
   masteryUpdate?:    { topicId: string; newLevel: MasteryLevel; levelChanged: boolean };
   questUpdate?:      { questId: string; title: string; completed: boolean; xpReward: number };
+  /** In-session adaptive guidance from the Session Adaptation Engine */
+  sessionAdaptation?: import("@mathai/shared-types").SessionNextStep;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

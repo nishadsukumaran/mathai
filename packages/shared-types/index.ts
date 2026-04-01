@@ -274,6 +274,8 @@ export interface SubmissionResult {
   masteryUpdate?: { topicId: string; newLevel: MasteryLevel };
   questUpdate?:   { questId: string; completed: boolean; newCount: number };
   nextQuestion?:  PracticeQuestion;
+  /** In-session adaptive guidance from the Session Adaptation Engine */
+  sessionAdaptation?: SessionNextStep;
 }
 
 export interface SessionSummary {
@@ -392,16 +394,102 @@ export interface PlaceValueChartData {
   highlight?: string[];                  // column keys to highlight
 }
 
+// ─── Equation Steps (algebra / step-by-step solving) ─────────────────────────
+
+export interface EquationStepsData {
+  title?:  string;
+  steps:   Array<{
+    label:       string;       // e.g. "Subtract 3 from both sides"
+    expression:  string;       // e.g. "x + 3 - 3 = 10 - 3"
+    result?:     string;       // e.g. "x = 7"
+    highlight?:  string;       // part to emphasise (CSS selector or key)
+  }>;
+}
+
+// ─── Logic Flow (multi-step reasoning) ───────────────────────────────────────
+
+export interface LogicFlowData {
+  title?:  string;
+  nodes:   Array<{
+    id:       string;
+    label:    string;
+    type:     "start" | "step" | "decision" | "result";
+    color?:   string;
+  }>;
+  edges:   Array<{
+    from:     string;
+    to:       string;
+    label?:   string;
+  }>;
+}
+
 export type VisualPlan =
   | { diagramType: "number_line";           data: NumberLineData }
   | { diagramType: "fraction_bar";          data: FractionBarData }
   | { diagramType: "array";                 data: ArrayData }
   | { diagramType: "bar_model";             data: BarModelData }
   | { diagramType: "place_value_chart";     data: PlaceValueChartData }
+  | { diagramType: "equation_steps";        data: EquationStepsData }
+  | { diagramType: "logic_flow";            data: LogicFlowData }
   | { diagramType: "animated_walkthrough";  data: AnimatedWalkthroughData }
   | { diagramType: "concept_image";         data: ConceptImageData }
   | { diagramType: "coordinate_grid";       data: Record<string, unknown> }
   | { diagramType: "none";                  data: Record<string, unknown> };
+
+// ─── Structured Math Data (AI-generated, used by Visual Plan Builder) ─────────
+
+/** The type of math problem the AI identified */
+export type MathDataType =
+  | "addition"
+  | "subtraction"
+  | "multiplication"
+  | "division"
+  | "fraction_addition"
+  | "fraction_subtraction"
+  | "fraction_equivalence"
+  | "fraction_comparison"
+  | "place_value"
+  | "word_problem"
+  | "equation"
+  | "comparison";
+
+/**
+ * Structured math understanding returned by the AI alongside its explanation.
+ * This is NOT visual data — it's the math problem structure that the
+ * deterministic plan builder uses to create precise visual plans.
+ *
+ * Fields are optional because the AI may only populate what's relevant.
+ */
+export interface MathData {
+  type:       MathDataType;
+  /** Raw numeric values involved (e.g. [3, 5] for "3 + 5") */
+  values?:    number[];
+  /** Fractions involved */
+  fractions?: Array<{ numerator: number; denominator: number }>;
+  /** Result of the computation (if applicable) */
+  result?:    number | string;
+  /** Solving steps as compact expressions (e.g. ["x + 3 = 10", "x = 10 - 3", "x = 7"]) */
+  steps?:     string[];
+  /** Grouping structure for multiplication/division */
+  structure?: {
+    groups?:        number;
+    itemsPerGroup?: number;
+    total?:         number;
+  };
+  /** Equation parts for algebra */
+  equation?: {
+    lhs:       string;
+    rhs:       string;
+    variable?: string;
+    solution?: string;
+  };
+  /** Word problem parts */
+  wordProblem?: {
+    known:    Array<{ label: string; value: number }>;
+    unknown?: { label: string };
+    operation?: string;
+  };
+}
 
 // ─── Ask MathAI ───────────────────────────────────────────────────────────────
 
@@ -440,6 +528,8 @@ export interface AskMathAIResponse {
   followUp:      string;
   encouragement: string;
   visualStrategy?: "diagram" | "animated_diagram" | "concept_image" | "none";
+  /** Structured math understanding for precise visual generation (AI-provided) */
+  mathData?:       MathData;
 }
 
 // ─── AI-generated practice questions ─────────────────────────────────────────
@@ -669,6 +759,95 @@ export interface PetResponse {
   unlockedPets: PetCatalogEntry[];
   /** Student's current XP level — drives unlock display. */
   currentLevel: number;
+}
+
+// ─── Learning Brain Engine ────────────────────────────────────────────────────
+
+/** The type of learning action the brain recommends */
+export type LearningActionType =
+  | "practice"
+  | "revise"
+  | "challenge"
+  | "review_mistake"
+  | "continue_path";
+
+/** Session mode for the recommended action */
+export type SessionMode = "focus" | "revision" | "challenge" | "guided";
+
+/** Explanation preference for the recommended action */
+export type ExplanationPreference = "step_by_step" | "visual" | "concise" | "adaptive";
+
+/** Difficulty level for the recommended action */
+export type BrainDifficulty = "easy" | "medium" | "hard" | "adaptive";
+
+/** Signals that contributed to the brain's decision */
+export interface SourceSignals {
+  weakArea?:          boolean;
+  lowConfidence?:     boolean;
+  recentErrors?:      boolean;
+  neglectedTopic?:    boolean;
+  masteryReady?:      boolean;
+  revisionDue?:       boolean;
+  hintDependency?:    boolean;
+  fastButInaccurate?: boolean;
+  slowButAccurate?:   boolean;
+}
+
+/** The structured decision object from the Learning Brain Engine */
+export interface LearningNextAction {
+  type:                      LearningActionType;
+  topicId:                   string;
+  topicName:                 string;
+  subtopicId?:               string;
+  difficulty:                BrainDifficulty;
+  reason:                    string;
+  encouragement:             string;
+  confidenceTarget?:         number;
+  sessionMode:               SessionMode;
+  recommendedQuestionCount:  number;
+  explanationPreference:     ExplanationPreference;
+  sourceSignals:             SourceSignals;
+}
+
+// ─── Session Adaptation Engine ────────────────────────────────────────────────
+
+/** The in-session adaptive action the engine recommends after each answer */
+export type SessionAdaptiveAction =
+  | "next_question"
+  | "easier_question"
+  | "harder_question"
+  | "show_hint"
+  | "show_visual_explanation"
+  | "show_step_by_step"
+  | "repeat_concept"
+  | "switch_to_revision"
+  | "celebrate_and_continue"
+  | "end_session_positive";
+
+/** Signals that contributed to the in-session adaptation decision */
+export interface SessionAdaptiveSignals {
+  consecutiveWrong?:    boolean;
+  consecutiveCorrect?:  boolean;
+  hintDependency?:      boolean;
+  visualTopic?:         boolean;
+  carelessPattern?:     boolean;
+  confidenceDrop?:      boolean;
+  masteryProgressing?:  boolean;
+  fatigueRisk?:         boolean;
+  sessionRecovery?:     boolean;
+}
+
+/** The structured in-session adaptation decision */
+export interface SessionNextStep {
+  action:                              SessionAdaptiveAction;
+  reason:                              string;
+  encouragement:                       string;
+  difficulty?:                         BrainDifficulty;
+  explanationPreference?:              ExplanationPreference;
+  topicId?:                            string;
+  subtopicId?:                         string;
+  recommendedQuestionCountRemaining?:  number;
+  sourceSignals:                       SessionAdaptiveSignals;
 }
 
 // ─── Error codes (known) ──────────────────────────────────────────────────────

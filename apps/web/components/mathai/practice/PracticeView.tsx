@@ -10,7 +10,7 @@
 
 import { useRouter } from "next/navigation";
 import type { PracticeQuestionItem, SubmitResultView } from "@/types/contracts";
-import type { VisualPlan } from "@mathai/shared-types";
+import type { VisualPlan, SessionNextStep } from "@mathai/shared-types";
 import { VisualRenderer } from "@/components/mathai/visual/VisualRenderer";
 
 interface SessionState {
@@ -42,6 +42,8 @@ interface Props {
   onTeachMe:         () => void;
   onRetry:           () => void;
   onRestart:         () => void;
+  /** Adaptive coaching from the Session Adaptation Engine */
+  adaptation:        SessionNextStep | null;
 }
 
 const CONFIDENCE_LABELS: Record<number, { emoji: string; label: string }> = {
@@ -73,6 +75,7 @@ export default function PracticeView({
   onTeachMe,
   onRetry,
   onRestart,
+  adaptation,
 }: Props) {
   const router     = useRouter();
   const totalQ     = session?.questions.length ?? 5;
@@ -340,6 +343,55 @@ export default function PracticeView({
                   <span className="text-base">📖</span>
                   {result.isCorrect ? "Want to understand why? Teach me →" : "Teach me this properly →"}
                 </button>
+              </div>
+            )}
+
+            {/* Adaptive coaching banner — shown when the engine has insight */}
+            {result && adaptation && adaptation.action !== "next_question" && (
+              <div className={`rounded-2xl p-4 mb-4 border ${
+                adaptation.sourceSignals.consecutiveCorrect || adaptation.sourceSignals.masteryProgressing || adaptation.sourceSignals.sessionRecovery
+                  ? "bg-emerald-50 border-emerald-200"
+                  : adaptation.sourceSignals.fatigueRisk
+                    ? "bg-blue-50 border-blue-200"
+                    : "bg-indigo-50 border-indigo-200"
+              }`}>
+                <div className="flex items-start gap-3">
+                  <span className="text-xl shrink-0">
+                    {adaptation.sourceSignals.consecutiveCorrect || adaptation.sourceSignals.masteryProgressing
+                      ? "🚀"
+                      : adaptation.sourceSignals.sessionRecovery
+                        ? "💪"
+                        : adaptation.sourceSignals.fatigueRisk
+                          ? "☕"
+                          : adaptation.sourceSignals.consecutiveWrong
+                            ? "🤝"
+                            : adaptation.sourceSignals.carelessPattern
+                              ? "🎯"
+                              : "🧠"}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-semibold ${
+                      adaptation.sourceSignals.consecutiveCorrect || adaptation.sourceSignals.sessionRecovery
+                        ? "text-emerald-700"
+                        : adaptation.sourceSignals.fatigueRisk
+                          ? "text-blue-700"
+                          : "text-indigo-700"
+                    }`}>
+                      {adaptation.reason}
+                    </p>
+                    {adaptation.difficulty && adaptation.difficulty !== "adaptive" && (
+                      <span className={`inline-block mt-1.5 text-xs font-bold px-2 py-0.5 rounded-full ${
+                        adaptation.difficulty === "easy"
+                          ? "bg-emerald-100 text-emerald-600"
+                          : adaptation.difficulty === "hard"
+                            ? "bg-rose-100 text-rose-600"
+                            : "bg-amber-100 text-amber-600"
+                      }`}>
+                        Next: {adaptation.difficulty} difficulty
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 

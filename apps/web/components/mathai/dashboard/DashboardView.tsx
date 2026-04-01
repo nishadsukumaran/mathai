@@ -28,6 +28,7 @@ import { ProfileModal }    from "@/components/mathai/profile-modal";
 import { useProfile }      from "@/hooks/use-profile";
 import { usePracticeMenu } from "@/hooks/use-practice-menu";
 import { PetCard }         from "@/components/mathai/pet";
+import { NextActionCard }  from "@/components/mathai/next-action-card";
 
 import type { DashboardViewData } from "@/types/contracts";
 import type { Grade }             from "@/types";
@@ -159,7 +160,13 @@ export default function DashboardView({ data }: Props) {
           )}
         </section>
 
-        {/* ── 2. Ask MathAI ───────────────────────────────────────────── */}
+        {/* ── 2. Next Best Action (Learning Brain) ─────────────────────── */}
+        <section>
+          <h2 className="text-lg font-black text-gray-800 mb-3">Your Next Step 🧠</h2>
+          <NextActionCard />
+        </section>
+
+        {/* ── 3. Ask MathAI ───────────────────────────────────────────── */}
         <section>
           <h2 className="text-lg font-black text-gray-800 mb-3">Ask MathAI 🤖</h2>
           <AskCard grade={gradeEnum} />

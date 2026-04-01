@@ -18,6 +18,7 @@ import {
   startSession,
   submitAnswer,
   getNextQuestion,
+  getNextAdaptiveQuestion,
   getTutorHelp,
 } from "../services/practiceService";
 import { send, sendCreated } from "../lib/response";
@@ -62,9 +63,14 @@ export async function submitPracticeAnswer(req: Request, res: Response, next: Ne
       confidenceBefore: body.confidenceBefore,
     });
 
+    // Use adaptive question selection when the session adaptation engine is active
     let nextQuestion = null;
     if (!result.sessionComplete) {
-      nextQuestion = await getNextQuestion(body.sessionId).catch(() => null);
+      const adaptAction = result.sessionAdaptation?.action ?? "next_question";
+      nextQuestion = await getNextAdaptiveQuestion(body.sessionId, adaptAction).catch(() =>
+        // Fallback to linear question list
+        getNextQuestion(body.sessionId).catch(() => null)
+      );
     }
 
     send(res, { ...result, nextQuestion });

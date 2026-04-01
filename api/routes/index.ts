@@ -49,6 +49,8 @@ import studentRoutes      from "./student.routes";
 import adminRoutes        from "./admin.routes";
 import internalRoutes     from "./internal.routes";
 import petRoutes          from "./pet.routes";
+import learningRoutes     from "./learning.routes";
+import parentRoutes       from "./parent.routes";
 
 const router = Router();
 
@@ -94,5 +96,7 @@ router.use("/tutor",          tutorRoutes);          // POST /tutor/ask
 router.use("/student",        studentRoutes);         // GET /student/memory, POST /student/memory/refresh, PATCH /student/interests
 router.use("/admin",          adminRoutes);           // admin-only; requireAdmin runs inside admin.routes.ts
 router.use("/pet",            petRoutes);             // GET /pet, POST /pet/adopt, GET /pet/catalog, GET /pet/insight
+router.use("/learning",       learningRoutes);        // GET /learning/next — Learning Brain Engine
+router.use("/parent",         parentRoutes);          // GET /parent/dashboard/:childId — Parent Portal
 
 export default router;

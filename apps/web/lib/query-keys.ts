@@ -70,6 +70,10 @@ export const queryKeys = {
   // ── Practice menu (personalised AI-generated practice recommendations) ────────
   // GET /api/practice/menu — user-scoped via auth token, no explicit ID needed
   practiceMenu: [ROOT, "practice-menu"] as const,
+
+  // ── Learning Brain (next best action recommendation) ───────────────────────────
+  // GET /api/learning/next — user-scoped via auth token
+  learningNext: [ROOT, "learning-next"] as const,
 } as const;
 
 // ─── Mutation keys (for useMutation's mutationKey, e.g. for DevTools) ─────────
@@ -99,4 +103,6 @@ export function invalidateAfterSession(
   queryClient.invalidateQueries({ queryKey: queryKeys.curriculum.weakAreas(studentId) });
   // Regenerate the AI practice menu so recommendations reflect the completed topic
   queryClient.invalidateQueries({ queryKey: queryKeys.practiceMenu });
+  // Refresh Learning Brain recommendation based on updated progress
+  queryClient.invalidateQueries({ queryKey: queryKeys.learningNext });
 }
