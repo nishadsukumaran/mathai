@@ -13,7 +13,8 @@ import { signOut }     from "next-auth/react";
 import { useSession }  from "next-auth/react";
 
 const NAV_ITEMS = [
-  { href: "/parent",           label: "Overview",  icon: "🏠" },
+  { href: "/parent",     label: "Overview",  icon: "🏠" },
+  { href: "/parent/ask", label: "Ask AI",    icon: "🤖" },
 ];
 
 export default function ParentNav() {

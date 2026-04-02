@@ -323,6 +323,28 @@ export default function ParentDashboardView({ data }: Props) {
         </section>
       )}
 
+      {/* ── Ask MathAI for Parents ──────────────────────────────────── */}
+      <section>
+        <h2 className="text-lg font-black text-gray-800 mb-3">Ask MathAI 🤖</h2>
+        <a
+          href="/parent/ask"
+          className="block bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-5 text-white hover:opacity-95 transition"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-2xl shrink-0">
+              🤖
+            </div>
+            <div className="flex-1">
+              <p className="font-bold text-sm">Ask MathAI for Parents</p>
+              <p className="text-indigo-200 text-xs mt-0.5">
+                Get help explaining concepts, understanding your child&apos;s progress, or finding the right approach.
+              </p>
+            </div>
+            <span className="text-sm font-bold shrink-0">Ask →</span>
+          </div>
+        </a>
+      </section>
+
       {/* ── 8. Score Breakdown ─────────────────────────────────────── */}
       <section>
         <h2 className="text-lg font-black text-gray-800 mb-3">Learning Score Breakdown</h2>

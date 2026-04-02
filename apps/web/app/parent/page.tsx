@@ -1,21 +1,37 @@
 /**
  * @module app/parent/page
  *
- * Parent portal landing — redirects to dashboard for now.
- * When multi-child support is added, this becomes a child picker.
+ * Parent portal landing — routes to onboarding if no child linked,
+ * or to the dashboard if a child exists.
  */
 
 import { redirect }         from "next/navigation";
 import { getServerSession }  from "next-auth";
 import { authOptions }       from "@/lib/auth";
+import { prisma }            from "@/lib/prisma";
 
 export default async function ParentPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect("/auth/signin?callbackUrl=/parent");
 
-  // For now, use the logged-in user's own ID as child ID
-  // (allows testing with student accounts too)
-  const childId = (session.user as { id?: string }).id ?? "";
+  const parentId = (session.user as { id?: string }).id ?? "";
 
-  redirect(`/parent/dashboard?childId=${childId}`);
+  // Check if this parent has created any child accounts
+  // Children are identified as users whose email starts with "child-{parentId}-"
+  const children = await prisma.user.findMany({
+    where: {
+      email: { startsWith: `child-${parentId}-` },
+      role:  "student" as any,
+    },
+    select: { id: true },
+    take: 1,
+  }).catch(() => []);
+
+  if (children.length === 0) {
+    // No children linked — start onboarding
+    redirect("/parent/onboarding");
+  }
+
+  // Has a child — go to dashboard with the first child's ID
+  redirect(`/parent/dashboard?childId=${children[0]!.id}`);
 }
