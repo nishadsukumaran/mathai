@@ -3,20 +3,31 @@
  *
  * POST /api/auth/parent-onboarding — create a child account linked to a parent.
  *
- * Creates a new User with role="student", links it to the authenticated parent,
- * and stores curriculum/school/goal metadata on the child's StudentProfile.
- *
- * The child account has no password (parent-managed). The parent can later
- * set a password for the child if they want independent login.
+ * Uses the proper ParentChildLink model for linking.
+ * Creates: User (student) + StudentProfile + ParentChildLink
+ * Optionally sets up PIN credentials for child direct login.
  */
 
 import { NextResponse }      from "next/server";
 import { getServerSession }   from "next-auth";
 import { authOptions }        from "@/lib/auth";
 import { prisma }             from "@/lib/prisma";
+import bcrypt                 from "bcryptjs";
 
 const VALID_GRADES = ["G1","G2","G3","G4","G5","G6","G7","G8"] as const;
 const VALID_CURRICULA = ["cambridge","ib","cbse","icse","british","american","other"] as const;
+const VALID_LOGIN_MODES = ["parent_managed","pin_only","hybrid"] as const;
+
+async function generateUsername(childName: string): Promise<string> {
+  const base = childName.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 12) || "student";
+  for (let i = 0; i < 5; i++) {
+    const suffix = Math.floor(100 + Math.random() * 900);
+    const username = `${base}-${suffix}`;
+    const exists = await prisma.studentProfile.findUnique({ where: { username }, select: { id: true } }).catch(() => null);
+    if (!exists) return username;
+  }
+  return `${base}-${Date.now().toString(36).slice(-5)}`;
+}
 
 export async function POST(req: Request) {
   try {
@@ -30,28 +41,54 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { childName, grade, curriculum, schoolName, onboardingGoal } = body as {
-      childName:       string;
-      grade:           string;
-      curriculum:      string;
-      schoolName?:     string;
-      onboardingGoal?: string;
+    const {
+      childName, grade, curriculum, schoolName, onboardingGoal,
+      relationshipType, loginMode, pin,
+    } = body as {
+      childName: string; grade: string; curriculum: string;
+      schoolName?: string; onboardingGoal?: string;
+      relationshipType?: string; loginMode?: string; pin?: string;
     };
 
     // ── Validation ───────────────────────────────────────────────────────
     if (!childName || childName.trim().length < 1) {
       return NextResponse.json({ error: "Child name is required" }, { status: 400 });
     }
-    if (!VALID_GRADES.includes(grade as typeof VALID_GRADES[number])) {
+    if (!VALID_GRADES.includes(grade as any)) {
       return NextResponse.json({ error: "Invalid grade" }, { status: 400 });
     }
-    if (!VALID_CURRICULA.includes(curriculum as typeof VALID_CURRICULA[number])) {
+    if (!VALID_CURRICULA.includes(curriculum as any)) {
       return NextResponse.json({ error: "Invalid curriculum" }, { status: 400 });
     }
 
+    const effectiveLoginMode = VALID_LOGIN_MODES.includes(loginMode as any) ? loginMode! : "parent_managed";
+
+    // PIN validation
+    let hashedPin: string | null = null;
+    if ((effectiveLoginMode === "pin_only" || effectiveLoginMode === "hybrid") && pin) {
+      if (pin.length < 4 || !/^\d+$/.test(pin)) {
+        return NextResponse.json({ error: "PIN must be at least 4 digits" }, { status: 400 });
+      }
+      hashedPin = await bcrypt.hash(pin, 10);
+    }
+
+    // ── Upgrade parent role if needed ──────────────────────────────────────
+    const parentUser = await prisma.user.findUnique({ where: { id: parentId } });
+    if (parentUser && (parentUser as any).role === "student") {
+      await prisma.user.update({
+        where: { id: parentId },
+        data:  { role: "parent" as any },
+      });
+    }
+
+    // ── Generate username for PIN-enabled accounts ────────────────────────
+    let username: string | null = null;
+    if (effectiveLoginMode === "pin_only" || effectiveLoginMode === "hybrid") {
+      username = await generateUsername(childName.trim());
+    }
+
     // ── Create child user ────────────────────────────────────────────────
-    // Child gets a unique email derived from parent ID + child name (no login needed initially)
-    const childEmail = `child-${parentId}-${Date.now()}@mathai.internal`;
+    const childEmail = `${(username ?? childName.toLowerCase().replace(/[^a-z0-9]/g, ""))}.child.${Date.now()}@mathai.app`;
 
     const child = await prisma.user.create({
       data: {
@@ -63,34 +100,36 @@ export async function POST(req: Request) {
       },
     });
 
-    // ── Create StudentProfile with curriculum metadata ────────────────────
+    // ── Create student profile ───────────────────────────────────────────
     await prisma.studentProfile.create({
       data: {
-        userId: child.id,
-        // Store curriculum and school in the interests/preferences fields
-        // (curriculum is not a separate column yet — stored as a structured note)
-        interests: [
-          curriculum && `curriculum:${curriculum}`,
-          schoolName && `school:${schoolName.trim()}`,
-          onboardingGoal && `goal:${onboardingGoal}`,
-        ].filter(Boolean).join(","),
+        userId:             child.id,
+        displayName:        childName.trim(),
+        curriculum,
+        schoolName:         schoolName?.trim() || null,
+        onboardingGoal:     onboardingGoal || null,
+        preferredLoginMode: effectiveLoginMode as any,
+        username,
+        hashedPin,
       },
     });
 
-    // ── Update parent role if needed ──────────────────────────────────────
-    // If the parent signed up as a "student" role, upgrade to "parent"
-    const parentUser = await prisma.user.findUnique({ where: { id: parentId } });
-    if (parentUser && (parentUser as any).role === "student") {
-      await prisma.user.update({
-        where: { id: parentId },
-        data:  { role: "parent" as any },
-      });
-    }
+    // ── Create parent-child link ─────────────────────────────────────────
+    await prisma.parentChildLink.create({
+      data: {
+        parentId,
+        childId:           child.id,
+        relationshipType:  (relationshipType ?? "guardian") as any,
+        status:            "active" as any,
+        isPrimaryGuardian: true,
+      },
+    });
 
     return NextResponse.json({
-      success: true,
-      childId: child.id,
+      success:   true,
+      childId:   child.id,
       childName: child.name,
+      username,
     });
 
   } catch (err) {

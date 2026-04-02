@@ -215,6 +215,11 @@ model User {
   sessions         Session[]
   studentProfile   StudentProfile?
   streak           Streak?
+
+  /// Parent-child links: a parent's linked children
+  parentLinks      ParentChildLink[]  @relation("ParentLinks")
+  /// Parent-child links: a child's linked parents/guardians
+  childLinks       ParentChildLink[]  @relation("ChildLinks")
   xpEvents         XPEvent[]
   studentBadges    StudentBadge[]
   questProgress    StudentQuestProgress[]
@@ -276,6 +281,59 @@ model VerificationToken {
   @@map("verification_tokens")
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// PARENT-CHILD RELATIONSHIPS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// How a parent/guardian relates to a child.
+enum RelationshipType {
+  guardian
+  mother
+  father
+  other
+}
+
+/// Lifecycle status of a parent-child link.
+enum LinkStatus {
+  active
+  pending
+  revoked
+}
+
+/// How the child accesses MathAI.
+enum LoginMode {
+  parent_managed
+  pin_only
+  hybrid
+}
+
+/// Links a parent user to a student user.
+/// Supports multiple children per parent and multiple guardians per child.
+/// The isPrimaryGuardian flag determines which parent sees the child first.
+model ParentChildLink {
+  id                 String           @id @default(cuid())
+  parentId           String
+  childId            String
+  relationshipType   RelationshipType @default(guardian)
+  status             LinkStatus       @default(active)
+  isPrimaryGuardian  Boolean          @default(true)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  parent User @relation("ParentLinks",  fields: [parentId], references: [id], onDelete: Cascade)
+  child  User @relation("ChildLinks",   fields: [childId],  references: [id], onDelete: Cascade)
+
+  /// Prevent duplicate active links for same parent-child pair
+  @@unique([parentId, childId])
+  @@index([parentId, status])
+  @@index([childId, status])
+  @@map("parent_child_links")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// STUDENT PROFILE
+// ═══════════════════════════════════════════════════════════════════════════════
+
 /// Extended learning metadata for student users.
 /// Kept separate from User so teacher/parent rows stay lean,
 /// and so this table can be queried independently by the AI pipeline.
@@ -326,6 +384,29 @@ model StudentProfile {
 
   /// Timestamp of the last AI topic assignment run. Null = never generated.
   aiAssignedTopicsAt DateTime?
+
+  // ─── Parent-managed child fields ────────────────────────────────────────
+
+  /// Display name (may differ from User.name for child-friendly display)
+  displayName      String?
+
+  /// Curriculum framework the student follows (cambridge, ib, cbse, etc.)
+  curriculum       String    @default("cambridge")
+
+  /// School name (optional, for parent/admin reference)
+  schoolName       String?
+
+  /// Parent's stated goal during onboarding (improve_grades, build_confidence, etc.)
+  onboardingGoal   String?
+
+  /// How the child accesses MathAI
+  preferredLoginMode LoginMode @default(parent_managed)
+
+  /// Username for child direct login (unique, kid-friendly)
+  username           String?   @unique
+
+  /// Hashed PIN for child direct login (4+ digits, bcrypt hashed)
+  hashedPin          String?
 
   updatedAt       DateTime     @updatedAt
 

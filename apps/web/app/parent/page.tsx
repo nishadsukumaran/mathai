@@ -1,8 +1,10 @@
 /**
  * @module app/parent/page
  *
- * Parent portal landing — routes to onboarding if no child linked,
- * or to the dashboard if a child exists.
+ * Parent portal landing — routes based on linked children status.
+ *
+ * Uses the proper ParentChildLink model for child lookup.
+ * No children → onboarding. One child → dashboard. Multiple → child picker (future).
  */
 
 import { redirect }         from "next/navigation";
@@ -16,22 +18,22 @@ export default async function ParentPage() {
 
   const parentId = (session.user as { id?: string }).id ?? "";
 
-  // Check if this parent has created any child accounts
-  // Children are identified as users whose email starts with "child-{parentId}-"
-  const children = await prisma.user.findMany({
-    where: {
-      email: { startsWith: `child-${parentId}-` },
-      role:  "student" as any,
-    },
-    select: { id: true },
-    take: 1,
-  }).catch(() => []);
+  // Query proper parent-child links
+  let children: Array<{ childId: string }> = [];
+  try {
+    children = await prisma.parentChildLink.findMany({
+      where:   { parentId, status: "active" as any },
+      select:  { childId: true },
+      orderBy: { createdAt: "asc" },
+    });
+  } catch {
+    // Table may not exist yet if migration hasn't run — fall back to onboarding
+  }
 
   if (children.length === 0) {
-    // No children linked — start onboarding
     redirect("/parent/onboarding");
   }
 
-  // Has a child — go to dashboard with the first child's ID
-  redirect(`/parent/dashboard?childId=${children[0]!.id}`);
+  // Single child → direct to dashboard
+  redirect(`/parent/dashboard?childId=${children[0]!.childId}`);
 }
