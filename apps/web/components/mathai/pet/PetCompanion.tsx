@@ -17,11 +17,12 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePet } from "@/hooks/use-pet";
-import type { PetReaction, PetMood, PetAnimation } from "@/lib/petEngine";
+import type { PetReaction, PetMood } from "@/lib/petEngine";
+import type { Variants } from "framer-motion";
 
 // ─── Framer Motion variants per mood ─────────────────────────────────────────
 
-const ANIMATION_VARIANTS: Record<PetMood, object> = {
+const ANIMATION_VARIANTS: Variants = {
   idle:     { y: [0, -3, 0], transition: { duration: 2.5, repeat: Infinity, ease: "easeInOut" } },
   happy:    { scale: [1, 1.15, 1], rotate: [0, -5, 5, 0], transition: { duration: 0.5 } },
   cheering: { scale: [1, 1.2, 1], y: [0, -8, 0], transition: { duration: 0.6 } },
