@@ -82,6 +82,9 @@ export default function PracticeContainer({ topicId, mode }: Props) {
   // Session Adaptation Engine — adaptive coaching state
   const [adaptation, setAdaptation]     = useState<SessionNextStep | null>(null);
 
+  // Retry-before-reveal: track attempt count per question to allow 1 retry before showing answer
+  const [attemptCount, setAttemptCount] = useState(0);
+
   // ── Start session ────────────────────────────────────────────────────────────
 
   const startSession = useCallback(async () => {
@@ -162,7 +165,18 @@ export default function PracticeContainer({ topicId, mode }: Props) {
       const json = await res.json();
       if (json.success) {
         const r = json.data as SubmitResultView;
-        setResult(r);
+        const currentAttempt = attemptCount + 1;
+        setAttemptCount(currentAttempt);
+
+        // Retry-before-reveal: on first wrong answer, allow retry instead of showing answer
+        if (!r.isCorrect && currentAttempt === 1) {
+          // Show "try again" state — don't set full result (which reveals answer)
+          setResult({ ...r, _retryAvailable: true } as any);
+          setAnswer("");
+        } else {
+          setResult(r);
+        }
+
         if (r.isCorrect) {
           setXpAnim(r.xpEarned);
           setTimeout(() => setXpAnim(null), 2000);
@@ -246,6 +260,7 @@ export default function PracticeContainer({ topicId, mode }: Props) {
     setHintsUsed(0);
     setConfidenceBefore(null);
     setAdaptation(null);
+    setAttemptCount(0);
   }, [session, result]);
 
   // ── Get hint ──────────────────────────────────────────────────────────────────
@@ -339,6 +354,7 @@ export default function PracticeContainer({ topicId, mode }: Props) {
       confidenceBefore={confidenceBefore}
       onConfidenceChange={setConfidenceBefore}
       adaptation={adaptation}
+      attemptCount={attemptCount}
       onRestart={() => {
         setSession(null);
         hasAttemptedRef.current = false;

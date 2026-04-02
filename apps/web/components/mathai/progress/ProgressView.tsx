@@ -53,6 +53,18 @@ export default function ProgressView({ data }: Props) {
           <p className="text-xs text-gray-500 mt-0.5">Track mastery, XP, and what to work on next</p>
         </header>
 
+        {/* ── Empty state for brand new students ─────────────────── */}
+        {totalXp === 0 && (
+          <div className="bg-white rounded-xl p-8 border border-gray-100 text-center">
+            <p className="text-4xl mb-3">📊</p>
+            <p className="font-semibold text-gray-700 text-sm">No progress yet</p>
+            <p className="text-xs text-gray-400 mt-1 mb-4">Your journey begins with one question.</p>
+            <a href="/practice" className="inline-block bg-indigo-600 text-white px-5 py-2 rounded-xl font-semibold text-sm hover:bg-indigo-700 transition active:scale-[0.98]">
+              Start Practising →
+            </a>
+          </div>
+        )}
+
         {/* ── Stat cards ────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="bg-white rounded-xl p-4 border border-gray-100 text-center">
