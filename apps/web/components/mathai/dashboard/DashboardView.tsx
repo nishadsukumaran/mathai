@@ -15,6 +15,8 @@ import { useProfile }      from "@/hooks/use-profile";
 import { usePracticeMenu } from "@/hooks/use-practice-menu";
 import { NextActionCard }  from "@/components/mathai/next-action-card";
 import { PetCompanion }    from "@/components/mathai/pet/PetCompanion";
+import { usePetEngine }    from "@/hooks/use-pet-engine";
+import { usePet }          from "@/hooks/use-pet";
 
 import type { DashboardViewData } from "@/types/contracts";
 import type { Grade }             from "@/types";
@@ -28,6 +30,8 @@ export default function DashboardView({ data }: Props) {
   const [profileOpen, setProfileOpen] = useState(false);
   const { profile, loading: profileLoading, save: saveProfile } = useProfile();
   const { menu, loading: menuLoading } = usePracticeMenu();
+  const { pet } = usePet();
+  const { reaction } = usePetEngine(pet?.personality);
   const gradeEnum = (student.grade.startsWith("G") ? student.grade : `G${student.grade}`) as Grade;
   const recommendedItems = (menu?.sections ?? []).flatMap((s) => s.items).slice(0, 3);
 
@@ -51,8 +55,8 @@ export default function DashboardView({ data }: Props) {
               </h1>
               <p className="text-xs text-gray-500">Grade {student.grade.replace("G", "")}</p>
             </div>
-            {/* Floating pet companion */}
-            <PetCompanion mood="idle" />
+            {/* Floating pet companion — driven by pet engine */}
+            <PetCompanion reaction={reaction} />
           </div>
 
           {/* Compact stat strip */}
