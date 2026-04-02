@@ -38,7 +38,8 @@ export function MathText({ text, className }: MathTextProps) {
   if (!text) return null;
 
   // Regex matches \(...\), \[...\], or $$...$$
-  const mathRegex = /\\\((.+?)\\\)|\\\[(.+?)\\\]|\$\$(.+?)\$\$/gs;
+  // Note: uses 'g' flag only (no 's' flag) for ES2015 compat
+  const mathRegex = /\\\((.+?)\\\)|\\\[(.+?)\\\]|\$\$(.+?)\$\$/g;
 
   const parts: Array<{ type: "text" | "inline" | "display"; content: string }> = [];
   let lastIndex = 0;
