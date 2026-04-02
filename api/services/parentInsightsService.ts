@@ -17,6 +17,7 @@
  */
 
 import type { MemorySnapshot } from "../../ai/services/studentMemoryService";
+import { daysSince }           from "../lib/dateUtils";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -128,11 +129,6 @@ export interface StudentDataInput {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function daysSince(date: Date | null): number {
-  if (!date) return 9999;
-  return Math.floor((Date.now() - date.getTime()) / 86_400_000);
-}
 
 function clamp(v: number, min: number, max: number): number {
   return Math.min(Math.max(v, min), max);

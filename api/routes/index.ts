@@ -2,35 +2,7 @@
  * @module api/routes/index
  *
  * Root router — registers all sub-routers with their prefixes.
- *
- * URL structure:
- *   GET  /api/health
- *   GET  /api/dashboard/:studentId
- *   GET  /api/curriculum
- *   GET  /api/topic/:topicId
- *   GET  /api/weak-areas/:studentId
- *   GET  /api/progress/:studentId
- *   GET  /api/daily-quests/:studentId
- *   GET  /api/gamification/dashboard
- *   POST /api/practice/start
- *   POST /api/practice/submit
- *   POST /api/practice/hint
- *   POST /api/practice/explanation
- *   GET  /api/profile                ← NEW
- *   PATCH /api/profile               ← NEW
- *   GET  /api/practice/menu          ← NEW
- *   POST /api/tutor/ask              ← NEW
- *   GET  /api/student/memory              ← Wave 5
- *   POST /api/student/memory/refresh     ← Wave 5
- *   PATCH /api/student/interests         ← Wave 5
- *   POST /api/internal/generate-topics   ← service-to-service, secret header
- *   POST /api/profile/regenerate-topics  ← authenticated user action
- *   POST /api/profile/request-topic      ← authenticated user action
- *   GET  /api/pet                        ← pet system
- *   POST /api/pet/adopt                  ← adopt/rename pet
- *   GET  /api/pet/catalog                ← available pets
- *   GET  /api/pet/insight                ← parent-facing personality insight
- *   POST /api/pet/evaluate               ← manual personality re-evaluation
+ * See docs/frontend-api-contracts.md for full endpoint reference.
  */
 
 import { Router } from "express";

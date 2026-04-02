@@ -79,6 +79,12 @@ export const MOCK_SESSION_COMPLETE: SubmissionResult = {
     completed: true,
     newCount:  5,
   },
+  sessionAdaptation: {
+    action:        "end_session_positive",
+    reason:        "You've completed all the questions in this session!",
+    encouragement: "Your hard work is paying off!",
+    sourceSignals: {},
+  },
   sessionComplete: {
     sessionId:      "session-1741478400000-abc123",
     totalQuestions: 10,

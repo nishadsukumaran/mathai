@@ -30,6 +30,7 @@ import { recommendationService } from "../../ai/services/recommendationService";
 import { studentMemoryService }  from "../../ai/services/studentMemoryService";
 import { getTopicsForGrade }     from "@/curriculum/topic_tree";
 import { generateAndStore }      from "./topicAssignmentService";
+import { daysSince }             from "../lib/dateUtils";
 
 // ─── Grade progression map ────────────────────────────────────────────────────
 
@@ -53,11 +54,6 @@ function masteryFromScore(score: number): MasteryLevel {
   if (score < 70)   return "developing";
   if (score < 90)   return "mastered";
   return "extended";
-}
-
-function daysSince(date: Date | null): number {
-  if (!date) return 9999;
-  return Math.floor((Date.now() - date.getTime()) / 86_400_000);
 }
 
 // ─── Build PracticeMenuItem from a DB row ─────────────────────────────────────

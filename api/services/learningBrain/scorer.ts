@@ -43,13 +43,21 @@ interface ScoredCandidate {
 }
 
 // ─── Scoring constants (tunable) ─────────────────────────────────────────────
+// These thresholds determine how the brain prioritises topics. They are intentionally
+// tunable — adjust based on cohort data once analytics are available.
 
-const SEVERE_MISCONCEPTION_THRESHOLD = 4;    // mistake count to trigger top priority
-const WEAK_MASTERY_CEILING           = 0.55; // below this = weak
-const STRONG_MASTERY_FLOOR           = 0.75; // above this = strong
-const REVISION_DUE_DAYS             = 5;     // days since last practice to trigger revision
-const LOW_CONFIDENCE_THRESHOLD       = 40;   // avg confidence below this = needs recovery
-const HIGH_HINT_DEPENDENCY           = 1.2;  // avg hints/question above this = dependent
+const SEVERE_MISCONCEPTION_THRESHOLD = 4;    // Mistake count on a single pattern to trigger top priority
+const WEAK_MASTERY_CEILING           = 0.55; // Mastery score below this = weak (aligns with studentMemoryService weak threshold)
+const STRONG_MASTERY_FLOOR           = 0.75; // Mastery score above this = strong (aligns with studentMemoryService strong threshold)
+const REVISION_DUE_DAYS             = 5;     // Days since last practice to trigger revision suggestion
+const LOW_CONFIDENCE_THRESHOLD       = 40;   // Avg confidence (0–100) below this = needs recovery
+const HIGH_HINT_DEPENDENCY           = 1.2;  // Avg hints per question above this = dependent on hints
+
+// Scoring weights — higher = stronger signal. Priority bands:
+//   100+ = severe misconception (must address immediately)
+//   60-99 = moderate priority (weak areas, revision due)
+//   20-59 = standard priority (progression, challenge)
+//   <20  = low priority (behavioral tweaks)
 
 // ─── Score a single topic ────────────────────────────────────────────────────
 

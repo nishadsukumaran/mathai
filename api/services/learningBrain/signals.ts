@@ -8,6 +8,7 @@
  */
 
 import type { MemorySnapshot } from "../../../ai/services/studentMemoryService";
+import { daysSince }           from "../../lib/dateUtils";
 
 // ─── Signal types ────────────────────────────────────────────────────────────
 
@@ -63,11 +64,6 @@ export interface TopicProgressRow {
 }
 
 // ─── Signal extraction ───────────────────────────────────────────────────────
-
-function daysSince(date: Date | null): number {
-  if (!date) return 9999;
-  return Math.floor((Date.now() - date.getTime()) / 86_400_000);
-}
 
 /**
  * Build a TopicSignal for a single topic by combining progress data and memory.
