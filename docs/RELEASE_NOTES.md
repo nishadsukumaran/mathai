@@ -2,96 +2,188 @@
 
 ---
 
+## v2.1 — Parent Accounts, Pet Engine, UX Polish (April 2026)
+
+### Parent-Child Account Model
+
+Production-grade parent-child linking system replacing temporary conventions.
+
+- **`parent_child_links` table** — proper relational model with FK constraints, unique constraint per parent-child pair, indexed for fast lookup
+- **Enums**: `RelationshipType` (guardian/mother/father/other), `LinkStatus` (active/pending/revoked), `LoginMode` (parent_managed/pin_only/hybrid)
+- **StudentProfile extensions**: displayName, curriculum, schoolName, onboardingGoal, preferredLoginMode, username (unique), hashedPin (bcrypt)
+- **Parent onboarding flow** (`/parent/onboarding`) — 2-step: child profile + optional learning goal, login mode selection with PIN setup
+- **Child PIN login** — `POST /api/auth/pin-login` validates username + hashed PIN, checks login mode permissions
+- **Kid-friendly usernames** — auto-generated (name + 3-digit suffix, e.g. "aryan-472")
+- **Future-ready** for: multiple children, multiple guardians, school-issued linking codes
+
+### Parent Ask MathAI
+
+- **`/parent/ask`** — dedicated AI tutor for parents, reusing existing endpoint with parent context
+- **Parent-specific suggestions**: "How do I explain fractions?", "Why is my child struggling?"
+- **LaTeX rendering** via KaTeX in all responses
+- **Dashboard CTA card** — gradient indigo→purple card on parent dashboard
+- **ParentNav** updated with "Ask AI" link
+
+### Pet Engine
+
+Centralized behavior system replacing scattered pet logic.
+
+- **`petEngine.ts`** — pure function service (no React), single entry point: `getReaction(event, personality?)`
+- **11 typed events**: correct_answer, wrong_answer, retry_success, hint_requested, streak_3/7/14, session_complete, level_up, badge_earned, idle
+- **6 moods**: idle (bob), happy (bounce), cheering (pulse), thinking (wiggle), proud (glow), excited (big bounce)
+- **132 message variations**: 3 personality tones (playful/calm/motivator) × 11 events × 4 messages each
+- **Personality modifier**: maps 12 backend PetPersonality values to 3 tone categories
+- **Anti-repeat logic**: tracks last message, filters from next pick
+- **`usePetEngine` hook**: React lifecycle bridge with auto-idle timeout
+- **PetCompanion refactored** to pure display component (zero logic, receives PetReaction)
+
+### Floating Pet Companion
+
+- Pet moved from content block to **header-area floating pill**
+- Expandable detail panel with personality, stats, manage link
+- Speech bubbles with mood-specific messages (auto-dismiss 2.5s)
+- `excited` mood variant added (scale 1.25 + bounce + rotate)
+- Idle animation: gentle 2.5s bob cycle
+
+### Celebration Animations
+
+- **CorrectBurst**: green checkmark scale-up on correct answers (400ms)
+- **XPFloat**: rising +XP badge that fades out (800ms, replaces old bounce)
+- **SessionCompleteEntrance**: card scale-up entrance (400ms)
+- **StreakPulse**: flame animation for streak milestones (600ms)
+- **FadeIn**: generic staggered entry wrapper for cards
+
+### Retry Before Reveal
+
+- First wrong answer → "Not quite — give it another try!" (amber banner)
+- Answer clears, student retries with fresh attempt
+- After second attempt → full result with correct answer revealed
+- Max 2 attempts, always supportive tone, no frustration loops
+
+### UI Redesign (v0 Style)
+
+All 4 main screens redesigned for clean, minimal aesthetics:
+
+**Dashboard:**
+- Compact 3-column stat strip (Level, Streak, XP)
+- Continue Learning as single prominent CTA button
+- Section labels as uppercase tracking-wider headers
+- Tighter spacing, subtler borders (rounded-xl, border-gray-100)
+
+**Practice:**
+- Sticky progress bar with blur backdrop
+- Centered question card with clear difficulty/XP badges
+- Animated progress bar and question transitions (Framer Motion)
+- Micro-interactions: active:scale-[0.98] on all buttons
+
+**Ask MathAI:**
+- MathText component for KaTeX LaTeX rendering in all text
+- Consistent card borders and section labels
+- Formula blocks with overflow-x-auto
+
+**Progress:**
+- 4-column stat cards
+- Color-coded mastery legend with dot indicators
+- 3-column responsive topic grid
+- Friendly empty state for new students
+
+### LaTeX Math Rendering
+
+- **MathText component** using KaTeX for inline `\(...\)` and display `\[...\]` math
+- Applied to: Ask MathAI responses, practice hints, step formulas, worked examples
+- Graceful fallback to code block on parse error
+- KaTeX CSS imported for proper typesetting
+
+### UX Fixes
+
+- **Dashboard cards**: mastery level badge, fallback text, actionable empty state CTA
+- **Admin link visibility**: correctly guarded (role === "admin" only)
+- **Parent portal discoverability**: "Parent View" link added to Profile page
+- **Mobile layout**: overflow-x-hidden on main, parent routes excluded from sidebar padding, AppNav hidden on /parent routes
+- **Empty states**: friendly messages across dashboard, progress, parent portal
+
+### Progressive Prompt Hook (Placeholder)
+
+- `useProgressivePrompt(type)` hook for future progressive onboarding
+- Types: "goal", "preference", "theme"
+- Currently returns shouldShow=false — trigger logic to be implemented
+
+### Code Quality
+
+- **Prisma typing**: regenerated client, removed 5 `as any` casts
+- **Session store**: isolated behind SessionStore interface (swappable to Redis)
+- **Shared utility**: `daysSince()` extracted to `api/lib/dateUtils.ts` (was duplicated in 3 files)
+- **Scorer constants**: documented with priority band explanation
+- **Mock data drift**: fixed missing sessionAdaptation in MOCK_SESSION_COMPLETE
+- **Route comments**: cleaned stale "NEW" and "Wave 5" markers
+
+### Database Migration
+
+- **`parent_child_links`** table created in production (Supabase)
+- **`student_profiles`** extended with 7 new columns
+- 3 new enums: RelationshipType, LinkStatus, LoginMode
+- Migration SQL: `database/migrations/parent_child_links.sql`
+
+### Test Suite
+
+| Suite | Tests | Status |
+|---|---|---|
+| learningBrain | 14 | Existing |
+| sessionAdaptation | 13 | Existing |
+| questionPoolManager | 25 | Existing |
+| visualExplanationEngine | 31 | Existing |
+| mathDataPlanBuilder | 19 | Existing |
+| alignmentVerifier | 13 | Existing |
+| parentInsights | 34 | Existing |
+| integrationFlows | 9 | New |
+| petEngine | 14 | New |
+| parentChild | 25 | New |
+| **Total** | **197** | |
+
+---
+
 ## v2.0 — Adaptive Intelligence Platform (April 2026)
 
 Major release transforming MathAI from a collection of features into a guided adaptive learning system.
 
 ### Learning Brain Engine
 
-The central decision layer that connects memory, mastery, performance, and motivation into a single recommendation.
-
-- **Pre-session intelligence** — `GET /api/learning/next` returns the student's next best learning action
+- **Pre-session intelligence** — `GET /api/learning/next` returns next best learning action
 - **5-tier priority framework**: severe misconception > confidence recovery > revision due > curriculum progression > challenge
-- **Dashboard integration** — "Your Next Step" card shows the brain's recommendation with reason and one-tap start
-- **Balance rules** — never drills weak areas endlessly; injects revision, confidence boosts, and healthy challenges
-- **149 unit tests** covering all decision logic
+- **Dashboard integration** — "Your Next Step" card with reason and one-tap start
+- **Balance rules** — never drills weak areas endlessly
 
 ### Session Adaptation Engine
 
-Real-time in-session intelligence that adapts the practice experience after every answer.
-
 - **Pattern detection** — consecutive wrong, hint dependency, careless rushing, recovery, momentum, fatigue
 - **10 adaptive actions** — easier/harder questions, auto-hints, visual explanations, celebration, positive session ending
-- **Trend-based** — reacts to patterns, not single events; never overreacts to one wrong answer
-- **Integrated into submit flow** — zero additional API calls; `sessionAdaptation` field on every SubmissionResult
+- **Trend-based** — reacts to patterns, not single events
 
 ### Dynamic Difficulty
 
-True difficulty adaptation inside practice sessions.
-
-- **Multi-difficulty question pool** — easy/medium/hard questions generated on-demand
-- **Lazy generation** — only generates new difficulty tiers when first needed (zero startup latency impact)
-- **Guardrails** — max 2 difficulty shifts in 3 questions, no level skipping, pool exhaustion fallback
-- **Backward compatible** — sessions without pools fall back to linear question list
+- **Multi-difficulty question pool** — easy/medium/hard generated on-demand
+- **Guardrails** — max 2 shifts in 3 questions, no level skipping
+- **Lazy generation** — zero startup latency impact
 
 ### Visual Explanation Engine
 
-Intelligent visual selection and rendering for Ask MathAI.
+- **Heuristic + AI classifier** with Phase 1 enforcement and intent caching
+- **mathData-driven precision** with regex fallback
+- **Alignment verifier** — cross-checks explanation/mathData/plan consistency
+- **New renderers**: EquationSteps (Framer Motion), LogicFlow (SVG, Phase 2 gated)
 
-- **Heuristic + AI classifier** — 12 pattern rules for instant classification, AI refinement for ambiguous cases
-- **Phase 1 enforcement** — only battle-tested renderers (number line, fraction bar, array, bar model, place value, equation steps)
-- **Intent caching** — normalized question -> intent cache (200 entries, 30min TTL)
-- **mathData-driven precision** — AI returns structured math understanding; plan builder uses it for exact visual data
-- **Regex fallback** — always available when mathData is missing or invalid
-- **Alignment verifier** — cross-checks explanation, mathData, and visual plan; falls back on 2+ mismatches
+### Parent Portal (v1)
 
-New renderers:
-- **EquationSteps** — step-by-step equation solving with Framer Motion progressive reveal
-- **LogicFlow** — SVG flow diagram for multi-step reasoning (Phase 2, gated)
-
-### Parent Portal
-
-A learning intelligence dashboard for parents.
-
-- **`/parent` route** with dedicated layout, navigation, and role-based access
-- **Learning Score** (0-100) — weighted composite of mastery, consistency, effort, accuracy, improvement
-- **Learning Status** — Excellent / On Track / Needs Attention
-- **Confidence Signal** with contextual explanation ("Confidence dipped — challenges in Fractions may be the cause")
-- **Actionable Insights** — up to 6 prioritised insights, each with a parent-friendly action hint
-- **Learning Personality** — derived from behavioral data (visual learner, independent solver, careful thinker, etc.)
-- **Clustered Mastery Map** — topics grouped into Weak Areas, Improving, Strong, Revision Due
-- **Insight Basis** — transparency label ("Based on 120 questions answered, 5 sessions")
-- **Mock data** for 4 student personas
+- Learning Score, Status, Confidence Signal with explanations
+- Actionable Insights with parent tips
+- Learning Personality, Clustered Mastery Map
+- Mock data for 4 student personas
 
 ### Structured Math Data (mathData)
 
-AI now returns compact structured math understanding alongside explanations.
-
-- **12 math types** — addition, subtraction, multiplication, division, fraction_*, place_value, word_problem, equation, comparison
-- **Validation layer** — sanitizes AI output (type checking, range clamping, zero-denominator rejection)
-- **No extra AI calls** — mathData is part of the existing Ask MathAI response
-- **Backward compatible** — mathData is optional; system works without it
-
-### Shared Types
-
-New types added to `@mathai/shared-types`:
-- `LearningNextAction`, `SourceSignals`, `LearningActionType`, `SessionMode`, `BrainDifficulty`
-- `SessionNextStep`, `SessionAdaptiveAction`, `SessionAdaptiveSignals`
-- `EquationStepsData`, `LogicFlowData`
-- `MathData`, `MathDataType`
-
-### Test Suite
-
-| Suite | Tests | New |
-|---|---|---|
-| learningBrain | 14 | New |
-| sessionAdaptation | 13 | New |
-| questionPoolManager | 25 | New |
-| visualExplanationEngine | 31 | New |
-| mathDataPlanBuilder | 19 | New |
-| alignmentVerifier | 13 | New |
-| parentInsights | 34 | New |
-| **Total** | **149** | |
+- 12 math types with validation layer
+- No extra AI calls — part of existing response
+- Backward compatible
 
 ---
 
@@ -105,51 +197,23 @@ New types added to `@mathai/shared-types`:
 - Progress tracking and weak area detection
 
 ### Gamification
-- XP system with level progression
-- Streak tracking with shield protection
-- Daily quests (3 per day, rotating)
-- Badge system (6 categories)
-- Virtual pet with AI-driven personality evolution
+- XP, levels, streaks, daily quests, badges, virtual pet
 
 ### Visual Explanations (v1)
-- NumberLine, FractionBar, ArrayDiagram, BarModel, PlaceValueChart renderers
-- StepPlayer for animated walkthroughs
-- ConceptImage for AI-generated educational images
-- On-demand image generation via Gemini + SVG fallback
+- NumberLine, FractionBar, ArrayDiagram, BarModel, PlaceValueChart, StepPlayer, ConceptImage
 
-### Student Learning Memory (Wave 5)
-- Two-layer memory system (raw events + cached MemorySnapshot)
-- Misconception tracking with resolution
-- Confidence EWMA (30% new, 70% historical)
-- Interest-aware AI personalisation
-- Topic-level hint dependency tracking
-
-### Profile & Preferences
-- Student profile management (name, grade, pace, style, theme)
-- Preferred explanation style inference from session behavior
-- AI topic queue management (ordered by priority)
+### Student Learning Memory
+- Two-layer memory (raw events + cached MemorySnapshot)
+- Misconception tracking, confidence EWMA, interest-aware personalisation
 
 ### Admin Panel
-- Platform statistics dashboard
-- User search, filter, pagination
-- User detail with pet personality insight
-- Account management (disable/enable, password reset)
+- Platform stats, user management, pet personality insight
 
 ### Authentication
-- Email/password + Google OAuth via NextAuth
-- JWT-based session with Express API verification
-- Role-based access control (student, parent, teacher, admin)
+- Email/password + Google OAuth, JWT sessions, role-based access control
 
 ### Cambridge Curriculum Alignment
-- Grade-based topic suggestions aligned to Cambridge framework
-- Cambridge objective codes on question generation prompts
-- Grade-level guard prevents above-stage content
-- Non-math question rejection with polite redirect
+- Grade-based topics, Cambridge objective codes, grade-level guard
 
 ### Infrastructure
-- Next.js 16 + React 18 frontend
-- Express REST API with Zod validation
-- PostgreSQL + Prisma ORM
-- Vercel AI SDK + AI Gateway
-- Turborepo monorepo
-- Mock data layer for frontend development
+- Next.js 16, Express REST API, PostgreSQL + Prisma, Vercel AI SDK, Turborepo
