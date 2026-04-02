@@ -12,6 +12,7 @@ import { cn }                from "@/lib/utils";
 import { clientPost }        from "@/lib/clientApi";
 import { useProfile }        from "@/hooks/use-profile";
 import { VisualRenderer }    from "@/components/mathai/visual";
+import { MathText }          from "@/components/shared/MathText";
 import type { AskMathAIResponse } from "@/types";
 
 // ─── Grade-based suggestions aligned to Cambridge Primary/Lower Secondary ────
@@ -463,26 +464,28 @@ function ResponseCard({ response }: { response: AskMathAIResponse }) {
       )}
 
       {/* Explanation */}
-      <div className="bg-white rounded-3xl rounded-tl-lg px-5 py-4 shadow-sm border border-indigo-100">
-        <p className="text-gray-800 text-sm leading-relaxed">{renderMd(response.explanation)}</p>
+      <div className="bg-white rounded-2xl px-5 py-4 shadow-sm border border-gray-100">
+        <p className="text-gray-800 text-sm leading-relaxed">
+          <MathText text={response.explanation} />
+        </p>
       </div>
 
       {/* Steps */}
       {response.steps && response.steps.length > 0 && (
-        <div className="bg-white rounded-3xl px-5 py-4 shadow-sm border border-purple-100 space-y-3">
-          <p className="text-xs font-bold text-purple-500 uppercase tracking-widest">Step by Step</p>
+        <div className="bg-white rounded-2xl px-5 py-4 shadow-sm border border-gray-100 space-y-3">
+          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Step by Step</p>
           <ol className="space-y-3">
             {response.steps.map((step) => (
               <li key={step.stepNumber} className="flex gap-3 items-start">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-purple-600 text-white text-xs font-black flex items-center justify-center">
+                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center justify-center">
                   {step.stepNumber}
                 </span>
-                <div>
-                  <p className="text-sm text-gray-700">{renderMd(step.instruction)}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-gray-700"><MathText text={step.instruction} /></p>
                   {step.formula && (
-                    <code className="mt-1 block text-xs bg-gray-100 rounded px-2 py-1 font-mono text-purple-700">
-                      {step.formula}
-                    </code>
+                    <div className="mt-1 text-sm bg-gray-50 rounded-lg px-3 py-1.5 text-indigo-700 overflow-x-auto">
+                      <MathText text={`\\(${step.formula}\\)`} />
+                    </div>
                   )}
                 </div>
               </li>
@@ -493,19 +496,19 @@ function ResponseCard({ response }: { response: AskMathAIResponse }) {
 
       {/* Example */}
       {response.example && (
-        <div className="bg-amber-50 border border-amber-200 rounded-3xl px-5 py-4 space-y-2">
-          <p className="text-xs font-bold text-amber-600 uppercase tracking-widest">Worked Example</p>
-          <p className="text-sm font-semibold text-amber-900">{renderMd(response.example.problem)}</p>
-          <p className="text-sm text-amber-800">{renderMd(response.example.solution)}</p>
-          <p className="text-xs text-amber-700 font-semibold">🔑 {renderMd(response.example.keyInsight)}</p>
+        <div className="bg-amber-50/60 border border-amber-200 rounded-2xl px-5 py-4 space-y-2">
+          <p className="text-[10px] font-semibold text-amber-600 uppercase tracking-wider">Worked Example</p>
+          <p className="text-sm font-semibold text-amber-900"><MathText text={response.example.problem} /></p>
+          <p className="text-sm text-amber-800"><MathText text={response.example.solution} /></p>
+          <p className="text-xs text-amber-700 font-semibold">🔑 <MathText text={response.example.keyInsight} /></p>
         </div>
       )}
 
-      {/* Follow-up + encouragement */}
+      {/* Follow-up */}
       {response.followUp && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-3xl px-5 py-3">
-          <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest mb-1">Explore Next</p>
-          <p className="text-sm text-emerald-800">{renderMd(response.followUp)}</p>
+        <div className="bg-emerald-50/60 border border-emerald-200 rounded-2xl px-5 py-3">
+          <p className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wider mb-1">Explore Next</p>
+          <p className="text-sm text-emerald-800">{response.followUp}</p>
         </div>
       )}
       {response.encouragement && (

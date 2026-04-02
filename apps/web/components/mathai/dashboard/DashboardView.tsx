@@ -3,26 +3,12 @@
 /**
  * @module apps/web/components/mathai/dashboard/DashboardView
  *
- * Pure view component for the student home screen.
- * Receives DashboardViewData from DashboardContainer (server) as props.
- * Client-side data (profile, practice menu) is fetched via hooks — this
- * keeps the hot path (auth + core dashboard) fully server-rendered while
- * personalised sections hydrate client-side without blocking the page.
- *
- * Layout — 5 core product actions:
- *   Header        — avatar, name, grade, compact XP strip
- *   1. Continue Learning      — most recent/in-progress topic
- *   2. Ask MathAI             — AskCard (already built)
- *   3. Recommended Practice   — top 3 items from practice menu
- *   4. Daily Mission          — quests + streak combined
- *   5. Progress Summary       — compact XP level + mastery count → /progress
- *
- * Secondary content (badges, full topic grid) lives on /progress and /practice.
+ * Student home screen — clean card-based layout with clear visual hierarchy.
  */
 
 import { useState }       from "react";
 import Link               from "next/link";
-import { XPBar, StreakCounter, QuestCard } from "@/components/mathai";
+import { QuestCard }       from "@/components/mathai";
 import { AskCard }         from "@/components/mathai/ask-card";
 import { ProfileModal }    from "@/components/mathai/profile-modal";
 import { useProfile }      from "@/hooks/use-profile";
@@ -33,153 +19,128 @@ import { NextActionCard }  from "@/components/mathai/next-action-card";
 import type { DashboardViewData } from "@/types/contracts";
 import type { Grade }             from "@/types";
 
-/* ─── Props ────────────────────────────────────────────────────────────────── */
-
 interface Props {
   data: DashboardViewData;
 }
 
-/* ─── Component ────────────────────────────────────────────────────────────── */
-
 export default function DashboardView({ data }: Props) {
   const { student, xp, streak, continueLearning, dailyMission, progressSummary } = data;
-
   const [profileOpen, setProfileOpen] = useState(false);
-
-  // Client-side: profile (for modal) + practice menu (for recommended section)
   const { profile, loading: profileLoading, save: saveProfile } = useProfile();
   const { menu, loading: menuLoading } = usePracticeMenu();
-
-  // Derive grade for AskCard — normalise "4" → "G4"
   const gradeEnum = (student.grade.startsWith("G") ? student.grade : `G${student.grade}`) as Grade;
-
-  // Top 3 recommended items from the first non-empty section
-  const recommendedItems = (menu?.sections ?? [])
-    .flatMap((s) => s.items)
-    .slice(0, 3);
+  const recommendedItems = (menu?.sections ?? []).flatMap((s) => s.items).slice(0, 3);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-      <div className="max-w-4xl mx-auto p-6 space-y-8">
+    <div className="min-h-screen bg-slate-50/50">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-6">
 
-        {/* ── Header ──────────────────────────────────────────────────── */}
-        <header className="flex items-center gap-4 bg-white rounded-3xl p-6 shadow-md border border-indigo-100/60">
-          {/* Avatar — tap to open profile modal */}
-          <button
-            onClick={() => setProfileOpen(true)}
-            className="relative w-16 h-16 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-3xl font-black text-white shadow-lg hover:scale-105 transition-transform"
-            aria-label="Open profile"
-          >
-            {student.name?.[0]?.toUpperCase() ?? "S"}
-            <span className="absolute -bottom-1 -right-1 bg-white rounded-full text-xs p-0.5 shadow border border-indigo-100">
-              ✏️
-            </span>
-          </button>
-
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-black text-gray-800 truncate">
-              Hey {student.name}! 👋
-            </h1>
-            <p className="text-sm text-slate-500">Grade {student.grade.replace("G", "")}</p>
+        {/* ── Header: Greeting + Stats ────────────────────────────────── */}
+        <header className="space-y-4">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setProfileOpen(true)}
+              className="relative w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xl font-black text-white shadow-md hover:scale-105 transition-transform shrink-0"
+              aria-label="Open profile"
+            >
+              {student.name?.[0]?.toUpperCase() ?? "S"}
+            </button>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl font-bold text-gray-900 truncate">
+                Hey {student.name}!
+              </h1>
+              <p className="text-xs text-gray-500">Grade {student.grade.replace("G", "")}</p>
+            </div>
           </div>
 
-          {xp && (
-            <div className="hidden sm:block">
-              <XPBar xp={xp} compact />
+          {/* Compact stat strip */}
+          <div className="grid grid-cols-3 gap-3">
+            {/* Level */}
+            {progressSummary && (
+              <div className="bg-white rounded-2xl p-3 border border-gray-100 text-center">
+                <p className="text-lg font-bold text-indigo-600">{progressSummary.level}</p>
+                <p className="text-[10px] text-gray-400 font-medium uppercase">Level</p>
+              </div>
+            )}
+            {/* Streak */}
+            <div className="bg-white rounded-2xl p-3 border border-gray-100 text-center">
+              <p className="text-lg font-bold text-orange-500">
+                {streak?.currentStreak ?? 0}
+              </p>
+              <p className="text-[10px] text-gray-400 font-medium uppercase">Day Streak</p>
             </div>
-          )}
+            {/* XP */}
+            {xp && (
+              <div className="bg-white rounded-2xl p-3 border border-gray-100 text-center">
+                <p className="text-lg font-bold text-purple-600">{xp.totalXP}</p>
+                <p className="text-[10px] text-gray-400 font-medium uppercase">Total XP</p>
+              </div>
+            )}
+          </div>
         </header>
 
-        {/* ── Getting Started — shown only to brand-new users (0 XP) ─── */}
+        {/* ── Getting Started (0 XP) ──────────────────────────────────── */}
         {progressSummary && progressSummary.totalXP === 0 && (
-          <section className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-3xl p-6 text-white shadow-lg">
-            <h2 className="font-black text-lg mb-1">Welcome to MathAI! 🎉</h2>
-            <p className="text-indigo-200 text-sm mb-4">Here&apos;s how to get started:</p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <Link
-                href="/progress"
-                className="bg-white/15 hover:bg-white/25 rounded-2xl p-4 transition"
-              >
-                <p className="text-2xl mb-1">📚</p>
-                <p className="font-bold text-sm">Pick a topic</p>
-                <p className="text-xs text-indigo-200 mt-0.5">Browse all topics on the Progress page</p>
+          <section className="bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl p-5 text-white">
+            <h2 className="font-bold text-base mb-1">Welcome to MathAI!</h2>
+            <p className="text-indigo-200 text-xs mb-3">Pick your first action to get started.</p>
+            <div className="grid grid-cols-3 gap-2">
+              <Link href="/practice" className="bg-white/15 hover:bg-white/25 rounded-xl p-3 transition text-center">
+                <p className="text-xl mb-0.5">📚</p>
+                <p className="font-semibold text-xs">Practice</p>
               </Link>
-              <Link
-                href="/ask"
-                className="bg-white/15 hover:bg-white/25 rounded-2xl p-4 transition"
-              >
-                <p className="text-2xl mb-1">🤖</p>
-                <p className="font-bold text-sm">Ask MathAI</p>
-                <p className="text-xs text-indigo-200 mt-0.5">Get step-by-step help on any math question</p>
+              <Link href="/ask" className="bg-white/15 hover:bg-white/25 rounded-xl p-3 transition text-center">
+                <p className="text-xl mb-0.5">🤖</p>
+                <p className="font-semibold text-xs">Ask AI</p>
               </Link>
-              <Link
-                href="/profile"
-                className="bg-white/15 hover:bg-white/25 rounded-2xl p-4 transition"
-              >
-                <p className="text-2xl mb-1">⚙️</p>
-                <p className="font-bold text-sm">Customise settings</p>
-                <p className="text-xs text-indigo-200 mt-0.5">Learning pace, style &amp; confidence</p>
+              <Link href="/profile" className="bg-white/15 hover:bg-white/25 rounded-xl p-3 transition text-center">
+                <p className="text-xl mb-0.5">⚙️</p>
+                <p className="font-semibold text-xs">Settings</p>
               </Link>
             </div>
           </section>
         )}
 
-        {/* ── 1. Continue Learning ────────────────────────────────────── */}
-        <section>
-          <h2 className="text-lg font-black text-gray-800 mb-3">Continue Learning 📖</h2>
-          {continueLearning ? (
-            <div className="bg-white rounded-3xl p-6 shadow-md border border-indigo-100 flex items-center gap-5">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-3xl shrink-0">
+        {/* ── Continue Learning ────────────────────────────────────────── */}
+        {continueLearning && (
+          <Link
+            href={`/practice?topicId=${continueLearning.topicId}`}
+            className="block bg-indigo-600 hover:bg-indigo-700 rounded-2xl p-5 text-white shadow-md transition-colors"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-2xl shrink-0">
                 {continueLearning.icon}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-black text-gray-800 text-lg truncate">
-                  {continueLearning.topicName}
-                </p>
-                <p className="text-sm text-slate-500 mt-0.5 capitalize">
+                <p className="font-bold text-sm truncate">{continueLearning.topicName}</p>
+                <p className="text-indigo-200 text-xs mt-0.5 capitalize">
                   {continueLearning.masteryLevel.replace("_", " ")}
                 </p>
               </div>
-              <Link
-                href={`/practice?topicId=${continueLearning.topicId}`}
-                className="shrink-0 bg-indigo-600 text-white px-5 py-2.5 rounded-2xl font-bold hover:bg-indigo-700 transition text-sm"
-              >
-                {continueLearning.ctaLabel}
-              </Link>
+              <span className="text-sm font-bold shrink-0">
+                {continueLearning.ctaLabel} →
+              </span>
             </div>
-          ) : (
-            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-3xl p-6 border border-indigo-100 text-center">
-              <p className="text-slate-500 mb-3">No topics started yet — let&apos;s go!</p>
-              <Link
-                href="/practice"
-                className="inline-block bg-indigo-600 text-white px-6 py-2 rounded-2xl font-bold hover:bg-indigo-700 transition text-sm"
-              >
-                Start your first lesson →
-              </Link>
-            </div>
-          )}
-        </section>
+          </Link>
+        )}
 
-        {/* ── 2. Next Best Action (Learning Brain) ─────────────────────── */}
+        {/* ── Your Next Step (Learning Brain) ─────────────────────────── */}
         <section>
-          <h2 className="text-lg font-black text-gray-800 mb-3">Your Next Step 🧠</h2>
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Recommended</p>
           <NextActionCard />
         </section>
 
-        {/* ── 3. Ask MathAI ───────────────────────────────────────────── */}
+        {/* ── Ask MathAI ──────────────────────────────────────────────── */}
         <section>
-          <h2 className="text-lg font-black text-gray-800 mb-3">Ask MathAI 🤖</h2>
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Ask a Question</p>
           <AskCard grade={gradeEnum} />
         </section>
 
-        {/* ── 3. Recommended Practice ─────────────────────────────────── */}
+        {/* ── Recommended Practice ─────────────────────────────────────── */}
         <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-black text-gray-800">Recommended Practice 🎯</h2>
-            <Link
-              href="/practice"
-              className="text-xs font-bold text-indigo-500 hover:text-indigo-700 transition"
-            >
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Practice Topics</p>
+            <Link href="/practice" className="text-xs font-semibold text-indigo-500 hover:text-indigo-700 transition">
               See All →
             </Link>
           </div>
@@ -187,7 +148,7 @@ export default function DashboardView({ data }: Props) {
           {menuLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-24 bg-slate-100 rounded-2xl animate-pulse" />
+                <div key={i} className="h-24 bg-white rounded-xl animate-pulse border border-gray-100" />
               ))}
             </div>
           ) : recommendedItems.length > 0 ? (
@@ -196,142 +157,102 @@ export default function DashboardView({ data }: Props) {
                 <Link
                   key={item.topicId}
                   href={`/practice?topicId=${item.topicId}&mode=${item.suggestedMode ?? "guided"}`}
-                  className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all group"
+                  className="bg-white rounded-xl p-4 border border-gray-100 hover:border-indigo-200 hover:shadow-sm transition-all group"
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-2xl">📚</span>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-lg">📚</span>
                     {item.masteryLevel && item.masteryLevel !== "not_started" && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 capitalize">
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-gray-100 text-gray-500 capitalize">
                         {item.masteryLevel.replace(/_/g, " ")}
                       </span>
                     )}
                   </div>
-                  <p className="font-bold text-gray-800 text-sm leading-snug group-hover:text-indigo-700 transition">
+                  <p className="font-semibold text-gray-800 text-sm leading-snug group-hover:text-indigo-600 transition">
                     {item.topicName || "Practice Topic"}
                   </p>
-                  {item.reason ? (
-                    <p className="text-xs text-slate-400 mt-1 line-clamp-2">
-                      {item.reason.replace(/_/g, " ")}
-                    </p>
-                  ) : (
-                    <p className="text-xs text-slate-400 mt-1">Tap to start practising</p>
-                  )}
+                  <p className="text-xs text-gray-400 mt-1 line-clamp-1">
+                    {item.reason ? item.reason.replace(/_/g, " ") : "Tap to start"}
+                  </p>
                 </Link>
               ))}
             </div>
           ) : (
-            <Link
-              href="/practice"
-              className="block bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-2xl p-6 text-center hover:shadow-md transition-all"
-            >
-              <p className="text-3xl mb-2">🚀</p>
-              <p className="font-bold text-indigo-700 text-sm">Let&apos;s get started!</p>
-              <p className="text-xs text-indigo-400 mt-1">Try your first practice session</p>
+            <Link href="/practice" className="block bg-white border border-dashed border-indigo-200 rounded-xl p-6 text-center hover:border-indigo-400 transition">
+              <p className="text-2xl mb-1">🚀</p>
+              <p className="font-semibold text-indigo-600 text-sm">Start your first practice session</p>
             </Link>
           )}
         </section>
 
-        {/* ── 4. Daily Mission ────────────────────────────────────────── */}
+        {/* ── Daily Mission ───────────────────────────────────────────── */}
         <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-black text-gray-800">Daily Mission ⚡</h2>
-            <div className="flex items-center gap-3">
-              {/* Streak inline */}
-              {streak && (
-                <span className="text-sm font-bold text-orange-500 bg-orange-50 px-3 py-1 rounded-full">
-                  🔥 {streak.currentStreak} day streak
-                </span>
-              )}
-              <span className="text-xs font-bold text-indigo-500 bg-indigo-50 px-3 py-1 rounded-full">
-                {dailyMission.completedCount}/{dailyMission.totalCount} done
-              </span>
-            </div>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Daily Quests</p>
+            <span className="text-xs font-semibold text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-md">
+              {dailyMission.completedCount}/{dailyMission.totalCount}
+            </span>
           </div>
 
           {dailyMission.quests.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {dailyMission.quests.map((quest, i) => (
                 <QuestCard key={i} quest={quest} />
               ))}
             </div>
           ) : (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-amber-700 text-sm text-center">
-              No active quests right now — check back tomorrow! 🌟
+            <div className="bg-white border border-gray-100 rounded-xl p-5 text-center">
+              <p className="text-gray-400 text-sm">No active quests — check back tomorrow!</p>
             </div>
           )}
         </section>
 
-        {/* ── 5. My Pet ─────────────────────────────────────────────── */}
+        {/* ── My Pet ──────────────────────────────────────────────────── */}
         <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-black text-gray-800">My Pet 🐾</h2>
-            <a
-              href="/profile#pet"
-              className="text-xs font-bold text-indigo-500 hover:text-indigo-700 transition"
-            >
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">My Pet</p>
+            <a href="/profile#pet" className="text-xs font-semibold text-indigo-500 hover:text-indigo-700 transition">
               Manage →
             </a>
           </div>
           <PetCard />
         </section>
 
-        {/* ── 6. Progress Summary ─────────────────────────────────────── */}
+        {/* ── Progress Summary ─────────────────────────────────────────── */}
         {progressSummary && (
-          <section>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-black text-gray-800">Your Progress 📈</h2>
-              <Link
-                href="/progress"
-                className="text-xs font-bold text-indigo-500 hover:text-indigo-700 transition"
-              >
-                Full Stats →
-              </Link>
-            </div>
-
-            <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
-              <div className="flex items-center gap-6">
-                {/* Level badge */}
-                <div className="shrink-0 w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex flex-col items-center justify-center text-white shadow-lg">
-                  <span className="text-xs font-bold opacity-80">Lvl</span>
-                  <span className="text-2xl font-black leading-none">{progressSummary.level}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-black text-gray-800">{progressSummary.levelTitle}</p>
-                  <p className="text-sm text-slate-500 mt-0.5">
-                    {progressSummary.totalXP.toLocaleString()} XP total ·{" "}
-                    {progressSummary.masteredTopics}/{progressSummary.totalTopics} topics mastered
-                  </p>
-                  {/* Mini mastery bar */}
-                  {progressSummary.totalTopics > 0 && (
-                    <div className="mt-2 h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-indigo-500 to-emerald-500 rounded-full transition-all"
-                        style={{
-                          width: `${Math.round(
-                            (progressSummary.masteredTopics / progressSummary.totalTopics) * 100
-                          )}%`,
-                        }}
-                      />
-                    </div>
-                  )}
-                </div>
+          <Link href="/progress" className="block bg-white rounded-xl p-4 border border-gray-100 hover:border-indigo-200 transition-all">
+            <div className="flex items-center gap-4">
+              <div className="shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex flex-col items-center justify-center text-white">
+                <span className="text-[10px] font-semibold opacity-80">Lvl</span>
+                <span className="text-lg font-bold leading-none">{progressSummary.level}</span>
               </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-gray-800 text-sm">{progressSummary.levelTitle}</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {progressSummary.totalXP.toLocaleString()} XP · {progressSummary.masteredTopics}/{progressSummary.totalTopics} mastered
+                </p>
+                {progressSummary.totalTopics > 0 && (
+                  <div className="mt-1.5 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-indigo-500 to-emerald-500 rounded-full transition-all"
+                      style={{ width: `${Math.round((progressSummary.masteredTopics / progressSummary.totalTopics) * 100)}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+              <span className="text-gray-300 text-sm">→</span>
             </div>
-          </section>
+          </Link>
         )}
 
       </div>
 
-      {/* ── Profile modal (portal overlay) ──────────────────────────── */}
+      {/* ── Profile modal ──────────────────────────────────────────── */}
       {profileOpen && (
         <ProfileModal
           profile={profile}
           loading={profileLoading}
           onClose={() => setProfileOpen(false)}
-          onSave={async (patch) => {
-            await saveProfile(patch);
-            setProfileOpen(false);
-          }}
+          onSave={async (patch) => { await saveProfile(patch); setProfileOpen(false); }}
         />
       )}
     </div>
