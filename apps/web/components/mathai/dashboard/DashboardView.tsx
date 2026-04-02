@@ -13,8 +13,8 @@ import { AskCard }         from "@/components/mathai/ask-card";
 import { ProfileModal }    from "@/components/mathai/profile-modal";
 import { useProfile }      from "@/hooks/use-profile";
 import { usePracticeMenu } from "@/hooks/use-practice-menu";
-import { PetCard }         from "@/components/mathai/pet";
 import { NextActionCard }  from "@/components/mathai/next-action-card";
+import { PetCompanion }    from "@/components/mathai/pet/PetCompanion";
 
 import type { DashboardViewData } from "@/types/contracts";
 import type { Grade }             from "@/types";
@@ -51,6 +51,8 @@ export default function DashboardView({ data }: Props) {
               </h1>
               <p className="text-xs text-gray-500">Grade {student.grade.replace("G", "")}</p>
             </div>
+            {/* Floating pet companion */}
+            <PetCompanion mood="idle" />
           </div>
 
           {/* Compact stat strip */}
@@ -204,17 +206,6 @@ export default function DashboardView({ data }: Props) {
               <p className="text-gray-400 text-sm">No active quests — check back tomorrow!</p>
             </div>
           )}
-        </section>
-
-        {/* ── My Pet ──────────────────────────────────────────────────── */}
-        <section>
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">My Pet</p>
-            <a href="/profile#pet" className="text-xs font-semibold text-indigo-500 hover:text-indigo-700 transition">
-              Manage →
-            </a>
-          </div>
-          <PetCard />
         </section>
 
         {/* ── Progress Summary ─────────────────────────────────────────── */}
