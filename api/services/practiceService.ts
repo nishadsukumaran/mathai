@@ -53,13 +53,33 @@ import {
 import { getTopicById, getCambridgeObjective } from "../../curriculum/topic_tree";
 import { PET_CATALOG } from "../../services/gamification/pet_personality_engine";
 
-// ─── In-Memory Session Store ──────────────────────────────────────────────────
+// ─── Session Store ───────────────────────────────────────────────────────────
+//
+// PRODUCTION RISK: Sessions are held in-memory only. This means:
+//   - Server restart = all active sessions lost (mitigated by DB recovery via loadSessionFromDB)
+//   - Horizontal scaling = sessions pinned to one process (needs Redis or DB sessions)
+//   - Memory growth = unbounded if sessions aren't cleaned up (mitigated by delete on complete)
+//
+// Current mitigation: sessions are persisted to practice_sessions table on creation,
+// currentIndex is persisted on each question advance, and loadSessionFromDB can
+// reconstruct a session from DB state (minus per-question response history).
+//
+// To replace: swap SessionStore implementation to Redis or DB-backed store.
 
-/**
- * Active session map — keyed by sessionId.
- * TODO: Replace with Redis HASH or Prisma practice_sessions row + in-memory cache.
- */
-const ACTIVE_SESSIONS = new Map<string, ActivePracticeSession>();
+interface SessionStore {
+  get(id: string): ActivePracticeSession | undefined;
+  set(id: string, session: ActivePracticeSession): void;
+  delete(id: string): void;
+}
+
+const inMemoryStore: SessionStore = {
+  _map: new Map<string, ActivePracticeSession>(),
+  get(id: string) { return (this as any)._map.get(id); },
+  set(id: string, session: ActivePracticeSession) { (this as any)._map.set(id, session); },
+  delete(id: string) { (this as any)._map.delete(id); },
+} as SessionStore & { _map: Map<string, ActivePracticeSession> };
+
+const sessionStore: SessionStore = inMemoryStore;
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
@@ -111,10 +131,7 @@ export async function startSession(
   let questions: PracticeQuestion[];
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const profileAny = profile as any;
-
-    // Extract topic-specific misconceptions from the memory snapshot
+      // Extract topic-specific misconceptions from the memory snapshot
     const topicMisconceptions = memorySnapshot?.activeMistakePatterns
       .filter((p) => p.topicId === topicId)
       .map((p) => p.tag) ?? [];
@@ -132,9 +149,9 @@ export async function startSession(
       questionCount:     questionCount ?? 10,
       cambridgeObjective,
       studentContext: {
-        learningPace:              memorySnapshot?.learningPace ?? String(profileAny?.learningPace ?? "standard"),
+        learningPace:              memorySnapshot?.learningPace ?? String(profile?.learningPace ?? "standard"),
         confidenceLevel:           memorySnapshot?.avgConfidenceScore ?? Number(profile?.confidenceLevel ?? 50),
-        preferredExplanationStyle: memorySnapshot?.preferredExplanationStyle ?? String(profileAny?.preferredExplanationStyle ?? "step_by_step"),
+        preferredExplanationStyle: memorySnapshot?.preferredExplanationStyle ?? String(profile?.preferredExplanationStyle ?? "step_by_step"),
         recentMistakes:            recentMistakeTags,
         interestKeywords:          memorySnapshot?.interests ?? [],
         activeMisconceptionsForTopic: topicMisconceptions,
@@ -175,8 +192,8 @@ export async function startSession(
   }
 
   // Persist session to DB so state survives server restarts / Render deploys.
-  // questionsJson lets us reconstruct in-memory session if ACTIVE_SESSIONS is evicted.
-  const dbRow = await (prisma.practiceSession.create as any)({
+  // questionsJson lets us reconstruct in-memory session if sessionStore is evicted.
+  const dbRow = await prisma.practiceSession.create({
     data: {
       userId,
       practiceSetId:  null,
@@ -227,7 +244,7 @@ export async function startSession(
     difficultyState,
   };
 
-  ACTIVE_SESSIONS.set(sessionId, session);
+  sessionStore.set(sessionId, session);
 
   // Mark lesson started in memory (fire-and-forget)
   if (lessonId) {
@@ -259,7 +276,7 @@ export interface SubmitAnswerParams {
 export async function submitAnswer(params: SubmitAnswerParams): Promise<SubmissionResult> {
   const { sessionId, questionId, studentAnswer, timeSpentSeconds, hintsUsed, hintMaxLevel } = params;
 
-  const sessionFromMemory = ACTIVE_SESSIONS.get(sessionId);
+  const sessionFromMemory = sessionStore.get(sessionId);
   let session: ActivePracticeSession;
   if (sessionFromMemory) {
     session = sessionFromMemory;
@@ -311,10 +328,8 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
       .catch((err) => console.error("[practiceService] checkAndResolvePatterns failed:", err));
   }
 
-  // 4c. Persist QuestionAttempt row (fire-and-forget — session.id is a DB cuid after P2 migration)
-  // Note: cast to `any` because the Prisma client was generated before the hintMaxLevel migration;
-  // the column exists in DB. Remove cast after next `prisma generate`.
-  (prisma.questionAttempt.create as any)({
+  // 4c. Persist QuestionAttempt row (fire-and-forget)
+  prisma.questionAttempt.create({
     data: {
       sessionId:        session.id,
       userId:           session.userId,
@@ -402,8 +417,7 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
   if (isCorrect || attemptCount >= 3) {
     session.currentIndex = Math.min(session.currentIndex + 1, session.questions.length);
     // Persist index so session can be recovered on server restart.
-    // Cast to `any`: Prisma client generated before currentIndex migration; remove after prisma generate.
-    (prisma.practiceSession.update as any)({
+    prisma.practiceSession.update({
       where: { id: session.id },
       data:  { currentIndex: session.currentIndex },
     }).catch((err: Error) => console.error("[practiceService] currentIndex persist failed:", err));
@@ -414,7 +428,7 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
   if (sessionComplete) {
     session.completedAt = new Date();
     session.accuracyPercent = computeAccuracy(session.responses);
-    ACTIVE_SESSIONS.delete(sessionId);
+    sessionStore.delete(sessionId);
   }
 
   // 8. Mastery update on session completion
@@ -522,7 +536,7 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
         const style = inferExplanationStyle(sessionMetrics);
         await prisma.studentProfile.update({
           where: { userId: session.userId },
-          data:  { preferredExplanationStyle: style as any },
+          data:  { preferredExplanationStyle: style as import("@prisma/client").ExplanationStyle },
         }).catch((err) => console.error("[practiceService] preferredExplanationStyle update failed:", err));
       })(),
       // Pet personality re-evaluation — runs every 50 questions answered.
@@ -613,7 +627,7 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
  * Returns the next question in the session, or null if complete.
  */
 export async function getNextQuestion(sessionId: string): Promise<PracticeQuestion | null> {
-  const session = ACTIVE_SESSIONS.get(sessionId);
+  const session = sessionStore.get(sessionId);
   if (!session) throw new NotFoundError("PracticeSession", sessionId);
   return session.questions[session.currentIndex] ?? null;
 }
@@ -688,7 +702,7 @@ export async function getNextAdaptiveQuestion(
   sessionId: string,
   adaptAction: import("@mathai/shared-types").SessionAdaptiveAction,
 ): Promise<PracticeQuestion | null> {
-  const session = ACTIVE_SESSIONS.get(sessionId);
+  const session = sessionStore.get(sessionId);
   if (!session) throw new NotFoundError("PracticeSession", sessionId);
 
   const ds = session.difficultyState;
@@ -854,9 +868,7 @@ function inferExplanationStyle(
  */
 async function loadSessionFromDB(sessionId: string): Promise<ActivePracticeSession | null> {
   try {
-    // Cast to `any`: Prisma client generated before questionsJson/topicId/currentIndex migration.
-    // All these columns exist in DB. Remove cast after next `prisma generate`.
-    const row = await prisma.practiceSession.findUnique({ where: { id: sessionId } }) as any;
+    const row = await prisma.practiceSession.findUnique({ where: { id: sessionId } });
     if (!row) return null;
 
     // questionsJson is stored as a JSON array of PracticeQuestion objects
