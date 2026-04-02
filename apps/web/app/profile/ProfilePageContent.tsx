@@ -400,6 +400,22 @@ export default function ProfilePageContent() {
           )}
         </section>
 
+        {/* ── Parent Portal ────────────────────────────────────────────── */}
+        <section className="bg-white rounded-3xl p-6 shadow-sm border border-indigo-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-indigo-500 uppercase tracking-widest">For Parents</p>
+              <p className="text-sm text-gray-600 mt-0.5">View learning progress and insights</p>
+            </div>
+            <a
+              href="/parent"
+              className="text-sm font-bold text-indigo-600 hover:text-indigo-800 border-2 border-indigo-200 hover:border-indigo-400 px-4 py-2 rounded-2xl transition flex items-center gap-2"
+            >
+              <span>👨‍👩‍👧</span> Parent View
+            </a>
+          </div>
+        </section>
+
         {/* ── Sign Out ─────────────────────────────────────────────────── */}
         <section className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
           <div className="flex items-center justify-between">

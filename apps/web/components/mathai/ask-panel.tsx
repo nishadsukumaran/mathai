@@ -11,6 +11,7 @@
 import { cn }            from "@/lib/utils";
 import type { AskMathAIResponse } from "@/types";
 import { VisualRenderer } from "./visual";
+import { MathText }       from "@/components/shared/MathText";
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -118,7 +119,7 @@ export function AskPanel({
                 Explanation
               </p>
               <p className="text-gray-800 text-sm leading-relaxed font-medium">
-                {response.explanation}
+                <MathText text={response.explanation} />
               </p>
             </div>
 
@@ -136,12 +137,12 @@ export function AskPanel({
                       </span>
                       <div className="pt-0.5">
                         <p className="text-sm text-gray-700 leading-snug">
-                          {step.instruction}
+                          <MathText text={step.instruction} />
                         </p>
                         {step.formula && (
-                          <code className="mt-1 block text-xs bg-gray-100 rounded px-2 py-1 font-mono text-indigo-700">
-                            {step.formula}
-                          </code>
+                          <div className="mt-1 block text-sm bg-gray-100 rounded px-2 py-1.5 text-indigo-700 overflow-x-auto">
+                            <MathText text={`\\(${step.formula}\\)`} />
+                          </div>
                         )}
                         {step.visualCue && (
                           <p className="mt-1 text-xs text-slate-400 italic">
@@ -165,7 +166,7 @@ export function AskPanel({
                   {response.example.problem}
                 </p>
                 <p className="text-sm text-amber-800 leading-relaxed">
-                  {response.example.solution}
+                  <MathText text={response.example.solution} />
                 </p>
                 <div className="flex items-start gap-2 pt-1">
                   <span className="text-base">🔑</span>

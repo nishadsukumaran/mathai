@@ -195,25 +195,39 @@ export default function DashboardView({ data }: Props) {
               {recommendedItems.map((item) => (
                 <Link
                   key={item.topicId}
-                  href={`/practice?topicId=${item.topicId}`}
+                  href={`/practice?topicId=${item.topicId}&mode=${item.suggestedMode ?? "guided"}`}
                   className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all group"
                 >
-                  <div className="text-2xl mb-2">📚</div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-2xl">📚</span>
+                    {item.masteryLevel && item.masteryLevel !== "not_started" && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 capitalize">
+                        {item.masteryLevel.replace(/_/g, " ")}
+                      </span>
+                    )}
+                  </div>
                   <p className="font-bold text-gray-800 text-sm leading-snug group-hover:text-indigo-700 transition">
-                    {item.topicName}
+                    {item.topicName || "Practice Topic"}
                   </p>
-                  {item.reason && (
-                    <p className="text-xs text-slate-400 mt-1 capitalize">
+                  {item.reason ? (
+                    <p className="text-xs text-slate-400 mt-1 line-clamp-2">
                       {item.reason.replace(/_/g, " ")}
                     </p>
+                  ) : (
+                    <p className="text-xs text-slate-400 mt-1">Tap to start practising</p>
                   )}
                 </Link>
               ))}
             </div>
           ) : (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-amber-700 text-sm text-center">
-              Complete a few topics and we&apos;ll recommend what to practice next! 🌟
-            </div>
+            <Link
+              href="/practice"
+              className="block bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-2xl p-6 text-center hover:shadow-md transition-all"
+            >
+              <p className="text-3xl mb-2">🚀</p>
+              <p className="font-bold text-indigo-700 text-sm">Let&apos;s get started!</p>
+              <p className="text-xs text-indigo-400 mt-1">Try your first practice session</p>
+            </Link>
           )}
         </section>
 

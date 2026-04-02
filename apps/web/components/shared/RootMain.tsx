@@ -16,10 +16,19 @@ import { usePathname } from "next/navigation";
 
 export function RootMain({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+
+  // Admin and parent layouts are self-contained — no sidebar padding
   const isAdmin  = pathname.startsWith("/admin");
+  const isParent = pathname.startsWith("/parent");
+
+  // Student routes: clear mobile top header (pt-11) + bottom bar (pb-20) + desktop sidebar (pl)
+  // Admin/parent routes: no padding — they manage their own layout
+  const padding = (isAdmin || isParent)
+    ? ""
+    : "pt-11 pb-20 md:pt-0 md:pb-0 md:pl-20 xl:pl-56";
 
   return (
-    <main className={isAdmin ? "" : "pt-11 pb-20 md:pt-0 md:pb-0 md:pl-20 xl:pl-56"}>
+    <main className={`${padding} overflow-x-hidden`}>
       {children}
     </main>
   );

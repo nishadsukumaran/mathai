@@ -40,11 +40,13 @@ export function AppNav() {
   const role                = session?.user?.role;
   const [signingOut, setSigningOut] = useState(false);
 
-  // Hide on auth routes, landing page, and admin area (admin has its own nav)
+  // Hide on auth routes, landing page, admin area, and parent portal
+  // (admin and parent each have their own navigation)
   if (
     pathname === "/" ||
     pathname.startsWith("/auth") ||
-    pathname.startsWith("/admin")
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/parent")
   ) {
     return null;
   }
