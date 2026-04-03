@@ -7,17 +7,48 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { verifyTurnstile, checkRateLimit, getClientIp, SIGNUP_LIMIT, isHoneypotTriggered } from "@/lib/security";
 
 export async function POST(req: Request) {
   try {
+    const ip = getClientIp(req);
+
+    // Rate limit: 5 signups per 15 minutes per IP
+    const rateCheck = checkRateLimit(`signup:ip:${ip}`, SIGNUP_LIMIT);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { error: "Too many attempts. Please wait a few minutes and try again." },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json();
-    const { email, password, name, grade, role: requestedRole } = body as {
+    const { email, password, name, grade, role: requestedRole, turnstileToken, website } = body as {
       email: string;
       password: string;
       name: string;
       grade?: string;
       role?: string;
+      turnstileToken?: string;
+      website?: string;
     };
+
+    // Honeypot: hidden field filled = bot
+    if (isHoneypotTriggered(website)) {
+      return NextResponse.json(
+        { error: "Could not create account. Please try again." },
+        { status: 400 }
+      );
+    }
+
+    // Turnstile: verify human
+    const turnstile = await verifyTurnstile(turnstileToken, ip);
+    if (!turnstile.success) {
+      return NextResponse.json(
+        { error: "We couldn't verify this request. Please try again." },
+        { status: 400 }
+      );
+    }
 
     if (!email || !password || !name) {
       return NextResponse.json(

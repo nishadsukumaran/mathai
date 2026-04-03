@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { signIn }   from "next-auth/react";
 import Link         from "next/link";
 
 type Role = "parent" | "student";
+
+const TURNSTILE_SITE_KEY = process.env["NEXT_PUBLIC_TURNSTILE_SITE_KEY"] ?? "";
 
 const GRADES = [
   { value: "G1", label: "Grade 1" }, { value: "G2", label: "Grade 2" },
@@ -22,6 +24,23 @@ export default function SignUpPage() {
   const [grade,           setGrade]           = useState("G4");
   const [error,           setError]           = useState("");
   const [loading,         setLoading]         = useState(false);
+  const [turnstileToken,  setTurnstileToken]  = useState("");
+  const turnstileRef = useRef<HTMLDivElement>(null);
+
+  // Load Turnstile widget when role form is shown
+  useEffect(() => {
+    if (!role || !TURNSTILE_SITE_KEY || !turnstileRef.current) return;
+    // Render Turnstile widget if script is loaded
+    const w = window as any;
+    if (w.turnstile) {
+      w.turnstile.render(turnstileRef.current, {
+        sitekey: TURNSTILE_SITE_KEY,
+        callback: (token: string) => setTurnstileToken(token),
+        theme: "light",
+        size: "flexible",
+      });
+    }
+  }, [role]);
 
   const pwMatch = !confirmPassword || confirmPassword === password;
 
@@ -39,7 +58,13 @@ export default function SignUpPage() {
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password, role, grade: role === "student" ? grade : undefined }),
+        body: JSON.stringify({
+          name, email, password, role,
+          grade: role === "student" ? grade : undefined,
+          turnstileToken: turnstileToken || undefined,
+          // honeypot field — real users never fill this
+          website: (document.getElementById("hp-website") as HTMLInputElement)?.value || undefined,
+        }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong"); setLoading(false); return; }
@@ -129,11 +154,24 @@ export default function SignUpPage() {
             </div>
           </div>
         )}
+        {/* Honeypot — hidden from real users, bots fill it */}
+        <div className="absolute -left-[9999px]" aria-hidden="true">
+          <input id="hp-website" name="website" type="text" tabIndex={-1} autoComplete="off" />
+        </div>
+
+        {/* Turnstile widget */}
+        {TURNSTILE_SITE_KEY && <div ref={turnstileRef} className="mb-2" />}
+
         <button type="submit" disabled={loading || !pwMatch}
           className="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold text-sm hover:bg-indigo-700 disabled:opacity-40 transition active:scale-[0.98]">
           {loading ? "Creating account..." : "Create Account"}
         </button>
       </form>
+
+      {/* Turnstile script — only loaded once */}
+      {TURNSTILE_SITE_KEY && (
+        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer />
+      )}
       <p className="mt-6 text-center text-sm text-gray-500">
         Already have an account?{" "}
         <Link href="/auth/signin" className="text-indigo-600 font-semibold hover:underline">Sign in</Link>

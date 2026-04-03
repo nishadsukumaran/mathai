@@ -15,13 +15,26 @@
 import { NextResponse } from "next/server";
 import { prisma }       from "@/lib/prisma";
 import bcrypt           from "bcryptjs";
+import { checkRateLimit, getClientIp, PIN_LOGIN_LIMIT } from "@/lib/security";
 
 export async function POST(req: Request) {
   try {
-    const { username, pin } = (await req.json()) as { username: string; pin: string };
+    const ip = getClientIp(req);
+    const body = await req.json();
+    const { username, pin } = body as { username: string; pin: string };
 
     if (!username || !pin) {
       return NextResponse.json({ error: "Username and PIN are required" }, { status: 400 });
+    }
+
+    // Rate limit: 5 attempts per 10 minutes per IP+username
+    const rateKey = `pin:${ip}:${username.toLowerCase().trim()}`;
+    const rateCheck = checkRateLimit(rateKey, PIN_LOGIN_LIMIT);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { error: "Too many attempts. Please wait a few minutes and try again." },
+        { status: 429 }
+      );
     }
 
     // Find student profile by username
