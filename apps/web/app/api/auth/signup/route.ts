@@ -11,11 +11,12 @@ import { prisma } from "@/lib/prisma";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { email, password, name, grade } = body as {
+    const { email, password, name, grade, role: requestedRole } = body as {
       email: string;
       password: string;
       name: string;
       grade?: string;
+      role?: string;
     };
 
     if (!email || !password || !name) {
@@ -52,24 +53,28 @@ export async function POST(req: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
+    // Determine role: parent or student (only these two are allowed from signup)
+    const effectiveRole = requestedRole === "parent" ? "parent" : "student";
+
     const user = await prisma.user.create({
       data: {
         email,
         name,
         hashedPassword,
-        role: "student",
-        gradeLevel: gradeLevel as any,
+        role: effectiveRole as any,
+        gradeLevel: effectiveRole === "student" ? (gradeLevel as any) : null,
       },
     });
 
-    // Create a StudentProfile for the new user.
-    // Grade is stored on User.gradeLevel (set above); StudentProfile has no grade column.
-    // Use upsert so a double-submit race condition doesn't throw a unique-constraint error.
-    await prisma.studentProfile.upsert({
-      where:  { userId: user.id },
-      create: { userId: user.id },
-      update: {},
-    });
+    // Create a StudentProfile for student users only.
+    // Parents don't need a StudentProfile — they get one when they create a child.
+    if (effectiveRole === "student") {
+      await prisma.studentProfile.upsert({
+        where:  { userId: user.id },
+        create: { userId: user.id },
+        update: {},
+      });
+    }
 
     // Fire-and-forget: kick off AI topic generation for this grade immediately.
     // Non-blocking — practiceMenuService will also retry on the user's first /practice visit.

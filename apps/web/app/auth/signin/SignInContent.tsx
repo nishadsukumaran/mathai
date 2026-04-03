@@ -166,6 +166,15 @@ export default function SignInContent() {
             Sign up
           </Link>
         </p>
+
+        {/* Child PIN login entry */}
+        <div className="mt-4 pt-4 border-t border-gray-100 text-center">
+          <Link href="/auth/pin-login"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-600 hover:text-emerald-700 transition">
+            <span className="text-base">🧒</span>
+            Child Login with PIN
+          </Link>
+        </div>
       </div>
     </main>
   );
