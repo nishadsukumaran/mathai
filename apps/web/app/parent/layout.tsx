@@ -2,7 +2,10 @@
  * @module app/parent/layout
  *
  * Parent portal layout — uses ParentNav instead of student AppNav.
+ * force-dynamic: all parent routes require auth session — cannot be prerendered.
  */
+
+export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
 import ParentNav         from "@/components/parent/ParentNav";
