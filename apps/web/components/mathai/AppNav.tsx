@@ -30,7 +30,8 @@ const NAV_ITEMS = [
   { href: "/profile",     label: "Profile",  icon: "👤" },
 ];
 
-const ADMIN_ITEM = { href: "/admin/dashboard", label: "Admin", icon: "⚙️" };
+const ADMIN_ITEM  = { href: "/admin/dashboard", label: "Admin",   icon: "⚙️" };
+const PARENT_ITEM = { href: "/parent",          label: "Parent",  icon: "👨‍👩‍👧" };
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -51,8 +52,12 @@ export function AppNav() {
     return null;
   }
 
-  // Append admin link for admin users
-  const navItems = role === "admin" ? [...NAV_ITEMS, ADMIN_ITEM] : NAV_ITEMS;
+  // Append role-specific links
+  const extraItems = [
+    ...(role === "parent" ? [PARENT_ITEM] : []),
+    ...(role === "admin"  ? [ADMIN_ITEM]  : []),
+  ];
+  const navItems = [...NAV_ITEMS, ...extraItems];
 
   const isActive = (href: string) =>
     href === "/dashboard"
@@ -128,7 +133,8 @@ export function AppNav() {
         <div className="flex-1 flex flex-col gap-1 px-2">
           {navItems.map((item) => {
             const active = isActive(item.href);
-            const isAdminLink = item.href.startsWith("/admin");
+            const isAdminLink  = item.href.startsWith("/admin");
+            const isParentLink = item.href === "/parent";
             return (
               <Link
                 key={item.href}
@@ -140,7 +146,9 @@ export function AppNav() {
                     ? "bg-indigo-600 text-white shadow-md shadow-indigo-200"
                     : isAdminLink
                       ? "text-amber-600 hover:bg-amber-50 hover:text-amber-700 border border-amber-200"
-                      : "text-gray-500 hover:bg-indigo-50 hover:text-indigo-600",
+                      : isParentLink
+                        ? "text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 border border-emerald-200"
+                        : "text-gray-500 hover:bg-indigo-50 hover:text-indigo-600",
                 )}
               >
                 <span className="text-xl shrink-0">{item.icon}</span>
