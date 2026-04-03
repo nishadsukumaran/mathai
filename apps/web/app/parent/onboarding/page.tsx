@@ -9,7 +9,7 @@
  * Step 2: Learning goal (optional, skippable)
  */
 
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
 const GRADES = [
@@ -52,18 +52,67 @@ export default function ParentOnboardingPage() {
   const [loginMode,  setLoginMode]  = useState("parent_managed");
   const [pin,        setPin]        = useState("");
   const [pinConfirm, setPinConfirm] = useState("");
+  const [username,   setUsername]   = useState("");
+  const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
+  const [usernameSuggestion, setUsernameSuggestion] = useState<string | null>(null);
+  const [usernameError, setUsernameError] = useState<string | null>(null);
+  const checkTimer = useRef<ReturnType<typeof setTimeout>>();
 
   // Step 2
   const [goal, setGoal] = useState<string | null>(null);
 
+  // Step 3 (confirmation)
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [createdChildId, setCreatedChildId]     = useState<string | null>(null);
+  const [createdUsername, setCreatedUsername]     = useState<string | null>(null);
+
   // State
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState("");
-  const [resultUsername, setResultUsername] = useState<string | null>(null);
 
   const needsPin = loginMode === "pin_only" || loginMode === "hybrid";
+  const usernameValid = !needsPin || (usernameStatus === "available" && username.length >= 3);
   const canProceed = childName.trim().length >= 1 && grade && curriculum &&
-    (!needsPin || (pin.length >= 4 && pin === pinConfirm));
+    (!needsPin || (pin.length >= 4 && pin === pinConfirm && usernameValid));
+
+  // ── Username availability check (debounced) ───────────────────────────
+  const checkUsername = useCallback(async (value: string) => {
+    if (value.length < 3) {
+      setUsernameStatus("idle");
+      setUsernameError(value.length > 0 ? "At least 3 characters" : null);
+      setUsernameSuggestion(null);
+      return;
+    }
+    setUsernameStatus("checking");
+    setUsernameError(null);
+    setUsernameSuggestion(null);
+    try {
+      const res = await fetch(`/api/auth/check-username?username=${encodeURIComponent(value.toLowerCase())}`);
+      const data = await res.json();
+      if (data.available) {
+        setUsernameStatus("available");
+        setUsernameError(null);
+      } else {
+        setUsernameStatus("taken");
+        setUsernameError(data.error ?? "Not available");
+        setUsernameSuggestion(data.suggestion ?? null);
+      }
+    } catch {
+      setUsernameStatus("idle");
+      setUsernameError("Could not check");
+    }
+  }, []);
+
+  function handleUsernameChange(value: string) {
+    // Only allow lowercase letters, numbers, hyphens
+    const clean = value.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 15);
+    setUsername(clean);
+    setUsernameStatus("idle");
+    clearTimeout(checkTimer.current);
+    if (clean.length >= 3) {
+      checkTimer.current = setTimeout(() => checkUsername(clean), 400);
+    }
+  }
 
   async function handleSubmit(skipGoal = false) {
     setLoading(true);
@@ -78,6 +127,7 @@ export default function ParentOnboardingPage() {
           schoolName: schoolName.trim() || undefined,
           onboardingGoal: skipGoal ? undefined : (goal ?? undefined),
           loginMode,
+          username: needsPin ? username.toLowerCase() : undefined,
           pin: needsPin && pin ? pin : undefined,
         }),
       });
@@ -85,9 +135,13 @@ export default function ParentOnboardingPage() {
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Something went wrong."); setLoading(false); return; }
 
-      // Show username if PIN login was set up
-      if (data.username) {
-        setResultUsername(data.username);
+      // Show confirmation with credentials if PIN login was set up
+      if (needsPin && data.username) {
+        setCreatedChildId(data.childId);
+        setCreatedUsername(data.username);
+        setShowConfirmation(true);
+        setLoading(false);
+        return;
       }
 
       router.push(`/parent/dashboard?childId=${data.childId}`);
@@ -164,21 +218,67 @@ export default function ParentOnboardingPage() {
               </div>
             </div>
 
-            {/* PIN setup (if needed) */}
+            {/* Username + PIN setup (if needed) */}
             {needsPin && (
-              <div className="space-y-3 bg-indigo-50 rounded-xl p-4 border border-indigo-200">
-                <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Set Child PIN</p>
-                <input type="password" inputMode="numeric" maxLength={6} value={pin}
-                  onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
-                  placeholder="4+ digit PIN"
-                  className="w-full border-2 border-indigo-200 rounded-lg px-4 py-2.5 text-sm focus:border-indigo-400 outline-none transition text-center tracking-widest" />
-                <input type="password" inputMode="numeric" maxLength={6} value={pinConfirm}
-                  onChange={(e) => setPinConfirm(e.target.value.replace(/\D/g, ""))}
-                  placeholder="Confirm PIN"
-                  className="w-full border-2 border-indigo-200 rounded-lg px-4 py-2.5 text-sm focus:border-indigo-400 outline-none transition text-center tracking-widest" />
-                {pin && pinConfirm && pin !== pinConfirm && (
-                  <p className="text-red-500 text-xs">PINs don&apos;t match</p>
-                )}
+              <div className="space-y-4 bg-indigo-50 rounded-xl p-4 border border-indigo-200">
+                <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Child Login Credentials</p>
+
+                {/* Username — parent chooses, we check availability */}
+                <div>
+                  <label className="block text-xs font-semibold text-indigo-500 mb-1.5">
+                    Username <span className="text-indigo-300 font-normal">(your child will type this to log in)</span>
+                  </label>
+                  <div className="relative">
+                    <input type="text" value={username}
+                      onChange={(e) => handleUsernameChange(e.target.value)}
+                      placeholder="e.g. aryan or neela-math"
+                      maxLength={15}
+                      autoComplete="off"
+                      className={`w-full border-2 rounded-lg px-4 py-2.5 text-sm outline-none transition pr-10 ${
+                        usernameStatus === "available" ? "border-emerald-400 bg-emerald-50/50" :
+                        usernameStatus === "taken" ? "border-red-300 bg-red-50/50" :
+                        "border-indigo-200 focus:border-indigo-400"
+                      }`} />
+                    {/* Status indicator */}
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm">
+                      {usernameStatus === "checking" && <span className="text-gray-400 animate-pulse">...</span>}
+                      {usernameStatus === "available" && <span className="text-emerald-500">&#10003;</span>}
+                      {usernameStatus === "taken" && <span className="text-red-400">&#10007;</span>}
+                    </span>
+                  </div>
+                  {usernameError && (
+                    <p className="text-xs text-red-500 mt-1">{usernameError}</p>
+                  )}
+                  {usernameSuggestion && usernameStatus === "taken" && (
+                    <button type="button"
+                      onClick={() => { handleUsernameChange(usernameSuggestion); }}
+                      className="text-xs text-indigo-500 mt-1 hover:underline">
+                      Try: <strong>{usernameSuggestion}</strong>
+                    </button>
+                  )}
+                  <p className="text-[10px] text-indigo-400 mt-1">
+                    3-15 characters. Letters, numbers, and hyphens. Must start with a letter.
+                  </p>
+                </div>
+
+                {/* PIN */}
+                <div>
+                  <label className="block text-xs font-semibold text-indigo-500 mb-1.5">PIN</label>
+                  <input type="password" inputMode="numeric" maxLength={6} value={pin}
+                    onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+                    placeholder="4+ digit PIN"
+                    className="w-full border-2 border-indigo-200 rounded-lg px-4 py-2.5 text-sm focus:border-indigo-400 outline-none transition text-center tracking-widest" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-indigo-500 mb-1.5">Confirm PIN</label>
+                  <input type="password" inputMode="numeric" maxLength={6} value={pinConfirm}
+                    onChange={(e) => setPinConfirm(e.target.value.replace(/\D/g, ""))}
+                    placeholder="Confirm PIN"
+                    className="w-full border-2 border-indigo-200 rounded-lg px-4 py-2.5 text-sm focus:border-indigo-400 outline-none transition text-center tracking-widest" />
+                  {pin && pinConfirm && pin !== pinConfirm && (
+                    <p className="text-red-500 text-xs mt-1">PINs don&apos;t match</p>
+                  )}
+                </div>
               </div>
             )}
 
@@ -187,6 +287,53 @@ export default function ParentOnboardingPage() {
             <button onClick={() => setStep(2)} disabled={!canProceed}
               className="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold text-sm hover:bg-indigo-700 disabled:opacity-40 transition active:scale-[0.98]">
               Continue
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Confirmation screen (shown after account creation with PIN) ─────
+
+  if (showConfirmation && createdUsername && createdChildId) {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center px-4">
+        <div className="w-full max-w-md text-center">
+          <div className="bg-white rounded-2xl border border-emerald-200 shadow-sm p-8 space-y-5">
+            <p className="text-4xl">🎉</p>
+            <h1 className="text-xl font-bold text-gray-900">{childName}&apos;s account is ready!</h1>
+            <p className="text-sm text-gray-500">
+              Save these login details — your child will need them to log in independently.
+            </p>
+
+            {/* Credentials card */}
+            <div className="bg-emerald-50 rounded-xl p-5 space-y-3 text-left border border-emerald-200">
+              <div>
+                <p className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wider">Username</p>
+                <p className="text-lg font-bold text-gray-900 mt-0.5 font-mono">{createdUsername}</p>
+              </div>
+              <div className="h-px bg-emerald-200" />
+              <div>
+                <p className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wider">PIN</p>
+                <p className="text-lg font-bold text-gray-900 mt-0.5 tracking-widest">{"*".repeat(pin.length)}</p>
+                <p className="text-[10px] text-emerald-500 mt-0.5">The PIN you set during setup</p>
+              </div>
+              <div className="h-px bg-emerald-200" />
+              <div>
+                <p className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wider">Login page</p>
+                <p className="text-sm font-medium text-indigo-600 mt-0.5">mathai-web.vercel.app/auth/pin-login</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-400">
+              You can always reset the PIN from the parent dashboard.
+            </p>
+
+            <button
+              onClick={() => router.push(`/parent/dashboard?childId=${createdChildId}`)}
+              className="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold text-sm hover:bg-indigo-700 transition active:scale-[0.98]">
+              Go to Parent Dashboard
             </button>
           </div>
         </div>

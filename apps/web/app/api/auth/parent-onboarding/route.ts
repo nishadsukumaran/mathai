@@ -18,16 +18,6 @@ const VALID_GRADES = ["G1","G2","G3","G4","G5","G6","G7","G8"] as const;
 const VALID_CURRICULA = ["cambridge","ib","cbse","icse","british","american","other"] as const;
 const VALID_LOGIN_MODES = ["parent_managed","pin_only","hybrid"] as const;
 
-async function generateUsername(childName: string): Promise<string> {
-  const base = childName.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 12) || "student";
-  for (let i = 0; i < 5; i++) {
-    const suffix = Math.floor(100 + Math.random() * 900);
-    const username = `${base}-${suffix}`;
-    const exists = await prisma.studentProfile.findUnique({ where: { username }, select: { id: true } }).catch(() => null);
-    if (!exists) return username;
-  }
-  return `${base}-${Date.now().toString(36).slice(-5)}`;
-}
 
 export async function POST(req: Request) {
   try {
@@ -43,11 +33,12 @@ export async function POST(req: Request) {
     const body = await req.json();
     const {
       childName, grade, curriculum, schoolName, onboardingGoal,
-      relationshipType, loginMode, pin,
+      relationshipType, loginMode, username: requestedUsername, pin,
     } = body as {
       childName: string; grade: string; curriculum: string;
       schoolName?: string; onboardingGoal?: string;
-      relationshipType?: string; loginMode?: string; pin?: string;
+      relationshipType?: string; loginMode?: string;
+      username?: string; pin?: string;
     };
 
     // ── Validation ───────────────────────────────────────────────────────
@@ -81,10 +72,22 @@ export async function POST(req: Request) {
       });
     }
 
-    // ── Generate username for PIN-enabled accounts ────────────────────────
+    // ── Username for PIN-enabled accounts ───────────────────────────────
     let username: string | null = null;
     if (effectiveLoginMode === "pin_only" || effectiveLoginMode === "hybrid") {
-      username = await generateUsername(childName.trim());
+      if (!requestedUsername || requestedUsername.trim().length < 3) {
+        return NextResponse.json({ error: "Username is required for PIN login (at least 3 characters)" }, { status: 400 });
+      }
+      username = requestedUsername.toLowerCase().trim();
+      // Validate format
+      if (!/^[a-z][a-z0-9-]{2,14}$/.test(username)) {
+        return NextResponse.json({ error: "Username must be 3-15 characters, start with a letter, only letters/numbers/hyphens" }, { status: 400 });
+      }
+      // Check availability
+      const existing = await prisma.studentProfile.findUnique({ where: { username }, select: { id: true } }).catch(() => null);
+      if (existing) {
+        return NextResponse.json({ error: "Username already taken" }, { status: 409 });
+      }
     }
 
     // ── Create child user ────────────────────────────────────────────────
