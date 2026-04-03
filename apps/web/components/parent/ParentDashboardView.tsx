@@ -110,8 +110,13 @@ export default function ParentDashboardView({ data }: Props) {
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-8">
 
+      {/* Back to child picker (useful when parent has multiple children) */}
+      <a href="/parent" className="text-xs text-gray-400 hover:text-indigo-500 transition font-medium">
+        &larr; All children
+      </a>
+
       {/* ── 1. Header ──────────────────────────────────────────────── */}
-      <header className="flex items-center gap-6 bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+      <header className="flex items-center gap-6 bg-white rounded-3xl p-6 shadow-sm border border-slate-100 -mt-4">
         {/* Learning Score Ring */}
         <div className="relative w-20 h-20 shrink-0">
           <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
