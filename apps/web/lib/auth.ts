@@ -4,7 +4,8 @@
  * NextAuth.js configuration.
  * Supports:
  *   1. Email + password credentials (always available)
- *   2. Google OAuth (when GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET are set)
+ *   2. Child PIN login (username + PIN for parent-managed child accounts)
+ *   3. Google OAuth (when GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET are set)
  */
 
 import type { NextAuthOptions } from "next-auth";
@@ -49,6 +50,50 @@ providers.push(
         email: user.email,
         name: user.name,
         image: user.avatarUrl,
+      };
+    },
+  })
+);
+
+// ── PIN credentials (username + PIN for child direct login) ────────────────
+providers.push(
+  CredentialsProvider({
+    id:   "pin",
+    name: "PIN Login",
+    credentials: {
+      username: { label: "Username", type: "text" },
+      pin:      { label: "PIN",      type: "password" },
+    },
+    async authorize(credentials) {
+      if (!credentials?.username || !credentials?.pin) return null;
+
+      const profile = await prisma.studentProfile.findUnique({
+        where:   { username: credentials.username.toLowerCase().trim() },
+        include: { user: { select: { id: true, name: true, email: true, isActive: true } } },
+      });
+
+      if (!profile || !profile.hashedPin || !profile.user) return null;
+
+      // Respect login mode: only pin_only and hybrid allow PIN auth
+      const mode = profile.preferredLoginMode as string;
+      if (mode !== "pin_only" && mode !== "hybrid") return null;
+
+      if (!profile.user.isActive) return null;
+
+      const valid = await bcrypt.compare(credentials.pin, profile.hashedPin);
+      if (!valid) return null;
+
+      // Update lastLoginAt
+      await prisma.user.update({
+        where: { id: profile.user.id },
+        data:  { lastLoginAt: new Date() },
+      }).catch(() => {});
+
+      return {
+        id:    profile.user.id,
+        email: profile.user.email,
+        name:  profile.user.name,
+        image: null,
       };
     },
   })

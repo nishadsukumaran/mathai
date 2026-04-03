@@ -26,26 +26,23 @@ export default function PinLoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/auth/pin-login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: username.trim().toLowerCase(), pin }),
+      // Use the dedicated "pin" NextAuth credentials provider directly.
+      // This validates username + PIN server-side and creates a proper session.
+      const result = await signIn("pin", {
+        username: username.trim().toLowerCase(),
+        pin,
+        redirect:    false,  // handle errors ourselves for child-friendly messages
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || "Could not log in. Check your username and PIN.");
+      if (result?.error) {
+        // NextAuth returns error="CredentialsSignin" for failed authorize()
+        setError("Wrong username or PIN. Please try again.");
         setLoading(false);
         return;
       }
 
-      // Sign in via NextAuth credentials using the child's email
-      await signIn("credentials", {
-        email:       data.user.email,
-        password:    "__pin__", // Marker — credentials provider will need to handle PIN auth
-        callbackUrl: "/dashboard",
-      });
+      // Success — redirect to student dashboard
+      window.location.href = "/dashboard";
     } catch {
       setError("Could not connect. Please try again.");
       setLoading(false);
