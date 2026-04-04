@@ -46,6 +46,7 @@ export function AppNav() {
   if (
     pathname === "/" ||
     pathname.startsWith("/auth") ||
+    pathname.startsWith("/features") ||
     pathname.startsWith("/admin") ||
     pathname.startsWith("/parent")
   ) {

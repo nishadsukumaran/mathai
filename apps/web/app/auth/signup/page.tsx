@@ -1,5 +1,12 @@
 "use client";
 
+/**
+ * @module app/auth/signup
+ *
+ * Sign-up page — role selector → registration form.
+ * Visual design aligned with the unified MathAI auth system.
+ */
+
 import { useState, useEffect, useRef } from "react";
 import { signIn }   from "next-auth/react";
 import Link         from "next/link";
@@ -27,10 +34,8 @@ export default function SignUpPage() {
   const [turnstileToken,  setTurnstileToken]  = useState("");
   const turnstileRef = useRef<HTMLDivElement>(null);
 
-  // Load Turnstile widget when role form is shown
   useEffect(() => {
     if (!role || !TURNSTILE_SITE_KEY || !turnstileRef.current) return;
-    // Render Turnstile widget if script is loaded
     const w = window as any;
     if (w.turnstile) {
       w.turnstile.render(turnstileRef.current, {
@@ -62,7 +67,6 @@ export default function SignUpPage() {
           name, email, password, role,
           grade: role === "student" ? grade : undefined,
           turnstileToken: turnstileToken || undefined,
-          // honeypot field — real users never fill this
           website: (document.getElementById("hp-website") as HTMLInputElement)?.value || undefined,
         }),
       });
@@ -80,37 +84,57 @@ export default function SignUpPage() {
   if (!role) {
     return (
       <Shell>
-        <div className="text-center mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white font-black text-lg mx-auto mb-4">M</div>
-          <h1 className="text-xl font-bold text-gray-900">Join MathAI</h1>
-          <p className="text-sm text-gray-500 mt-1">How will you use MathAI?</p>
-        </div>
-        <div className="space-y-3">
-          <button onClick={() => setRole("parent")}
-            className="w-full text-left px-5 py-4 rounded-xl border-2 border-gray-200 hover:border-emerald-400 hover:bg-emerald-50 transition active:scale-[0.98] group">
-            <div className="flex items-center gap-4">
-              <span className="text-2xl shrink-0">👨‍👩‍👧</span>
-              <div>
-                <p className="font-semibold text-gray-900 group-hover:text-emerald-700">Parent / Guardian</p>
-                <p className="text-xs text-gray-400 mt-0.5">Set up learning for your child and track their progress</p>
+        <div className="w-full max-w-md">
+          {/* Back to home */}
+          <div className="text-center mb-6">
+            <Link href="/" className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-gray-600 transition">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+              Back to MathAI
+            </Link>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-xl shadow-gray-200/50 border border-gray-100 p-8">
+            <div className="text-center mb-8">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center text-white font-black text-lg mx-auto mb-4 shadow-lg shadow-indigo-200">
+                M
               </div>
+              <h1 className="text-xl font-bold text-gray-900">Join MathAI</h1>
+              <p className="text-sm text-gray-500 mt-1">How will you use MathAI?</p>
             </div>
-          </button>
-          <button onClick={() => setRole("student")}
-            className="w-full text-left px-5 py-4 rounded-xl border-2 border-gray-200 hover:border-indigo-400 hover:bg-indigo-50 transition active:scale-[0.98] group">
-            <div className="flex items-center gap-4">
-              <span className="text-2xl shrink-0">🎓</span>
-              <div>
-                <p className="font-semibold text-gray-900 group-hover:text-indigo-700">Student</p>
-                <p className="text-xs text-gray-400 mt-0.5">Practice maths and learn with AI-powered tutoring</p>
-              </div>
+            <div className="space-y-3">
+              <button onClick={() => setRole("parent")}
+                className="w-full text-left px-5 py-4 rounded-xl border-2 border-gray-200 hover:border-emerald-400 hover:bg-emerald-50 transition active:scale-[0.98] group">
+                <div className="flex items-center gap-4">
+                  <div className="w-11 h-11 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
+                    <span className="text-xl">👨‍👩‍👧</span>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900 group-hover:text-emerald-700">Parent / Guardian</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Set up learning for your child and track their progress</p>
+                  </div>
+                </div>
+              </button>
+              <button onClick={() => setRole("student")}
+                className="w-full text-left px-5 py-4 rounded-xl border-2 border-gray-200 hover:border-indigo-400 hover:bg-indigo-50 transition active:scale-[0.98] group">
+                <div className="flex items-center gap-4">
+                  <div className="w-11 h-11 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
+                    <span className="text-xl">🎓</span>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900 group-hover:text-indigo-700">Student</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Practice maths and learn with AI-powered tutoring</p>
+                  </div>
+                </div>
+              </button>
             </div>
-          </button>
+            <p className="mt-6 text-center text-sm text-gray-500">
+              Already have an account?{" "}
+              <Link href="/auth/signin" className="text-indigo-600 font-semibold hover:underline">Sign in</Link>
+            </p>
+          </div>
         </div>
-        <p className="mt-6 text-center text-sm text-gray-500">
-          Already have an account?{" "}
-          <Link href="/auth/signin" className="text-indigo-600 font-semibold hover:underline">Sign in</Link>
-        </p>
       </Shell>
     );
   }
@@ -118,72 +142,90 @@ export default function SignUpPage() {
   /* ── Registration form ───────────────────────────────────────────────── */
   return (
     <Shell>
-      <div className="text-center mb-6">
-        <button onClick={() => setRole(null)} className="text-xs text-gray-400 hover:text-gray-600 transition mb-3 inline-block">
-          &larr; Change role
-        </button>
-        <h1 className="text-xl font-bold text-gray-900">
-          {role === "parent" ? "Create Parent Account" : "Create Student Account"}
-        </h1>
-        <p className="text-sm text-gray-500 mt-1">
-          {role === "parent" ? "You will set up your child next" : "Start your math learning journey"}
-        </p>
-      </div>
-      {error && <div className="mb-4 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">{error}</div>}
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <InpField label="Name" type="text" value={name} onChange={setName} ph="Your name" />
-        <InpField label="Email" type="email" value={email} onChange={setEmail} ph="you@example.com" />
-        <InpField label="Password" type="password" value={password} onChange={setPassword} ph="8+ chars, letters + numbers" />
-        <div>
-          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Confirm Password</label>
-          <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={8}
-            placeholder="Re-enter password"
-            className={`w-full border-2 rounded-xl px-4 py-3 text-sm outline-none transition ${!pwMatch ? "border-red-400" : "border-gray-200 focus:border-indigo-400"}`} />
-          {!pwMatch && <p className="text-xs text-red-500 mt-1">Passwords don&apos;t match</p>}
+      <div className="w-full max-w-md">
+        {/* Back to home */}
+        <div className="text-center mb-6">
+          <Link href="/" className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-gray-600 transition">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to MathAI
+          </Link>
         </div>
-        {role === "student" && (
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Grade</label>
-            <div className="grid grid-cols-4 gap-2">
-              {GRADES.map((g) => (
-                <button key={g.value} type="button" onClick={() => setGrade(g.value)}
-                  className={`py-2 rounded-lg border-2 text-xs font-semibold transition active:scale-[0.95] ${
-                    grade === g.value ? "border-indigo-500 bg-indigo-600 text-white" : "border-gray-200 text-gray-600 hover:border-indigo-300"
-                  }`}>{g.label}</button>
-              ))}
-            </div>
+
+        <div className="bg-white rounded-2xl shadow-xl shadow-gray-200/50 border border-gray-100 p-8">
+          <div className="text-center mb-6">
+            <button onClick={() => setRole(null)} className="text-xs text-gray-400 hover:text-gray-600 transition mb-3 inline-flex items-center gap-1">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+              Change role
+            </button>
+            <h1 className="text-xl font-bold text-gray-900">
+              {role === "parent" ? "Create Parent Account" : "Create Student Account"}
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">
+              {role === "parent" ? "You'll set up your child's profile next" : "Start your math learning journey"}
+            </p>
           </div>
-        )}
-        {/* Honeypot — hidden from real users, bots fill it */}
-        <div className="absolute -left-[9999px]" aria-hidden="true">
-          <input id="hp-website" name="website" type="text" tabIndex={-1} autoComplete="off" />
+
+          {error && <div className="mb-4 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">{error}</div>}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <InpField label="Name" type="text" value={name} onChange={setName} ph="Your name" />
+            <InpField label="Email" type="email" value={email} onChange={setEmail} ph="you@example.com" />
+            <InpField label="Password" type="password" value={password} onChange={setPassword} ph="8+ chars, letters + numbers" />
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Confirm Password</label>
+              <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={8}
+                placeholder="Re-enter password"
+                className={`w-full border-2 rounded-xl px-4 py-3 text-sm outline-none transition ${!pwMatch ? "border-red-400" : "border-gray-200 focus:border-indigo-400"}`} />
+              {!pwMatch && <p className="text-xs text-red-500 mt-1">Passwords don&apos;t match</p>}
+            </div>
+            {role === "student" && (
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Grade</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {GRADES.map((g) => (
+                    <button key={g.value} type="button" onClick={() => setGrade(g.value)}
+                      className={`py-2 rounded-lg border-2 text-xs font-semibold transition active:scale-[0.95] ${
+                        grade === g.value ? "border-indigo-500 bg-gradient-to-r from-indigo-600 to-violet-600 text-white" : "border-gray-200 text-gray-600 hover:border-indigo-300"
+                      }`}>{g.label}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {/* Honeypot */}
+            <div className="absolute -left-[9999px]" aria-hidden="true">
+              <input id="hp-website" name="website" type="text" tabIndex={-1} autoComplete="off" />
+            </div>
+
+            {TURNSTILE_SITE_KEY && <div ref={turnstileRef} className="mb-2" />}
+
+            <button type="submit" disabled={loading || !pwMatch}
+              className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 text-white py-3 rounded-xl font-bold text-sm hover:shadow-lg hover:shadow-indigo-200 disabled:opacity-40 transition-all active:scale-[0.98]">
+              {loading ? "Creating account..." : "Create Account"}
+            </button>
+          </form>
+
+          {TURNSTILE_SITE_KEY && (
+            <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer />
+          )}
+
+          <p className="mt-6 text-center text-sm text-gray-500">
+            Already have an account?{" "}
+            <Link href="/auth/signin" className="text-indigo-600 font-semibold hover:underline">Sign in</Link>
+          </p>
         </div>
-
-        {/* Turnstile widget */}
-        {TURNSTILE_SITE_KEY && <div ref={turnstileRef} className="mb-2" />}
-
-        <button type="submit" disabled={loading || !pwMatch}
-          className="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold text-sm hover:bg-indigo-700 disabled:opacity-40 transition active:scale-[0.98]">
-          {loading ? "Creating account..." : "Create Account"}
-        </button>
-      </form>
-
-      {/* Turnstile script — only loaded once */}
-      {TURNSTILE_SITE_KEY && (
-        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer />
-      )}
-      <p className="mt-6 text-center text-sm text-gray-500">
-        Already have an account?{" "}
-        <Link href="/auth/signin" className="text-indigo-600 font-semibold hover:underline">Sign in</Link>
-      </p>
+      </div>
     </Shell>
   );
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 w-full max-w-md">{children}</div>
+    <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-indigo-50/30 to-violet-50/20 p-4">
+      {children}
     </main>
   );
 }
