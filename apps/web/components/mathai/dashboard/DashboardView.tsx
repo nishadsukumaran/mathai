@@ -55,10 +55,9 @@ export default function DashboardView({ data }: Props) {
               </h1>
               <p className="text-xs text-gray-500">Grade {student.grade.replace("G", "")}</p>
             </div>
+            {/* Floating pet companion — no card, just the character */}
+            <PetCompanion reaction={reaction} className="shrink-0 w-14 h-14 flex items-center justify-center" />
           </div>
-
-          {/* Pet companion — prominent card with mood animations */}
-          <PetCompanion reaction={reaction} />
 
           {/* Compact stat strip */}
           <div className="grid grid-cols-3 gap-3">
