@@ -3,53 +3,52 @@
 /**
  * @module components/mathai/pet/PetCompanion
  *
- * Floating companion widget — PURE DISPLAY COMPONENT.
+ * Dashboard companion — prominent 2.5D-style pet presence.
+ * Shows the pet as a living character with mood, speech, and personality.
  *
- * Receives a PetReaction from the pet engine (via usePetEngine hook).
- * Renders the avatar, animation, speech bubble, and expandable panel.
- * Contains ZERO behavior logic — all decisions are made by petEngine.ts.
- *
- * Usage:
- *   const { reaction, trigger } = usePetEngine(pet?.personality);
- *   <PetCompanion reaction={reaction} />
+ * Receives PetReaction from the pet engine. Pure display — zero logic.
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePet } from "@/hooks/use-pet";
-import type { PetReaction, PetMood } from "@/lib/petEngine";
+import type { PetReaction } from "@/lib/petEngine";
 import type { Variants } from "framer-motion";
 
-// ─── Framer Motion variants per mood ─────────────────────────────────────────
+// ─── Mood animations (applied to the avatar) ────────────────────────────────
 
-const ANIMATION_VARIANTS: Variants = {
-  idle:     { y: [0, -3, 0], transition: { duration: 2.5, repeat: Infinity, ease: "easeInOut" } },
-  happy:    { scale: [1, 1.15, 1], rotate: [0, -5, 5, 0], transition: { duration: 0.5 } },
-  cheering: { scale: [1, 1.2, 1], y: [0, -8, 0], transition: { duration: 0.6 } },
-  thinking: { rotate: [0, -3, 3, 0], transition: { duration: 1.2, repeat: Infinity } },
-  proud:    { scale: [1, 1.1, 1], transition: { duration: 0.4 } },
-  excited:  { scale: [1, 1.25, 1], y: [0, -10, 0], rotate: [0, -8, 8, 0], transition: { duration: 0.7 } },
+const MOOD_VARIANTS: Variants = {
+  idle:     { y: [0, -4, 0], transition: { duration: 2.5, repeat: Infinity, ease: "easeInOut" } },
+  happy:    { scale: [1, 1.15, 1], rotate: [0, -6, 6, 0], transition: { duration: 0.5 } },
+  cheering: { scale: [1, 1.2, 1], y: [0, -10, 0], transition: { duration: 0.6 } },
+  thinking: { rotate: [0, -4, 4, 0], transition: { duration: 1.2, repeat: Infinity } },
+  proud:    { scale: [1, 1.12, 1], transition: { duration: 0.4 } },
+  excited:  { scale: [1, 1.25, 1], y: [0, -12, 0], rotate: [0, -8, 8, 0], transition: { duration: 0.7 } },
 };
 
-// ─── Props ───────────────────────────────────────────────────────────────────
+// ─── Aura color map ───���──────────────────────────────────────────────────────
+
+const AURA_BG: Record<string, string> = {
+  yellow: "from-yellow-100 to-yellow-50",
+  orange: "from-orange-100 to-orange-50",
+  red:    "from-red-100 to-red-50",
+  blue:   "from-blue-100 to-blue-50",
+  green:  "from-green-100 to-green-50",
+  purple: "from-purple-100 to-purple-50",
+};
 
 interface PetCompanionProps {
-  /** Reaction state from usePetEngine — drives mood, animation, and speech */
   reaction: PetReaction;
-  /** Optional className for positioning */
   className?: string;
 }
 
-// ─── Component ───────────────────────────────────────────────────────────────
-
 export function PetCompanion({ reaction, className }: PetCompanionProps) {
   const { pet, catalog, effects, loading } = usePet();
-  const [expanded, setExpanded] = useState(false);
-  const [bubble, setBubble]     = useState<string | null>(null);
-  const bubbleTimer             = useRef<ReturnType<typeof setTimeout>>();
-  const lastMessageRef          = useRef<string | undefined>(undefined);
+  const [bubble, setBubble]   = useState<string | null>(null);
+  const bubbleTimer           = useRef<ReturnType<typeof setTimeout>>();
+  const lastMessageRef        = useRef<string | undefined>(undefined);
 
-  // Show speech bubble when reaction.message changes
+  // Show speech bubble on reaction message change
   useEffect(() => {
     if (reaction.message && reaction.message !== lastMessageRef.current) {
       lastMessageRef.current = reaction.message;
@@ -63,101 +62,107 @@ export function PetCompanion({ reaction, className }: PetCompanionProps) {
     return () => clearTimeout(bubbleTimer.current);
   }, [reaction.message]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const toggleExpand = useCallback(() => setExpanded((v) => !v), []);
-
-  // Loading: show nothing
   if (loading) return null;
 
-  // No pet yet: show egg teaser
+  // ── Egg state ──────────────────────────────────────────────────────────
+
   if (!pet || !catalog || !effects) {
     return (
-      <div className={`relative ${className ?? ""}`}>
-        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-full pl-1.5 pr-3 py-1 shadow-sm cursor-default select-none">
-          <span className="w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center text-lg">🥚</span>
-          <span className="text-xs font-semibold text-gray-400 leading-none">Mystery Egg</span>
+      <div className={className}>
+        <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-200 p-4 flex items-center gap-4">
+          <motion.span
+            animate={{ y: [0, -3, 0] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            className="text-4xl shrink-0"
+          >
+            🥚
+          </motion.span>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-amber-800 text-sm">A mystery egg!</p>
+            <p className="text-[10px] text-amber-600 mt-0.5">Complete a practice session to hatch it</p>
+          </div>
         </div>
       </div>
     );
   }
 
+  // ── Active pet ────���────────────────────────────────────────────────────
+
   const displayName = pet.petName ?? catalog.name;
-  const emoji       = catalog.emoji;
+  const auraBg = effects.auraColor
+    ? AURA_BG[effects.auraColor] ?? "from-indigo-100 to-indigo-50"
+    : "from-indigo-100 to-indigo-50";
 
   return (
-    <div className={`relative ${className ?? ""}`}>
+    <div className={className}>
+      <a href="/profile#pet" className="block group">
+        <div className={`relative bg-gradient-to-br ${auraBg} rounded-2xl border border-gray-100 p-4 overflow-hidden hover:shadow-sm transition-shadow`}>
 
-      {/* Speech bubble */}
-      <AnimatePresence>
-        {bubble && (
-          <motion.div
-            initial={{ opacity: 0, y: 4, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -4, scale: 0.9 }}
-            transition={{ duration: 0.2 }}
-            className="absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap z-10"
-          >
-            <div className="bg-white border border-gray-200 shadow-sm rounded-full px-3 py-1 text-xs font-medium text-gray-600">
-              {bubble}
-            </div>
-            <div className="w-2 h-2 bg-white border-r border-b border-gray-200 rotate-45 mx-auto -mt-1" />
-          </motion.div>
-        )}
-      </AnimatePresence>
+          {/* Speech bubble */}
+          <AnimatePresence>
+            {bubble && (
+              <motion.div
+                initial={{ opacity: 0, y: 4, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.2 }}
+                className="absolute -top-1 left-1/2 -translate-x-1/2 z-10"
+              >
+                <div className="bg-white border border-gray-200 shadow-sm rounded-full px-3 py-1 text-[11px] font-medium text-gray-600 whitespace-nowrap">
+                  {bubble}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-      {/* Pet avatar pill */}
-      <motion.button
-        onClick={toggleExpand}
-        variants={ANIMATION_VARIANTS}
-        animate={reaction.mood}
-        className="flex items-center gap-2 bg-white border border-gray-200 rounded-full pl-1.5 pr-3 py-1 shadow-sm hover:shadow-md transition-shadow cursor-pointer select-none"
-        aria-label={`${displayName} — your learning companion`}
-        title={`${displayName} (${effects.label})`}
-      >
-        <span className="relative w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-lg">
-          {emoji}
-          {effects.isEvolved && (
-            <span className="absolute -top-0.5 -right-0.5 text-[8px]" aria-hidden>⭐</span>
-          )}
-        </span>
-        <span className="text-xs font-semibold text-gray-700 leading-none">{displayName}</span>
-      </motion.button>
+          <div className="flex items-center gap-4">
+            {/* Large animated pet avatar */}
+            <motion.div
+              variants={MOOD_VARIANTS}
+              animate={reaction.mood}
+              className="shrink-0"
+            >
+              <div className="w-16 h-16 rounded-full bg-white/80 flex items-center justify-center shadow-sm relative">
+                <span className="text-4xl" role="img" aria-label={`${displayName} pet`}>
+                  {catalog.emoji}
+                </span>
+                {effects.isEvolved && (
+                  <span className="absolute -bottom-0.5 -right-0.5 text-xs" aria-hidden>⭐</span>
+                )}
+                {effects.streakIcon && (
+                  <span className="absolute -top-0.5 -right-0.5 text-xs" aria-hidden>{effects.streakIcon}</span>
+                )}
+              </div>
+            </motion.div>
 
-      {/* Expanded detail panel */}
-      <AnimatePresence>
-        {expanded && (
-          <motion.div
-            initial={{ opacity: 0, y: -4, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -4, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
-            className="absolute top-full right-0 mt-2 w-56 bg-white border border-gray-200 rounded-xl shadow-lg p-4 z-20"
-          >
-            <div className="flex items-center gap-3 mb-3">
-              <span className="text-3xl">{emoji}</span>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-gray-800 text-sm truncate">{displayName}</p>
-                <p className="text-[10px] text-gray-400">{effects.label}</p>
+            {/* Pet info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="font-bold text-gray-800 text-sm truncate">{displayName}</p>
+                {effects.isEvolved && (
+                  <span className="text-[9px] font-bold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded shrink-0">EVOLVED</span>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-xs">{effects.icon}</span>
+                <span className="text-[11px] text-gray-500 font-medium">{effects.label}</span>
+              </div>
+              {/* Mini stat strip */}
+              <div className="flex items-center gap-3 mt-1.5">
+                <span className="text-[10px] text-gray-400">
+                  <span className="font-semibold text-indigo-600">{Math.round((pet.accuracyRate ?? 0) * 100)}%</span> accuracy
+                </span>
+                <span className="text-[10px] text-gray-400">
+                  <span className="font-semibold text-emerald-600">{pet.questionsAnswered ?? 0}</span> questions
+                </span>
               </div>
             </div>
-            <p className="text-xs text-gray-500 leading-relaxed mb-3">{effects.description}</p>
-            <div className="grid grid-cols-2 gap-2 text-center">
-              <div className="bg-gray-50 rounded-lg py-1.5">
-                <p className="text-xs font-bold text-indigo-600">{Math.round((pet.accuracyRate ?? 0) * 100)}%</p>
-                <p className="text-[9px] text-gray-400">Accuracy</p>
-              </div>
-              <div className="bg-gray-50 rounded-lg py-1.5">
-                <p className="text-xs font-bold text-emerald-600">{pet.questionsAnswered ?? 0}</p>
-                <p className="text-[9px] text-gray-400">Questions</p>
-              </div>
-            </div>
-            <a href="/profile#pet" className="block mt-3 text-center text-[10px] font-semibold text-indigo-500 hover:text-indigo-700 transition">
-              Manage Pet →
-            </a>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
-      {expanded && <div className="fixed inset-0 z-10" onClick={() => setExpanded(false)} />}
+            {/* Arrow to profile */}
+            <span className="text-gray-300 text-sm shrink-0 group-hover:text-indigo-400 transition-colors">→</span>
+          </div>
+        </div>
+      </a>
     </div>
   );
 }
