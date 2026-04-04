@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /parent/
+Disallow: /auth/
+
+Sitemap: https://mathai-web-nishadsukumarans-projects.vercel.app/sitemap.xml
