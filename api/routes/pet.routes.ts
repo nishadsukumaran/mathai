@@ -35,6 +35,7 @@ router.get("/", async (req, res, next) => {
     const currentLevel = profile?.currentLevel ?? 1;
 
     const response = await getPetResponse(userId, "Student", currentLevel);
+    // response is null if the student hasn't earned a pet yet
     res.json({ success: true, data: response });
   } catch (err) {
     next(err);

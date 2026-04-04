@@ -31,6 +31,7 @@ export type PetEvent =
   | "session_complete"
   | "level_up"
   | "badge_earned"
+  | "pet_hatched"
   | "idle";
 
 // ─── Moods ───────────────────────────────────────────────────────────────────
@@ -114,6 +115,11 @@ const MESSAGES: Record<PetEvent, MessagePool> = {
     calm:      ["Badge earned.", "Achievement.", "Well deserved."],
     motivator: ["You earned it!", "Trophy time!", "So deserved!"],
   },
+  pet_hatched: {
+    playful:   ["I'm alive!", "Hi friend!", "Let's GO!"],
+    calm:      ["Hello there.", "Nice to meet you.", "I'm your pet."],
+    motivator: ["You earned me!", "We're a team!", "Let's learn!"],
+  },
   idle: {
     playful:   ["Let's play!", "Bored yet? 😄", "Math time!"],
     calm:      ["I'm here.", "Ready.", "Take your time."],
@@ -139,6 +145,7 @@ const EVENT_MAP: Record<PetEvent, ReactionTemplate> = {
   streak_14:        { mood: "excited",  animation: "bounce",  duration: 4000 },
   session_complete: { mood: "cheering", animation: "pulse",   duration: 3000 },
   level_up:         { mood: "excited",  animation: "bounce",  duration: 4000 },
+  pet_hatched:      { mood: "excited",  animation: "bounce",  duration: 5000 },
   badge_earned:     { mood: "happy",    animation: "glow",    duration: 3000 },
   idle:             { mood: "idle",     animation: "bob",     duration: 0    },
 };

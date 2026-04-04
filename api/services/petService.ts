@@ -3,15 +3,19 @@
  *
  * Database operations and behaviour-score computation for the pet system.
  *
+ * PET LIFECYCLE:
+ *   1. New student has NO pet (findPetForUser returns null)
+ *   2. Student completes first practice session → createFirstPet() hatches the egg
+ *   3. Pet exists from this point — personality evaluated every 50 questions
+ *
  * Public API
  * ───────────
- *   getPetForUser(userId)                  → StudentPet (upserts if missing)
- *   evaluateAndUpdatePersonality(userId)   → updated StudentPet | null (skips if not due)
- *   adoptPet(userId, petId, name?)         → StudentPet
- *   getPetResponse(userId)                 → full PetResponse including effects + insight
- *
- * Personality evaluation runs when questionsAnswered crosses a new
- * PERSONALITY_EVAL_INTERVAL multiple (currently every 50 questions).
+ *   findPetForUser(userId)                → StudentPet | null (read-only, never creates)
+ *   createFirstPet(userId)                → StudentPet (creates starter pet — call on first milestone)
+ *   getPetForUser(userId)                 → StudentPet (upserts if missing — legacy, use sparingly)
+ *   evaluateAndUpdatePersonality(userId)  → updated StudentPet | null (skips if no pet)
+ *   adoptPet(userId, petId, name?)        → StudentPet
+ *   getPetResponse(userId)                → full PetResponse | null (null if no pet)
  */
 
 import { prisma } from "../lib/prisma";
@@ -72,7 +76,36 @@ function rowToPet(row: {
 // ─── Core functions ───────────────────────────────────────────────────────────
 
 /**
- * Returns the student's pet, creating a default one if none exists yet.
+ * Read-only: returns the student's pet, or null if they haven't earned one yet.
+ * Does NOT auto-create. Use this for display/read paths (GET /api/pet, dashboard).
+ */
+export async function findPetForUser(userId: string): Promise<StudentPet | null> {
+  const row = await prisma.studentPet.findUnique({ where: { userId } });
+  return row ? rowToPet(row) : null;
+}
+
+/**
+ * Creates the student's first pet (the "egg hatching" moment).
+ * Call this when the student reaches their first milestone (e.g., first session complete).
+ * Returns the new pet, or the existing one if they already have one.
+ */
+export async function createFirstPet(userId: string): Promise<StudentPet> {
+  const row = await prisma.studentPet.upsert({
+    where:  { userId },
+    create: {
+      userId,
+      petId:       "spark-owl",
+      personality: PetPersonality.CarefulLearner,
+    },
+    update: {},
+  });
+  return rowToPet(row);
+}
+
+/**
+ * Legacy: returns the student's pet, creating a default one if none exists.
+ * Prefer findPetForUser() for read paths and createFirstPet() for milestones.
+ * Kept for backward compatibility in level-up logic.
  */
 export async function getPetForUser(userId: string): Promise<StudentPet> {
   const row = await prisma.studentPet.upsert({
@@ -179,7 +212,9 @@ async function computeBehaviorMetrics(userId: string): Promise<PetBehaviorMetric
 export async function evaluateAndUpdatePersonality(
   userId: string
 ): Promise<StudentPet | null> {
-  const pet = await getPetForUser(userId);
+  // Read-only check — don't auto-create a pet during evaluation
+  const pet = await findPetForUser(userId);
+  if (!pet) return null; // Student hasn't earned a pet yet
 
   // Check if we've crossed a new evaluation milestone
   const newTotal = await prisma.questionAttempt.count({ where: { userId } });
@@ -247,8 +282,11 @@ export async function getPetResponse(
   userId:       string,
   studentName:  string,
   currentLevel: number = 1
-): Promise<PetResponse> {
-  const pet     = await getPetForUser(userId);
+): Promise<PetResponse | null> {
+  // Read-only — don't auto-create a pet on API read
+  const pet = await findPetForUser(userId);
+  if (!pet) return null; // Student hasn't earned a pet yet
+
   const catalog = PET_CATALOG.find((p) => p.id === pet.petId) ?? PET_CATALOG[0]!;
   const effects = petPersonalityEngine.getEffects(pet.personality);
   const insight = petPersonalityEngine.formatInsight(

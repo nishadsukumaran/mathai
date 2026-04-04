@@ -35,7 +35,7 @@ import { appendAfterCompletion }      from "./topicAssignmentService";
 import { getMasteredTopicNamesForGrade } from "./curriculumService";
 import { learningMetrics }             from "../../services/analytics/learning_metrics";
 import { NotFoundError, ValidationError } from "../middlewares/error.middleware";
-import { evaluateAndUpdatePersonality, getPetForUser } from "./petService";
+import { evaluateAndUpdatePersonality, getPetForUser, createFirstPet, findPetForUser } from "./petService";
 import { decideSessionNextStep }                       from "./sessionAdaptationService";
 import {
   createDifficultyState,
@@ -385,7 +385,8 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
   //     If the student just hit a new level that unlocks a pet AND they are still
   //     on the default spark-owl with no custom name, auto-switch to the new pet.
   if (levelUp) {
-    getPetForUser(session.userId).then((currentPet) => {
+    findPetForUser(session.userId).then((currentPet) => {
+      if (!currentPet) return; // No pet yet — will be created on session completion
       const newPetEntry = PET_CATALOG
         .filter((p) => p.unlockLevel === levelUp.level)
         .at(0);
@@ -539,8 +540,11 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
           data:  { preferredExplanationStyle: style as import("@prisma/client").ExplanationStyle },
         }).catch((err) => console.error("[practiceService] preferredExplanationStyle update failed:", err));
       })(),
+      // Hatch the student's first pet on their first session completion.
+      // createFirstPet is idempotent (upsert) — safe to call every session.
+      createFirstPet(session.userId)
+        .catch((err) => console.error("[practiceService] createFirstPet failed:", (err as Error).message)),
       // Pet personality re-evaluation — runs every 50 questions answered.
-      // Fire-and-forget: never blocks the submission response.
       evaluateAndUpdatePersonality(session.userId)
         .catch((err) => console.error("[practiceService] Pet personality eval failed:", (err as Error).message)),
     ]).then((results) => {
@@ -550,6 +554,7 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
         "refreshSnapshot",
         "appendAfterCompletion",
         "inferExplanationStyle",
+        "createFirstPet",
         "evaluateAndUpdatePersonality",
       ];
       for (let i = 0; i < results.length; i++) {

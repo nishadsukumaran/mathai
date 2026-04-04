@@ -65,7 +65,20 @@ export function PetCompanion({ reaction, className }: PetCompanionProps) {
 
   const toggleExpand = useCallback(() => setExpanded((v) => !v), []);
 
-  if (loading || !pet || !catalog || !effects) return null;
+  // Loading: show nothing
+  if (loading) return null;
+
+  // No pet yet: show egg teaser
+  if (!pet || !catalog || !effects) {
+    return (
+      <div className={`relative ${className ?? ""}`}>
+        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-full pl-1.5 pr-3 py-1 shadow-sm cursor-default select-none">
+          <span className="w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center text-lg">🥚</span>
+          <span className="text-xs font-semibold text-gray-400 leading-none">Mystery Egg</span>
+        </div>
+      </div>
+    );
+  }
 
   const displayName = pet.petName ?? catalog.name;
   const emoji       = catalog.emoji;

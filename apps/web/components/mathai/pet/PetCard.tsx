@@ -43,11 +43,22 @@ export function PetCard({ compact = false }: Props) {
     );
   }
 
-  // ── Error / no pet ───────────────────────────────────────────────────────────
-  if (error || !pet || !catalog || !effects) {
+  // ── No pet yet — show egg teaser ──────────────────────────────────────────────
+  if (!pet || !catalog || !effects) {
     return (
-      <div className="rounded-3xl bg-white border border-indigo-100 p-4 text-center text-sm text-gray-400">
-        🐾 Adopt a pet to track your learning personality!
+      <div className="rounded-3xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 p-6 text-center">
+        <p className="text-4xl mb-2">🥚</p>
+        <p className="font-semibold text-amber-800 text-sm">A mystery egg!</p>
+        <p className="text-xs text-amber-600 mt-1">Complete your first practice session to hatch your pet.</p>
+      </div>
+    );
+  }
+
+  // ── Error state ─────────────────────────────────────────────────────────────
+  if (error) {
+    return (
+      <div className="rounded-3xl bg-white border border-gray-100 p-4 text-center text-sm text-gray-400">
+        Could not load pet — try again later.
       </div>
     );
   }
