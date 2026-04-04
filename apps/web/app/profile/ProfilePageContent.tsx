@@ -13,7 +13,7 @@ import { useSession, signOut }  from "next-auth/react";
 import { useQueryClient }       from "@tanstack/react-query";
 import { cn }                   from "@/lib/utils";
 import { useProfile }           from "@/hooks/use-profile";
-import { PetCard }              from "@/components/mathai/pet";
+import { PetShowcase, PetCollection } from "@/components/mathai/pet";
 import { queryKeys }            from "@/lib/query-keys";
 import type {
   LearningPace,
@@ -302,14 +302,15 @@ export default function ProfilePageContent() {
         </button>
 
         {/* ── My Pet ───────────────────────────────────────────────────── */}
-        <section id="pet" className="space-y-3">
+        <section id="pet" className="space-y-4">
           <div>
             <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">My Pet</p>
             <p className="text-sm text-gray-500 mt-0.5">
               Your pet&apos;s personality reflects your learning style — it evolves as you practice!
             </p>
           </div>
-          <PetCard />
+          <PetShowcase />
+          <PetCollection />
         </section>
 
         {/* ── Security / Change Password ───────────────────────────────── */}

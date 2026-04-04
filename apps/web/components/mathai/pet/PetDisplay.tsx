@@ -21,14 +21,15 @@ interface Props {
   emoji:       string;     // pet emoji from catalog
   name:        string;     // display name (pet name or catalog name)
   effects:     PersonalityEffects;
-  size?:       "sm" | "md" | "lg";
+  size?:       "sm" | "md" | "lg" | "xl";
   showName?:   boolean;
 }
 
 const SIZE_MAP = {
-  sm:  { container: "w-14 h-14", text: "text-3xl", label: "text-xs mt-1" },
-  md:  { container: "w-20 h-20", text: "text-4xl", label: "text-sm mt-1.5" },
-  lg:  { container: "w-28 h-28", text: "text-6xl", label: "text-base mt-2" },
+  sm:  { container: "w-14 h-14", text: "text-3xl",  label: "text-xs mt-1",   ring: "ring-2 shadow-lg" },
+  md:  { container: "w-20 h-20", text: "text-4xl",  label: "text-sm mt-1.5", ring: "ring-2 shadow-lg" },
+  lg:  { container: "w-28 h-28", text: "text-6xl",  label: "text-base mt-2", ring: "ring-2 shadow-lg" },
+  xl:  { container: "w-40 h-40", text: "text-8xl",  label: "text-lg mt-2",   ring: "ring-4 shadow-xl" },
 };
 
 const AURA_COLOR_MAP: Record<string, string> = {
@@ -41,9 +42,9 @@ const AURA_COLOR_MAP: Record<string, string> = {
 };
 
 export function PetDisplay({ emoji, name, effects, size = "sm", showName = false }: Props) {
-  const { container, text, label } = SIZE_MAP[size];
+  const { container, text, label, ring } = SIZE_MAP[size];
   const auraClasses = effects.auraColor
-    ? `ring-2 shadow-lg ${AURA_COLOR_MAP[effects.auraColor] ?? "ring-indigo-300 shadow-indigo-200"}`
+    ? `${ring} ${AURA_COLOR_MAP[effects.auraColor] ?? "ring-indigo-300 shadow-indigo-200"}`
     : "";
 
   return (
