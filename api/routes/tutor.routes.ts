@@ -15,8 +15,9 @@ import { Router, Request, Response, NextFunction } from "express";
 import { z }                   from "zod";
 import { askMathAIService }     from "../../ai/services/askMathAIService";
 import { generateConceptImage } from "../../ai/services/imageGenerationService";
-import { generateScenePlan }    from "../../ai/services/sceneGeneratorService";
-import { getProfile }           from "../services/profileService";
+import { generateScenePlan }     from "../../ai/services/sceneGeneratorService";
+import { generateSimilarProblem } from "../../ai/services/similarProblemService";
+import { getProfile }            from "../services/profileService";
 import type { Grade, ExplanationStyle, LearningPace } from "@mathai/shared-types";
 
 const router = Router();
@@ -194,6 +195,43 @@ router.post("/generate-scene", async (req: Request, res: Response, next: NextFun
 
     const plan = await generateScenePlan(question, mathData as any, resolvedGrade);
     res.json({ success: true, data: plan });
+  } catch (err) { next(err); }
+});
+
+// ─── Similar problem generation ─────────────────────────────────────────────
+
+const SimilarProblemSchema = z.object({
+  problem: z.string().min(1).max(1000),
+  type:    z.string().min(1).max(60),
+  grade:   z.string().regex(/^G\d+$/).optional(),
+  answer:  z.string().max(100).optional(),
+});
+
+router.post("/similar-problem", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.student?.id;
+    if (!userId) { res.status(401).json({ success: false, error: "Unauthorized" }); return; }
+
+    const parsed = SimilarProblemSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ success: false, error: "Invalid body", details: parsed.error.flatten() });
+      return;
+    }
+
+    const { problem, type, answer } = parsed.data;
+
+    let grade = parsed.data.grade;
+    if (!grade) {
+      try {
+        const studentProfile = await getProfile(userId);
+        grade = studentProfile.grade;
+      } catch {
+        grade = "G4";
+      }
+    }
+
+    const result = await generateSimilarProblem({ problem, type, grade, answer });
+    res.json({ success: true, data: result });
   } catch (err) { next(err); }
 });
 

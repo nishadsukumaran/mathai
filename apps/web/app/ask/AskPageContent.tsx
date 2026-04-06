@@ -700,12 +700,14 @@ function WatchItView({
             {/* End card */}
             <EndCard
               source={source}
+              question={question}
+              mathType={mathData?.type ?? "unknown"}
+              answer={String(mathData?.result ?? "")}
               onReplay={() => {
                 telemetry.replay();
                 setState("idle");
                 setPlan(null);
               }}
-              followUp={undefined}
             />
           </motion.div>
         )}
@@ -714,39 +716,197 @@ function WatchItView({
   );
 }
 
-// ─── End card ────────────────────────────────────────────────────────────────
+// ─── End card with "Try one like this" ───────────────────────────────────────
+
+interface SimilarProblem {
+  problem:     string;
+  answer:      string;
+  steps:       string[];
+  explanation: string;
+}
 
 function EndCard({
   source,
+  question,
+  mathType,
+  answer,
   onReplay,
-  followUp,
 }: {
-  source: string;
+  source:   string;
+  question: string;
+  mathType: string;
+  answer:   string;
   onReplay: () => void;
-  followUp?: string;
 }) {
+  const [tryState, setTryState] = useState<"idle" | "loading" | "showing" | "revealed">("idle");
+  const [similar, setSimilar]   = useState<SimilarProblem | null>(null);
+  const [userAnswer, setUserAnswer] = useState("");
+
+  const handleTrySimilar = useCallback(async () => {
+    setTryState("loading");
+    try {
+      const result = await clientPost<SimilarProblem>("/tutor/similar-problem", {
+        problem: question,
+        type: mathType,
+        answer,
+      });
+      if (result) {
+        setSimilar(result);
+        setTryState("showing");
+      } else {
+        setTryState("idle");
+      }
+    } catch {
+      setTryState("idle");
+    }
+  }, [question, mathType, answer]);
+
+  const handleCheck = useCallback(() => {
+    setTryState("revealed");
+  }, []);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.5, duration: 0.3 }}
-      className="mt-4 bg-emerald-50/60 border border-emerald-200 rounded-2xl p-5 text-center space-y-3"
+      className="mt-4 space-y-3"
     >
-      <p className="text-sm font-semibold text-emerald-700">Got it?</p>
+      {/* Got it? card */}
+      <div className="bg-emerald-50/60 border border-emerald-200 rounded-2xl p-5 text-center space-y-3">
+        <p className="text-sm font-semibold text-emerald-700">Got it?</p>
 
-      <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
-        <button
-          onClick={onReplay}
-          className="px-4 py-2 rounded-xl text-xs font-semibold bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition active:scale-[0.97]"
-        >
-          Replay
-        </button>
+        <div className="flex items-center justify-center gap-2">
+          {tryState === "idle" && (
+            <button
+              onClick={handleTrySimilar}
+              className="px-5 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition active:scale-[0.97]"
+            >
+              Try one like this
+            </button>
+          )}
+          <button
+            onClick={onReplay}
+            className="px-4 py-2.5 rounded-xl text-xs font-semibold bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition active:scale-[0.97]"
+          >
+            Replay
+          </button>
+        </div>
+
+        {tryState === "loading" && (
+          <div className="flex items-center justify-center gap-2 pt-1">
+            <div className="w-3.5 h-3.5 rounded-full border-2 border-indigo-400 border-t-indigo-700 animate-spin" />
+            <span className="text-xs text-indigo-500 font-medium">Creating a problem for you...</span>
+          </div>
+        )}
+
+        {source !== "template" && tryState === "idle" && (
+          <p className="text-[10px] text-gray-400">
+            {source === "ai" ? "AI-generated animation" : "Basic view"}
+          </p>
+        )}
       </div>
 
-      {source !== "template" && (
-        <p className="text-[10px] text-gray-400">
-          {source === "ai" ? "AI-generated animation" : "Basic view"}
-        </p>
+      {/* Inline practice problem */}
+      {similar && tryState !== "idle" && tryState !== "loading" && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="bg-white border border-indigo-100 rounded-2xl p-5 space-y-4"
+        >
+          {/* Problem */}
+          <div>
+            <p className="text-[10px] font-semibold text-indigo-500 uppercase tracking-wider mb-1.5">Your turn</p>
+            <p className="text-sm font-semibold text-gray-800">
+              <MathText text={similar.problem} />
+            </p>
+          </div>
+
+          {/* Answer input (before reveal) */}
+          {tryState === "showing" && (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={userAnswer}
+                onChange={(e) => setUserAnswer(e.target.value)}
+                placeholder="Your answer..."
+                className="flex-1 border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-center focus:border-indigo-400 outline-none transition"
+                onKeyDown={(e) => { if (e.key === "Enter") handleCheck(); }}
+                autoFocus
+              />
+              <button
+                onClick={handleCheck}
+                className="px-4 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 transition active:scale-[0.97] shrink-0"
+              >
+                Check
+              </button>
+            </div>
+          )}
+
+          {/* Answer reveal */}
+          {tryState === "revealed" && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="space-y-3"
+            >
+              {/* Result comparison */}
+              <div className={cn(
+                "rounded-xl px-4 py-3 text-center",
+                userAnswer.trim().toLowerCase() === similar.answer.trim().toLowerCase()
+                  ? "bg-emerald-50 border border-emerald-200"
+                  : "bg-amber-50 border border-amber-200",
+              )}>
+                {userAnswer.trim().toLowerCase() === similar.answer.trim().toLowerCase() ? (
+                  <p className="text-sm font-bold text-emerald-700">Correct!</p>
+                ) : (
+                  <div>
+                    <p className="text-sm font-bold text-amber-700">
+                      The answer is <span className="text-indigo-600">{similar.answer}</span>
+                    </p>
+                    {userAnswer.trim() && (
+                      <p className="text-xs text-amber-600 mt-0.5">
+                        You said: {userAnswer}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Steps */}
+              {similar.steps.length > 0 && (
+                <div className="space-y-1.5">
+                  {similar.steps.map((step, i) => (
+                    <div key={i} className="flex gap-2 items-start">
+                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-bold flex items-center justify-center mt-0.5">
+                        {i + 1}
+                      </span>
+                      <p className="text-xs text-gray-600"><MathText text={step} /></p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Explanation */}
+              <p className="text-xs text-gray-500 leading-relaxed">
+                <MathText text={similar.explanation} />
+              </p>
+
+              {/* Try another */}
+              <button
+                onClick={() => {
+                  setTryState("idle");
+                  setSimilar(null);
+                  setUserAnswer("");
+                }}
+                className="w-full py-2.5 rounded-xl text-xs font-semibold bg-gray-50 border border-gray-200 text-gray-600 hover:bg-gray-100 transition active:scale-[0.97]"
+              >
+                Try another
+              </button>
+            </motion.div>
+          )}
+        </motion.div>
       )}
     </motion.div>
   );
