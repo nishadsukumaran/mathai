@@ -358,9 +358,9 @@ export function buildVisualPlan(
   question: string,
   mathData?: MathData,
 ): VisualPlan | null {
-  if (intent.visualType === "worked_steps_only") return null;
-
   // ── Strategy 1: mathData-driven plan (precise) ──────────────────────────
+  // Always try mathData first — it knows the math type even when the
+  // heuristic classifier couldn't match the question text patterns.
   if (mathData) {
     // Override intent visual type if mathData type maps to a different visual
     const mathDrivenType = MATHDATA_TYPE_MAP[mathData.type];
@@ -372,6 +372,9 @@ export function buildVisualPlan(
     if (plan && isValidPlan(plan)) return plan;
     // mathData didn't produce a valid plan — fall through to regex
   }
+
+  // No visual needed when heuristic says worked_steps_only and no mathData
+  if (intent.visualType === "worked_steps_only") return null;
 
   // ── Strategy 2: regex fallback (original system) ────────────────────────
   const builder = FALLBACK_MAP[intent.visualType];

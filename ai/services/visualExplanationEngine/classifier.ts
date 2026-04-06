@@ -73,9 +73,9 @@ const CLASSIFICATION_RULES: PatternRule[] = [
     needsStepByStep: false,
   },
 
-  // ── Simple addition/subtraction with small numbers → number line
+  // ── Simple addition/subtraction → number line
   {
-    patterns:        [/\b\d{1,2}\s*[\+\-]\s*\d{1,2}\b/, /add(ition|ing)?|subtract(ion|ing)?/i],
+    patterns:        [/\b\d+\s*[\+\-]\s*\d+\b/, /add(ition|ing)?|subtract(ion|ing)?/i],
     antiPatterns:    [/fraction/i, /decimal/i, /multiply|multipl/i, /divid/i],
     visualType:      "number_line",
     confidence:      0.7,

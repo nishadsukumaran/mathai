@@ -229,10 +229,12 @@ export const askMathAIService = {
       let finalVisualPlan: VisualPlan | undefined = response.visualPlan;
 
       // Re-run the visual engine with mathData if available — produces more precise plans
+      let mathDrivenIntent: string | undefined;
       if (mathData) {
         const mathDrivenResult = await getVisualExplanation(req.question, req.grade, false, mathData).catch(() => null);
         if (mathDrivenResult?.plan && isValidPlan(mathDrivenResult.plan)) {
           finalVisualPlan = mathDrivenResult.plan;
+          mathDrivenIntent = mathDrivenResult.intent.visualType;
         }
       } else if (visualResult?.plan && isValidPlan(visualResult.plan)) {
         finalVisualPlan = visualResult.plan;
@@ -259,6 +261,7 @@ export const askMathAIService = {
           finalVisualPlan = (visualResult?.plan && isValidPlan(visualResult.plan))
             ? visualResult.plan
             : undefined;
+          mathDrivenIntent = undefined;
         } else if (alignment.confidence === "medium") {
           console.info(
             `[askMathAIService] Visual alignment partial (${alignment.issues.join("; ")}). Using plan with reduced confidence.`,
@@ -266,13 +269,13 @@ export const askMathAIService = {
         }
       }
 
-      // Determine visual strategy from the engine's intent
-      const engineStrategy = visualResult?.intent.visualType;
-      const visualStrategy = engineStrategy && engineStrategy !== "worked_steps_only"
+      // Determine visual strategy — prefer mathData-driven intent over heuristic-only
+      const engineStrategy = mathDrivenIntent ?? visualResult?.intent.visualType;
+      const visualStrategy = (finalVisualPlan && engineStrategy && engineStrategy !== "worked_steps_only")
         ? (engineStrategy === "logic_flow" || engineStrategy === "equation_steps"
             ? "animated_diagram" as const
             : "diagram" as const)
-        : (response.visualStrategy ?? "none");
+        : (finalVisualPlan ? "diagram" as const : "none");
 
       return {
         question:     req.question,
