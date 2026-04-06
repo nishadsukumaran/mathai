@@ -70,6 +70,7 @@ export type {
   AskRequest,
   AskStep,
   AskMathAIResponse,
+  MathData,
 
   // Profile
   LearningPace,

@@ -13,9 +13,10 @@
 
 import { Router, Request, Response, NextFunction } from "express";
 import { z }                   from "zod";
-import { askMathAIService }    from "../../ai/services/askMathAIService";
+import { askMathAIService }     from "../../ai/services/askMathAIService";
 import { generateConceptImage } from "../../ai/services/imageGenerationService";
-import { getProfile }          from "../services/profileService";
+import { generateScenePlan }    from "../../ai/services/sceneGeneratorService";
+import { getProfile }           from "../services/profileService";
 import type { Grade, ExplanationStyle, LearningPace } from "@mathai/shared-types";
 
 const router = Router();
@@ -135,6 +136,64 @@ router.post("/generate-visual", async (req: Request, res: Response, next: NextFu
     } else {
       res.status(503).json({ success: false, error: "Image generation unavailable. Try again later." });
     }
+  } catch (err) { next(err); }
+});
+
+// ─── On-demand animated scene generation ────────────────────────────────────
+
+const GenerateSceneSchema = z.object({
+  question: z.string().min(1).max(1000),
+  mathData: z.object({
+    type:        z.string(),
+    values:      z.array(z.number()).optional(),
+    fractions:   z.array(z.object({ numerator: z.number(), denominator: z.number() })).optional(),
+    result:      z.union([z.number(), z.string()]).optional(),
+    steps:       z.array(z.string()).optional(),
+    structure:   z.object({
+      groups:        z.number().optional(),
+      itemsPerGroup: z.number().optional(),
+      total:         z.number().optional(),
+    }).optional(),
+    equation:    z.object({
+      lhs:       z.string(),
+      rhs:       z.string(),
+      variable:  z.string().optional(),
+      solution:  z.string().optional(),
+    }).optional(),
+    wordProblem: z.object({
+      known:     z.array(z.object({ label: z.string(), value: z.number() })),
+      unknown:   z.object({ label: z.string() }).optional(),
+      operation: z.string().optional(),
+    }).optional(),
+  }),
+  grade: z.string().regex(/^G\d+$/).optional(),
+});
+
+router.post("/generate-scene", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.student?.id;
+    if (!userId) { res.status(401).json({ success: false, error: "Unauthorized" }); return; }
+
+    const parsed = GenerateSceneSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ success: false, error: "Invalid body", details: parsed.error.flatten() });
+      return;
+    }
+
+    const { question, mathData, grade } = parsed.data;
+
+    let resolvedGrade = grade;
+    if (!resolvedGrade) {
+      try {
+        const studentProfile = await getProfile(userId);
+        resolvedGrade = studentProfile.grade;
+      } catch {
+        resolvedGrade = "G4";
+      }
+    }
+
+    const plan = await generateScenePlan(question, mathData as any, resolvedGrade);
+    res.json({ success: true, data: plan });
   } catch (err) { next(err); }
 });
 

@@ -11,8 +11,9 @@ import { useState, useRef, useCallback, useEffect }  from "react";
 import { cn }                from "@/lib/utils";
 import { clientPost }        from "@/lib/clientApi";
 import { useProfile }        from "@/hooks/use-profile";
-import { VisualRenderer }    from "@/components/mathai/visual";
-import { MathText }          from "@/components/shared/MathText";
+import { VisualRenderer }     from "@/components/mathai/visual";
+import { SceneExplanation }   from "@/components/scene-engine";
+import { MathText }           from "@/components/shared/MathText";
 import type { AskMathAIResponse } from "@/types";
 
 // ─── Grade-based suggestions aligned to Cambridge Primary/Lower Secondary ────
@@ -462,6 +463,12 @@ function ResponseCard({ response }: { response: AskMathAIResponse }) {
           <button onClick={handleGenerateVisual} className="text-red-500 text-xs underline mt-1">Try again</button>
         </div>
       )}
+
+      {/* Animated scene explanation (Duolingo-style) */}
+      <SceneExplanation
+        question={response.question}
+        mathData={response.mathData}
+      />
 
       {/* Explanation */}
       <div className="bg-white rounded-2xl px-5 py-4 shadow-sm border border-gray-100">
