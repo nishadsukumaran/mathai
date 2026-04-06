@@ -703,6 +703,7 @@ function WatchItView({
               question={question}
               mathType={mathData?.type ?? "unknown"}
               answer={String(mathData?.result ?? "")}
+              topicId={mathData?.type ?? "unknown"}
               onReplay={() => {
                 telemetry.replay();
                 setState("idle");
@@ -716,7 +717,7 @@ function WatchItView({
   );
 }
 
-// ─── End card with "Try one like this" ───────────────────────────────────────
+// ─── End card with learning loop integration ─────────────────────────────────
 
 interface SimilarProblem {
   problem:     string;
@@ -725,25 +726,41 @@ interface SimilarProblem {
   explanation: string;
 }
 
+interface NextActionRec {
+  type:       string;
+  topicId:    string;
+  topicName?: string;
+  reason:     string;
+  cta:        string;
+  href?:      string;
+}
+
 function EndCard({
   source,
   question,
   mathType,
   answer,
+  topicId,
   onReplay,
 }: {
   source:   string;
   question: string;
   mathType: string;
   answer:   string;
+  topicId:  string;
   onReplay: () => void;
 }) {
   const [tryState, setTryState] = useState<"idle" | "loading" | "showing" | "revealed">("idle");
   const [similar, setSimilar]   = useState<SimilarProblem | null>(null);
   const [userAnswer, setUserAnswer] = useState("");
+  const [nextAction, setNextAction] = useState<NextActionRec | null>(null);
+  const [xpEarned, setXpEarned]    = useState(0);
+  const consecutiveRef = useRef({ correct: 0, wrong: 0 });
+  const startTimeRef   = useRef(Date.now());
 
   const handleTrySimilar = useCallback(async () => {
     setTryState("loading");
+    setNextAction(null);
     try {
       const result = await clientPost<SimilarProblem>("/tutor/similar-problem", {
         problem: question,
@@ -753,6 +770,8 @@ function EndCard({
       if (result) {
         setSimilar(result);
         setTryState("showing");
+        startTimeRef.current = Date.now();
+        emitLoopEvent("similar_problem_attempted", { topic: mathType, question });
       } else {
         setTryState("idle");
       }
@@ -761,9 +780,45 @@ function EndCard({
     }
   }, [question, mathType, answer]);
 
-  const handleCheck = useCallback(() => {
+  const handleCheck = useCallback(async () => {
+    if (!similar) return;
     setTryState("revealed");
-  }, []);
+
+    const isCorrect = userAnswer.trim().toLowerCase() === similar.answer.trim().toLowerCase();
+    const timeSpent = Math.round((Date.now() - startTimeRef.current) / 1000);
+
+    // Update consecutive counters
+    if (isCorrect) {
+      consecutiveRef.current = { correct: consecutiveRef.current.correct + 1, wrong: 0 };
+    } else {
+      consecutiveRef.current = { correct: 0, wrong: consecutiveRef.current.wrong + 1 };
+    }
+
+    emitLoopEvent(isCorrect ? "similar_problem_correct" : "similar_problem_wrong", { topic: mathType });
+
+    // Record attempt (feeds mastery model)
+    const attemptResult = await clientPost<{ isCorrect: boolean; xpEarned: number }>("/learning/record-attempt", {
+      topicId,
+      questionText:     similar.problem,
+      studentAnswer:    userAnswer.trim(),
+      correctAnswer:    similar.answer,
+      timeSpentSeconds: timeSpent,
+      hintsUsed:        0,
+      source:           "ask_similar",
+    });
+    if (attemptResult?.xpEarned) setXpEarned((prev) => prev + attemptResult.xpEarned);
+
+    // Get next action recommendation
+    const action = await clientPost<NextActionRec>("/learning/next-action", {
+      topicId,
+      isCorrect,
+      consecutiveCorrect: consecutiveRef.current.correct,
+      consecutiveWrong:   consecutiveRef.current.wrong,
+      hasSceneTemplate:   true,
+      source:             "ask_similar",
+    });
+    if (action) setNextAction(action);
+  }, [similar, userAnswer, mathType, topicId]);
 
   return (
     <motion.div
@@ -800,15 +855,14 @@ function EndCard({
           </div>
         )}
 
-        {source !== "template" && tryState === "idle" && (
-          <p className="text-[10px] text-gray-400">
-            {source === "ai" ? "AI-generated animation" : "Basic view"}
-          </p>
+        {/* XP earned badge */}
+        {xpEarned > 0 && (
+          <p className="text-xs text-emerald-600 font-semibold">+{xpEarned} XP earned</p>
         )}
       </div>
 
       {/* Inline practice problem */}
-      {similar && tryState !== "idle" && tryState !== "loading" && (
+      {similar && (tryState === "showing" || tryState === "revealed") && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -823,7 +877,7 @@ function EndCard({
             </p>
           </div>
 
-          {/* Answer input (before reveal) */}
+          {/* Answer input */}
           {tryState === "showing" && (
             <div className="flex gap-2">
               <input
@@ -832,11 +886,11 @@ function EndCard({
                 onChange={(e) => setUserAnswer(e.target.value)}
                 placeholder="Your answer..."
                 className="flex-1 border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-center focus:border-indigo-400 outline-none transition"
-                onKeyDown={(e) => { if (e.key === "Enter") handleCheck(); }}
+                onKeyDown={(e) => { if (e.key === "Enter") void handleCheck(); }}
                 autoFocus
               />
               <button
-                onClick={handleCheck}
+                onClick={() => void handleCheck()}
                 className="px-4 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 transition active:scale-[0.97] shrink-0"
               >
                 Check
@@ -844,14 +898,10 @@ function EndCard({
             </div>
           )}
 
-          {/* Answer reveal */}
+          {/* Reveal + next action */}
           {tryState === "revealed" && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="space-y-3"
-            >
-              {/* Result comparison */}
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
+              {/* Result */}
               <div className={cn(
                 "rounded-xl px-4 py-3 text-center",
                 userAnswer.trim().toLowerCase() === similar.answer.trim().toLowerCase()
@@ -866,9 +916,7 @@ function EndCard({
                       The answer is <span className="text-indigo-600">{similar.answer}</span>
                     </p>
                     {userAnswer.trim() && (
-                      <p className="text-xs text-amber-600 mt-0.5">
-                        You said: {userAnswer}
-                      </p>
+                      <p className="text-xs text-amber-600 mt-0.5">You said: {userAnswer}</p>
                     )}
                   </div>
                 )}
@@ -888,26 +936,82 @@ function EndCard({
                 </div>
               )}
 
-              {/* Explanation */}
-              <p className="text-xs text-gray-500 leading-relaxed">
-                <MathText text={similar.explanation} />
-              </p>
+              {/* Next action recommendation */}
+              {nextAction && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="bg-indigo-50/60 border border-indigo-200 rounded-xl p-4 text-center space-y-2"
+                >
+                  <p className="text-xs text-indigo-600 leading-relaxed">{nextAction.reason}</p>
+                  <div className="flex items-center justify-center gap-2">
+                    {/* Primary action */}
+                    {nextAction.href ? (
+                      <a
+                        href={nextAction.href}
+                        onClick={() => emitLoopEvent("next_action_clicked", { type: nextAction.type, topic: mathType })}
+                        className="px-5 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition active:scale-[0.97]"
+                      >
+                        {nextAction.cta}
+                      </a>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          emitLoopEvent("next_action_clicked", { type: nextAction.type, topic: mathType });
+                          setTryState("idle");
+                          setSimilar(null);
+                          setUserAnswer("");
+                          void handleTrySimilar();
+                        }}
+                        className="px-5 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition active:scale-[0.97]"
+                      >
+                        {nextAction.cta}
+                      </button>
+                    )}
+                    {/* Secondary: try another anyway */}
+                    {nextAction.type !== "retry_similar" && (
+                      <button
+                        onClick={() => {
+                          setTryState("idle");
+                          setSimilar(null);
+                          setUserAnswer("");
+                          setNextAction(null);
+                        }}
+                        className="px-4 py-2.5 rounded-xl text-xs font-semibold bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition active:scale-[0.97]"
+                      >
+                        Try another
+                      </button>
+                    )}
+                  </div>
+                </motion.div>
+              )}
 
-              {/* Try another */}
-              <button
-                onClick={() => {
-                  setTryState("idle");
-                  setSimilar(null);
-                  setUserAnswer("");
-                }}
-                className="w-full py-2.5 rounded-xl text-xs font-semibold bg-gray-50 border border-gray-200 text-gray-600 hover:bg-gray-100 transition active:scale-[0.97]"
-              >
-                Try another
-              </button>
+              {/* Fallback: try another if no next action loaded yet */}
+              {!nextAction && (
+                <button
+                  onClick={() => {
+                    setTryState("idle");
+                    setSimilar(null);
+                    setUserAnswer("");
+                  }}
+                  className="w-full py-2.5 rounded-xl text-xs font-semibold bg-gray-50 border border-gray-200 text-gray-600 hover:bg-gray-100 transition active:scale-[0.97]"
+                >
+                  Try another
+                </button>
+              )}
             </motion.div>
           )}
         </motion.div>
       )}
     </motion.div>
   );
+}
+
+// ─── Loop telemetry ──────────────────────────────────────────────────────────
+
+function emitLoopEvent(event: string, payload: Record<string, unknown> = {}) {
+  if (process.env.NODE_ENV === "development") {
+    console.log(`[loop:${event}]`, payload);
+  }
 }
