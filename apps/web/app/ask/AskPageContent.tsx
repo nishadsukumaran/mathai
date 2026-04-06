@@ -8,13 +8,18 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect }  from "react";
+import { motion, AnimatePresence }                     from "framer-motion";
 import { cn }                from "@/lib/utils";
 import { clientPost }        from "@/lib/clientApi";
 import { useProfile }        from "@/hooks/use-profile";
-import { VisualRenderer }     from "@/components/mathai/visual";
-import { SceneExplanation }   from "@/components/scene-engine";
-import { MathText }           from "@/components/shared/MathText";
-import type { AskMathAIResponse } from "@/types";
+import { VisualRenderer }    from "@/components/mathai/visual";
+import { ScenePlayer }       from "@/components/scene-engine";
+import { MathText }          from "@/components/shared/MathText";
+import { dispatchScene, isSceneEligible }  from "@/lib/scene-engine/dispatcher";
+import { validateScenePlan }               from "@/lib/scene-engine/validator";
+import { useSceneTelemetry }               from "@/hooks/useSceneTelemetry";
+import type { ScenePlan }                  from "@/lib/scene-engine/types";
+import type { AskMathAIResponse }          from "@/types";
 
 // ─── Grade-based suggestions aligned to Cambridge Primary/Lower Secondary ────
 // Each grade maps to Cambridge stage topics so students see relevant questions.
@@ -362,167 +367,387 @@ export default function AskPageContent({ initialQuestion = "" }: AskPageContentP
   );
 }
 
-// ─── Inline markdown renderer ─────────────────────────────────────────────────
-// Handles **bold** and *italic* from AI responses without pulling in a full parser.
+// ═════════════════════════════════════════════════════════════════════════════
+// ResponseCard — tabbed, single-focus layout
+// ═════════════════════════════════════════════════════════════════════════════
 
-function renderMd(text: string): React.ReactNode {
-  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g);
-  return parts.map((part, i) => {
-    if (part.startsWith("**") && part.endsWith("**")) {
-      return <strong key={i}>{part.slice(2, -2)}</strong>;
-    }
-    if (part.startsWith("*") && part.endsWith("*")) {
-      return <em key={i}>{part.slice(1, -1)}</em>;
-    }
-    return part;
-  });
-}
-
-// ─── Response card sub-component ─────────────────────────────────────────────
+type TabId = "steps" | "visual" | "watch";
 
 function ResponseCard({ response }: { response: AskMathAIResponse }) {
-  const [visualPlan, setVisualPlan] = useState(response.visualPlan ?? null);
-  const [visualLoading, setVisualLoading] = useState(false);
-  const [visualError, setVisualError] = useState<string | null>(null);
+  // ── Derived state ──────────────────────────────────────────────────────────
+  const answer = String(response.mathData?.result ?? "");
+  const hasSteps = (response.steps?.length ?? 0) > 0;
 
-  // Show existing static diagrams (number_line, fraction_bar, etc.) automatically
-  const hasStaticDiagram = visualPlan &&
+  const visualPlan = response.visualPlan ?? null;
+  const hasVisual = visualPlan != null &&
     visualPlan.diagramType !== "none" &&
-    visualPlan.diagramType !== "concept_image" &&
-    visualPlan.diagramType !== "animated_walkthrough";
+    visualPlan.diagramType !== "concept_image";
 
-  // Show concept_image or animated_walkthrough only after generation
-  const hasGeneratedVisual = visualPlan &&
-    (visualPlan.diagramType === "concept_image" || visualPlan.diagramType === "animated_walkthrough");
+  const sceneEligible = isSceneEligible(response.mathData);
 
-  // Can generate a visual on demand if AI suggested concept_image
-  const canGenerateVisual = (response as any).visualStrategy === "concept_image" &&
-    (response as any).imagePrompt &&
-    (response as any).conceptKey &&
-    !hasGeneratedVisual;
+  // ── Tabs ───────────────────────────────────────────────────────────────────
+  const tabs: { id: TabId; label: string; show: boolean; primary?: boolean }[] = [
+    { id: "steps",  label: "Steps",   show: hasSteps },
+    { id: "visual", label: "Visual",  show: hasVisual },
+    { id: "watch",  label: "Watch It", show: sceneEligible, primary: true },
+  ];
+  const visibleTabs = tabs.filter((t) => t.show);
 
-  const handleGenerateVisual = useCallback(async () => {
-    const r = response as any;
-    if (!r.imagePrompt || !r.conceptKey) return;
-
-    setVisualLoading(true);
-    setVisualError(null);
-    try {
-      const result = await clientPost<{ diagramType: string; data: any }>("/tutor/generate-visual", {
-        imagePrompt: r.imagePrompt,
-        conceptKey: r.conceptKey,
-        altText: r.imagePrompt,
-        caption: r.imagePrompt,
-      });
-      if (result) {
-        setVisualPlan(result as any);
-      } else {
-        setVisualError("Failed to generate visual. Please try again.");
-      }
-    } catch {
-      setVisualError("Failed to generate visual. Please try again.");
-    } finally {
-      setVisualLoading(false);
-    }
-  }, [response]);
+  // Default to first available tab
+  const defaultTab = visibleTabs.find((t) => t.id === "steps")?.id
+    ?? visibleTabs[0]?.id
+    ?? "steps";
+  const [activeTab, setActiveTab] = useState<TabId>(defaultTab);
 
   return (
-    <div className="space-y-4">
-      {/* Static diagrams render automatically */}
-      {hasStaticDiagram && (
-        <VisualRenderer plan={visualPlan!} animated />
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: "easeOut" }}
+      className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden"
+    >
+      {/* ── Answer hero ──────────────────────────────────────────────── */}
+      <AnswerHero answer={answer} explanation={response.explanation} />
+
+      {/* ── Action tabs ──────────────────────────────────────────────── */}
+      {visibleTabs.length > 0 && (
+        <ActionTabs
+          tabs={visibleTabs}
+          active={activeTab}
+          onChange={setActiveTab}
+        />
       )}
 
-      {/* Generated visuals (concept_image, animated_walkthrough) render after button click */}
-      {hasGeneratedVisual && (
-        <VisualRenderer plan={visualPlan!} animated />
-      )}
-
-      {/* "Show Visual" button — appears when AI suggests a concept image */}
-      {canGenerateVisual && !visualLoading && (
-        <button
-          onClick={handleGenerateVisual}
-          className="w-full py-3 rounded-2xl border-2 border-dashed border-indigo-300 text-indigo-600 font-semibold text-sm hover:bg-indigo-50 hover:border-indigo-400 transition flex items-center justify-center gap-2"
-        >
-          <span>Show Visual Explanation</span>
-        </button>
-      )}
-
-      {/* Loading state */}
-      {visualLoading && (
-        <div className="w-full py-4 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center gap-3">
-          <div className="w-4 h-4 rounded-full border-2 border-indigo-400 border-t-indigo-700 animate-spin" />
-          <span className="text-indigo-600 text-sm font-medium">Generating visual...</span>
-        </div>
-      )}
-
-      {/* Error state */}
-      {visualError && (
-        <div className="w-full py-3 rounded-2xl bg-red-50 border border-red-200 text-center">
-          <p className="text-red-600 text-sm">{visualError}</p>
-          <button onClick={handleGenerateVisual} className="text-red-500 text-xs underline mt-1">Try again</button>
-        </div>
-      )}
-
-      {/* Animated scene explanation (Duolingo-style) */}
-      <SceneExplanation
-        question={response.question}
-        mathData={response.mathData}
-      />
-
-      {/* Explanation */}
-      <div className="bg-white rounded-2xl px-5 py-4 shadow-sm border border-gray-100">
-        <p className="text-gray-800 text-sm leading-relaxed">
-          <MathText text={response.explanation} />
-        </p>
+      {/* ── Content area — one mode at a time ────────────────────────── */}
+      <div className="px-5 pb-5">
+        <AnimatePresence mode="wait">
+          {activeTab === "steps" && hasSteps && (
+            <TabPanel key="steps">
+              <StepsView steps={response.steps!} />
+            </TabPanel>
+          )}
+          {activeTab === "visual" && hasVisual && (
+            <TabPanel key="visual">
+              <VisualView plan={visualPlan!} />
+            </TabPanel>
+          )}
+          {activeTab === "watch" && sceneEligible && (
+            <TabPanel key="watch">
+              <WatchItView question={response.question} mathData={response.mathData} />
+            </TabPanel>
+          )}
+        </AnimatePresence>
       </div>
 
-      {/* Steps */}
-      {response.steps && response.steps.length > 0 && (
-        <div className="bg-white rounded-2xl px-5 py-4 shadow-sm border border-gray-100 space-y-3">
-          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Step by Step</p>
-          <ol className="space-y-3">
-            {response.steps.map((step) => (
-              <li key={step.stepNumber} className="flex gap-3 items-start">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center justify-center">
-                  {step.stepNumber}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-700"><MathText text={step.instruction} /></p>
-                  {step.formula && (
-                    <div className="mt-1 text-sm bg-gray-50 rounded-lg px-3 py-1.5 text-indigo-700 overflow-x-auto">
-                      <MathText text={`\\(${step.formula}\\)`} />
-                    </div>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ol>
-        </div>
-      )}
-
-      {/* Example */}
-      {response.example && (
-        <div className="bg-amber-50/60 border border-amber-200 rounded-2xl px-5 py-4 space-y-2">
-          <p className="text-[10px] font-semibold text-amber-600 uppercase tracking-wider">Worked Example</p>
-          <p className="text-sm font-semibold text-amber-900"><MathText text={response.example.problem} /></p>
-          <p className="text-sm text-amber-800"><MathText text={response.example.solution} /></p>
-          <p className="text-xs text-amber-700 font-semibold">🔑 <MathText text={response.example.keyInsight} /></p>
-        </div>
-      )}
-
-      {/* Follow-up */}
-      {response.followUp && (
-        <div className="bg-emerald-50/60 border border-emerald-200 rounded-2xl px-5 py-3">
-          <p className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wider mb-1">Explore Next</p>
-          <p className="text-sm text-emerald-800">{response.followUp}</p>
-        </div>
-      )}
+      {/* ── Encouragement ────────────────────────────────────────────── */}
       {response.encouragement && (
-        <p className="text-center text-xs text-indigo-400 font-semibold italic">
-          {response.encouragement} ✨
+        <div className="px-5 pb-4">
+          <p className="text-center text-xs text-indigo-400 font-semibold">
+            {response.encouragement}
+          </p>
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+// ─── Tab panel wrapper (shared enter/exit animation) ─────────────────────────
+
+function TabPanel({ children }: { children: React.ReactNode }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -6 }}
+      transition={{ duration: 0.2 }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+// ─── Answer hero ─────────────────────────────────────────────────────────────
+
+function AnswerHero({ answer, explanation }: { answer: string; explanation: string }) {
+  // Extract a short first sentence as the "one-liner"
+  const oneLiner = explanation.split(/[.!?]/)[0]?.trim() ?? explanation;
+
+  return (
+    <div className="px-6 pt-6 pb-4 text-center">
+      {/* Large answer display */}
+      {answer && (
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 400, damping: 20, delay: 0.1 }}
+          className="mb-3"
+        >
+          <span className="text-4xl sm:text-5xl font-black text-indigo-600 tabular-nums">
+            <MathText text={answer} />
+          </span>
+        </motion.div>
+      )}
+
+      {/* One-line explanation */}
+      <motion.p
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25, duration: 0.3 }}
+        className="text-sm text-gray-500 leading-relaxed max-w-md mx-auto"
+      >
+        <MathText text={oneLiner} />
+      </motion.p>
+    </div>
+  );
+}
+
+// ─── Action tabs ─────────────────────────────────────────────────────────────
+
+function ActionTabs({
+  tabs,
+  active,
+  onChange,
+}: {
+  tabs: { id: TabId; label: string; primary?: boolean }[];
+  active: TabId;
+  onChange: (id: TabId) => void;
+}) {
+  return (
+    <div className="px-5 pb-3">
+      <div className="flex gap-2 justify-center">
+        {tabs.map((tab) => {
+          const isActive = tab.id === active;
+          const isPrimary = tab.primary && !isActive;
+
+          return (
+            <button
+              key={tab.id}
+              onClick={() => onChange(tab.id)}
+              className={cn(
+                "relative px-4 py-2 rounded-xl text-sm font-semibold transition-all active:scale-[0.96]",
+                isActive
+                  ? "bg-indigo-600 text-white shadow-sm"
+                  : isPrimary
+                    ? "bg-violet-50 text-violet-600 hover:bg-violet-100"
+                    : "bg-gray-50 text-gray-500 hover:bg-gray-100 hover:text-gray-700",
+              )}
+            >
+              {tab.label}
+              {isPrimary && (
+                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-violet-400 animate-pulse" />
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Steps view ──────────────────────────────────────────────────────────────
+
+function StepsView({ steps }: { steps: NonNullable<AskMathAIResponse["steps"]> }) {
+  return (
+    <div className="space-y-2.5 pt-2">
+      {steps.map((step, i) => (
+        <motion.div
+          key={step.stepNumber}
+          initial={{ opacity: 0, x: -12 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: i * 0.08, duration: 0.25 }}
+          className="flex gap-3 items-start bg-gray-50/80 rounded-2xl px-4 py-3"
+        >
+          <span className="flex-shrink-0 w-7 h-7 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center justify-center mt-0.5">
+            {step.stepNumber}
+          </span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-gray-700 leading-relaxed">
+              <MathText text={step.instruction} />
+            </p>
+            {step.formula && (
+              <div className="mt-1.5 text-sm bg-white rounded-xl px-3 py-2 text-indigo-700 border border-indigo-100 overflow-x-auto">
+                <MathText text={`\\(${step.formula}\\)`} />
+              </div>
+            )}
+          </div>
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Visual view (static diagrams) ───────────────────────────────────────────
+
+function VisualView({ plan }: { plan: NonNullable<AskMathAIResponse["visualPlan"]> }) {
+  return (
+    <div className="pt-2">
+      <VisualRenderer plan={plan} animated />
+    </div>
+  );
+}
+
+// ─── Watch It view (animated scenes) ─────────────────────────────────────────
+
+function WatchItView({
+  question,
+  mathData,
+}: {
+  question: string;
+  mathData: AskMathAIResponse["mathData"];
+}) {
+  const topic = mathData?.type ?? "unknown";
+  const telemetry = useSceneTelemetry(question, topic);
+
+  const [state, setState]    = useState<"idle" | "loading" | "playing" | "done">("idle");
+  const [plan, setPlan]      = useState<ScenePlan | null>(null);
+  const [source, setSource]  = useState<"template" | "ai" | "fallback">("template");
+
+  const loadScene = useCallback(async () => {
+    telemetry.buttonClicked();
+    setState("loading");
+
+    // 1. Try template
+    const dispatch = dispatchScene(mathData, question);
+    if (dispatch.plan) {
+      const v = validateScenePlan(dispatch.plan, question);
+      if (v.valid) {
+        setPlan(v.plan);
+        setSource("template");
+        setState("playing");
+        telemetry.planLoaded("template");
+        return;
+      }
+      telemetry.validationFailed(v.issues);
+    }
+
+    // 2. Try AI
+    if (dispatch.eligible) {
+      try {
+        const aiPlan = await clientPost<ScenePlan>("/tutor/generate-scene", {
+          question, mathData,
+        });
+        if (aiPlan) {
+          const v = validateScenePlan(aiPlan, question);
+          setPlan(v.plan);
+          setSource(v.valid ? "ai" : "fallback");
+          setState("playing");
+          telemetry.planLoaded(v.valid ? "ai" : "fallback");
+          if (!v.valid) telemetry.validationFailed(v.issues);
+          return;
+        }
+      } catch { /* fall through */ }
+    }
+
+    // 3. Fallback
+    const { plan: fb } = validateScenePlan(null, question);
+    setPlan(fb);
+    setSource("fallback");
+    setState("playing");
+    telemetry.planLoaded("fallback");
+  }, [mathData, question, telemetry]);
+
+  // Fire button_shown on mount
+  useEffect(() => { telemetry.buttonShown(); }, [telemetry]);
+
+  return (
+    <div className="pt-2">
+      <AnimatePresence mode="wait">
+        {/* ── Idle: CTA ──────────────────────────────────────────── */}
+        {state === "idle" && (
+          <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <p className="text-center text-xs text-gray-400 mb-3">
+              Want to see this visually?
+            </p>
+            <button
+              onClick={loadScene}
+              className="w-full py-4 rounded-2xl bg-gradient-to-r from-violet-500 to-indigo-600 text-white font-bold text-sm shadow-md shadow-indigo-200/50 hover:shadow-lg hover:-translate-y-0.5 transition-all active:scale-[0.97] flex items-center justify-center gap-2.5"
+            >
+              <span className="text-lg">▶</span>
+              Watch It
+            </button>
+          </motion.div>
+        )}
+
+        {/* ── Loading ────────────────────────────────────────────── */}
+        {state === "loading" && (
+          <motion.div
+            key="loading"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="py-10 flex flex-col items-center gap-4"
+          >
+            {/* Shimmer skeleton */}
+            <div className="w-full max-w-sm space-y-3">
+              <div className="h-3 bg-gray-100 rounded-full animate-pulse" />
+              <div className="h-40 bg-gradient-to-br from-violet-50 to-indigo-50 rounded-2xl animate-pulse" />
+              <div className="h-3 bg-gray-100 rounded-full w-2/3 mx-auto animate-pulse" />
+            </div>
+            <p className="text-sm text-violet-500 font-medium">Building your animation...</p>
+          </motion.div>
+        )}
+
+        {/* ── Playing ────────────────────────────────────────────── */}
+        {(state === "playing" || state === "done") && plan && (
+          <motion.div
+            key="player"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <ScenePlayer plan={plan} />
+
+            {/* End card */}
+            <EndCard
+              source={source}
+              onReplay={() => {
+                telemetry.replay();
+                setState("idle");
+                setPlan(null);
+              }}
+              followUp={undefined}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ─── End card ────────────────────────────────────────────────────────────────
+
+function EndCard({
+  source,
+  onReplay,
+  followUp,
+}: {
+  source: string;
+  onReplay: () => void;
+  followUp?: string;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.5, duration: 0.3 }}
+      className="mt-4 bg-emerald-50/60 border border-emerald-200 rounded-2xl p-5 text-center space-y-3"
+    >
+      <p className="text-sm font-semibold text-emerald-700">Got it?</p>
+
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
+        <button
+          onClick={onReplay}
+          className="px-4 py-2 rounded-xl text-xs font-semibold bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition active:scale-[0.97]"
+        >
+          Replay
+        </button>
+      </div>
+
+      {source !== "template" && (
+        <p className="text-[10px] text-gray-400">
+          {source === "ai" ? "AI-generated animation" : "Basic view"}
         </p>
       )}
-    </div>
+    </motion.div>
   );
 }
