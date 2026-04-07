@@ -24,7 +24,7 @@ export async function GET() {
       orderBy: { createdAt: "asc" },
     });
 
-    const children = links.map((l) => ({
+    const children = links.map((l: typeof links[number]) => ({
       id:    l.child.id,
       name:  l.child.name,
       grade: (l.child.gradeLevel as string) ?? null,
