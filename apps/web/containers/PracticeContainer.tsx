@@ -25,6 +25,13 @@ import { useQueryClient }                            from "@tanstack/react-query
 
 import PracticeView from "@/components/mathai/practice/PracticeView";
 import { queryKeys }   from "@/lib/query-keys";
+import { evaluateStruggle, decideIntervention } from "@/lib/scene-engine/struggleEvaluator";
+import { dispatchScene }         from "@/lib/scene-engine/dispatcher";
+import { validateScenePlan }     from "@/lib/scene-engine/validator";
+import { visualTelemetry }       from "@/lib/scene-engine/visualTelemetry";
+import { clientPost }            from "@/lib/clientApi";
+import type { ScenePlan }        from "@/lib/scene-engine/types";
+import type { Intervention }     from "@/lib/scene-engine/struggleEvaluator";
 import type { PracticeQuestionItem, SubmitResultView } from "@/types/contracts";
 import type { VisualPlan, SessionNextStep } from "@mathai/shared-types";
 
@@ -84,6 +91,14 @@ export default function PracticeContainer({ topicId, mode }: Props) {
 
   // Retry-before-reveal: track attempt count per question to allow 1 retry before showing answer
   const [attemptCount, setAttemptCount] = useState(0);
+
+  // Visual recovery state
+  const [intervention, setIntervention]   = useState<Intervention | null>(null);
+  const [recoveryPlan, setRecoveryPlan]   = useState<ScenePlan | null>(null);
+  const [recoveryMode, setRecoveryMode]   = useState<"none" | "watching" | "practicing">("none");
+  const [recoveryProblem, setRecoveryProblem] = useState<{ problem: string; answer: string } | null>(null);
+  const [sessionWrongCount, setSessionWrongCount] = useState(0);
+  const [sessionCorrectCount, setSessionCorrectCount] = useState(0);
 
   // ── Start session ────────────────────────────────────────────────────────────
 
@@ -191,6 +206,28 @@ export default function PracticeContainer({ topicId, mode }: Props) {
         const adapt = r.sessionAdaptation ?? null;
         setAdaptation(adapt);
 
+        // Track session-level counts for struggle detection
+        if (r.isCorrect) setSessionCorrectCount((c) => c + 1);
+        else setSessionWrongCount((c) => c + 1);
+
+        // Struggle detection + visual intervention (on revealed wrong answers, attempt >= 2)
+        if (!r.isCorrect && currentAttempt >= 2 && currentQ) {
+          const struggle = evaluateStruggle({
+            incorrectAttempts: currentAttempt,
+            hintLevel: hintsUsed,
+            misconception: (r as any).misconceptionTag,
+            totalSessionWrong:   sessionWrongCount + 1,
+            totalSessionCorrect: sessionCorrectCount,
+          });
+          if (struggle.struggleDetected) {
+            const iv = decideIntervention(struggle, (currentQ as any).mathData, currentQ.prompt);
+            setIntervention(iv);
+            if (iv.type === "watch_visual") {
+              visualTelemetry.ctaShown({ mathType: (currentQ as any).mathData?.type, reliability: iv.reliability });
+            }
+          }
+        }
+
         // Auto-trigger hint/explanation when the engine recommends proactive support
         if (adapt && !r.isCorrect) {
           const autoHelpActions = ["show_hint", "show_step_by_step", "show_visual_explanation"];
@@ -261,6 +298,10 @@ export default function PracticeContainer({ topicId, mode }: Props) {
     setConfidenceBefore(null);
     setAdaptation(null);
     setAttemptCount(0);
+    setIntervention(null);
+    setRecoveryMode("none");
+    setRecoveryPlan(null);
+    setRecoveryProblem(null);
   }, [session, result]);
 
   // ── Get hint ──────────────────────────────────────────────────────────────────
@@ -313,6 +354,109 @@ export default function PracticeContainer({ topicId, mode }: Props) {
     router.push(`/ask?q=${encodeURIComponent(teachQuestion)}&topic=${encodeURIComponent(topicId)}`);
   }, [session, topicId, router]);
 
+  // ── Visual recovery: load scene + generate similar problem ─────────────────────
+
+  const startVisualRecovery = useCallback(async () => {
+    if (!session) return;
+    const currentQ = session.questions[session.currentIndex];
+    if (!currentQ) return;
+
+    visualTelemetry.ctaClicked({ mathType: (currentQ as any).mathData?.type });
+    setRecoveryMode("watching");
+
+    // Try template first
+    const dispatch = dispatchScene((currentQ as any).mathData, currentQ.prompt);
+    if (dispatch.plan) {
+      const v = validateScenePlan(dispatch.plan, currentQ.prompt);
+      if (v.valid) {
+        visualTelemetry.sourceSelected({ source: "template", mathType: (currentQ as any).mathData?.type });
+        setRecoveryPlan(v.plan);
+        return;
+      }
+    }
+
+    // AI fallback with timeout
+    try {
+      const controller = new AbortController();
+      const tm = setTimeout(() => controller.abort(), 12_000);
+      const aiPlan = await clientPost<ScenePlan>("/tutor/generate-scene", {
+        question: currentQ.prompt,
+        mathData: (currentQ as any).mathData,
+      }, { signal: controller.signal });
+      clearTimeout(tm);
+      if (aiPlan) {
+        const v = validateScenePlan(aiPlan, currentQ.prompt);
+        if (v.severity !== "failed") {
+          visualTelemetry.sourceSelected({ source: "ai", mathType: (currentQ as any).mathData?.type });
+          setRecoveryPlan(v.plan);
+          return;
+        }
+      }
+    } catch { /* timeout or error */ }
+
+    // Steps fallback — close recovery mode, show hint instead
+    visualTelemetry.fallbackUsed({ reason: "Visual failed in practice recovery", mathType: (currentQ as any).mathData?.type });
+    setRecoveryMode("none");
+    setIntervention({ type: "retry", reason: "Let's break this down with steps instead." });
+  }, [session]);
+
+  const onRecoveryAnimationDone = useCallback(async () => {
+    if (!session) return;
+    const currentQ = session.questions[session.currentIndex];
+    if (!currentQ) return;
+
+    visualTelemetry.sessionCompleted({ mathType: (currentQ as any).mathData?.type });
+
+    // Generate a similar problem for recovery practice
+    setRecoveryMode("practicing");
+    try {
+      const similar = await clientPost<{ problem: string; answer: string }>("/tutor/similar-problem", {
+        problem: currentQ.prompt,
+        type: (currentQ as any).mathData?.type ?? "unknown",
+        answer: currentQ.correctAnswer,
+      });
+      if (similar) {
+        setRecoveryProblem(similar);
+      } else {
+        // No similar problem — just advance
+        setRecoveryMode("none");
+      }
+    } catch {
+      setRecoveryMode("none");
+    }
+  }, [session]);
+
+  const onRecoveryAnswer = useCallback(async (userAnswer: string): Promise<boolean> => {
+    if (!recoveryProblem || !session) return false;
+    const currentQ = session.questions[session.currentIndex];
+    const isCorrect = userAnswer.trim().toLowerCase() === recoveryProblem.answer.trim().toLowerCase();
+
+    // Record attempt to mastery model
+    clientPost("/learning/record-attempt", {
+      topicId: session.topicId,
+      questionText: recoveryProblem.problem,
+      studentAnswer: userAnswer.trim(),
+      correctAnswer: recoveryProblem.answer,
+      timeSpentSeconds: 30,
+      hintsUsed: 0,
+      source: "practice_recovery",
+    }).catch(() => {});
+
+    // Telemetry
+    if (isCorrect) {
+      visualTelemetry.similarCorrectAfterVisual({ mathType: (currentQ as any)?.mathData?.type });
+    }
+
+    return isCorrect;
+  }, [recoveryProblem, session]);
+
+  const endRecovery = useCallback(() => {
+    setRecoveryMode("none");
+    setRecoveryPlan(null);
+    setRecoveryProblem(null);
+    setIntervention(null);
+  }, []);
+
   // ── Auto-start once ───────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -355,6 +499,14 @@ export default function PracticeContainer({ topicId, mode }: Props) {
       onConfidenceChange={setConfidenceBefore}
       adaptation={adaptation}
       attemptCount={attemptCount}
+      intervention={intervention}
+      recoveryMode={recoveryMode}
+      recoveryPlan={recoveryPlan}
+      recoveryProblem={recoveryProblem}
+      onStartVisualRecovery={startVisualRecovery}
+      onRecoveryAnimationDone={onRecoveryAnimationDone}
+      onRecoveryAnswer={onRecoveryAnswer}
+      onEndRecovery={endRecovery}
       onRestart={() => {
         setSession(null);
         hasAttemptedRef.current = false;

@@ -8,9 +8,13 @@
 
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
 import type { PracticeQuestionItem, SubmitResultView } from "@/types/contracts";
 import type { VisualPlan, SessionNextStep } from "@mathai/shared-types";
+import type { ScenePlan }    from "@/lib/scene-engine/types";
+import type { Intervention } from "@/lib/scene-engine/struggleEvaluator";
 import { VisualRenderer } from "@/components/mathai/visual/VisualRenderer";
+import { ScenePlayer }   from "@/components/scene-engine";
 import { MathText }       from "@/components/shared/MathText";
 import { XPFloat, SessionCompleteEntrance, CorrectBurst } from "@/components/shared/Celebrations";
 
@@ -30,6 +34,15 @@ interface Props {
   onRetry: () => void; onRestart: () => void;
   adaptation: SessionNextStep | null;
   attemptCount: number;
+  // Visual recovery
+  intervention: Intervention | null;
+  recoveryMode: "none" | "watching" | "practicing";
+  recoveryPlan: ScenePlan | null;
+  recoveryProblem: { problem: string; answer: string } | null;
+  onStartVisualRecovery: () => void;
+  onRecoveryAnimationDone: () => void;
+  onRecoveryAnswer: (answer: string) => Promise<boolean>;
+  onEndRecovery: () => void;
 }
 
 const CONFIDENCE = [
@@ -44,6 +57,8 @@ export default function PracticeView(props: Props) {
     loading, error, xpAnim, hintsUsed, authStatus, confidenceBefore,
     onConfidenceChange, onAnswerChange, onSubmit, onNextQuestion,
     onGetHint, onTeachMe, onRetry, onRestart, adaptation, attemptCount,
+    intervention, recoveryMode, recoveryPlan, recoveryProblem,
+    onStartVisualRecovery, onRecoveryAnimationDone, onRecoveryAnswer, onEndRecovery,
   } = props;
   const router   = useRouter();
   const totalQ   = session?.questions.length ?? 5;
@@ -274,6 +289,51 @@ export default function PracticeView(props: Props) {
                   </div>
                 )}
 
+                {/* Visual recovery intervention */}
+                {isRevealed && intervention?.type === "watch_visual" && recoveryMode === "none" && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="rounded-xl p-4 mb-3 bg-violet-50 border border-violet-200 text-center space-y-2"
+                  >
+                    <p className="text-sm text-violet-700 font-medium">{intervention.reason}</p>
+                    <button
+                      onClick={onStartVisualRecovery}
+                      className="px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-violet-500 to-indigo-600 text-white shadow-sm hover:shadow-md transition active:scale-[0.97]"
+                    >
+                      ▶ Watch It
+                    </button>
+                  </motion.div>
+                )}
+
+                {/* Scene player (watching) */}
+                {recoveryMode === "watching" && recoveryPlan && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-3"
+                  >
+                    <ScenePlayer plan={recoveryPlan} />
+                    <div className="mt-3 text-center">
+                      <button
+                        onClick={onRecoveryAnimationDone}
+                        className="px-5 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 transition active:scale-[0.97]"
+                      >
+                        Got it — let me try
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Recovery problem (practicing after visual) */}
+                {recoveryMode === "practicing" && (
+                  <RecoveryProblemCard
+                    problem={recoveryProblem}
+                    onAnswer={onRecoveryAnswer}
+                    onDone={onEndRecovery}
+                  />
+                )}
+
                 {/* Action buttons */}
                 <div className="flex gap-2">
                   {!isRevealed ? (
@@ -317,4 +377,82 @@ export default function PracticeView(props: Props) {
 
 function CenterScreen({ children }: { children: React.ReactNode }) {
   return <div className="min-h-screen bg-slate-50/50 flex items-center justify-center p-6">{children}</div>;
+}
+
+// ─── Recovery problem card (post-visual similar problem) ─────────────────────
+
+function RecoveryProblemCard({
+  problem,
+  onAnswer,
+  onDone,
+}: {
+  problem: { problem: string; answer: string } | null;
+  onAnswer: (answer: string) => Promise<boolean>;
+  onDone: () => void;
+}) {
+  const [input, setInput]       = useState("");
+  const [checked, setChecked]   = useState(false);
+  const [correct, setCorrect]   = useState(false);
+
+  if (!problem) {
+    return (
+      <div className="rounded-xl p-4 mb-3 bg-gray-50 border border-gray-200 text-center">
+        <p className="text-sm text-gray-500">Loading problem...</p>
+      </div>
+    );
+  }
+
+  const handleCheck = async () => {
+    const result = await onAnswer(input);
+    setCorrect(result);
+    setChecked(true);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-xl p-4 mb-3 bg-indigo-50 border border-indigo-200 space-y-3"
+    >
+      <p className="text-[10px] font-semibold text-indigo-500 uppercase tracking-wider">Try this one</p>
+      <p className="text-sm font-semibold text-gray-800"><MathText text={problem.problem} /></p>
+
+      {!checked ? (
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Your answer..."
+            className="flex-1 border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-center focus:border-indigo-400 outline-none transition"
+            onKeyDown={(e) => { if (e.key === "Enter" && input.trim()) void handleCheck(); }}
+            autoFocus
+          />
+          <button
+            onClick={() => void handleCheck()}
+            disabled={!input.trim()}
+            className="px-4 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 transition active:scale-[0.97] shrink-0"
+          >
+            Check
+          </button>
+        </div>
+      ) : (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-2">
+          <div className={`rounded-xl px-4 py-3 text-center ${correct ? "bg-emerald-50 border border-emerald-200" : "bg-amber-50 border border-amber-200"}`}>
+            {correct ? (
+              <p className="text-sm font-bold text-emerald-700">Correct! You got it after watching.</p>
+            ) : (
+              <p className="text-sm font-bold text-amber-700">The answer is <span className="text-indigo-600">{problem.answer}</span></p>
+            )}
+          </div>
+          <button
+            onClick={onDone}
+            className="w-full py-2.5 rounded-xl text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 transition active:scale-[0.97]"
+          >
+            Continue →
+          </button>
+        </motion.div>
+      )}
+    </motion.div>
+  );
 }
