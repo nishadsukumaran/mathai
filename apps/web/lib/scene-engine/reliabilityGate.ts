@@ -94,6 +94,55 @@ function checkTemplateFit(md: MathData): { fits: boolean; reason: string } {
       return { fits: false, reason: `Equation format not supported for whiteboard template` };
     }
 
+    // ── Phase 1 templates ──────────────────────────────────────────────────
+
+    case "place_value": {
+      const num = v[0];
+      if (num && num >= 10 && num <= 999) {
+        return { fits: true, reason: `Place value blocks for ${num} — fully supported` };
+      }
+      return { fits: false, reason: `Number out of place-value range (10–999)` };
+    }
+
+    case "comparison": {
+      const a = v[0], b = v[1];
+      if (a && b && a >= 1 && a <= 999 && b >= 1 && b <= 999) {
+        return { fits: true, reason: `${a} vs ${b} comparison bars — fully supported` };
+      }
+      return { fits: false, reason: `Numbers out of comparison range (1–999)` };
+    }
+
+    case "fraction_comparison": {
+      const fracs = md.fractions ?? [];
+      if (fracs.length >= 2) {
+        const f1 = fracs[0]!, f2 = fracs[1]!;
+        if (f1.denominator >= 2 && f1.denominator <= 12 && f2.denominator >= 2 && f2.denominator <= 12) {
+          return { fits: true, reason: `Fraction comparison bars — fully supported` };
+        }
+      }
+      return { fits: false, reason: `Denominators out of range (2–12)` };
+    }
+
+    case "fraction_equivalence": {
+      const fracs = md.fractions ?? [];
+      if (fracs.length >= 2) {
+        const f1 = fracs[0]!, f2 = fracs[1]!;
+        if (f1.denominator >= 2 && f1.denominator <= 12 && f2.denominator >= 2 && f2.denominator <= 12) {
+          return { fits: true, reason: `Equivalent fraction bars — fully supported` };
+        }
+      }
+      return { fits: false, reason: `Denominators out of range (2–12)` };
+    }
+
+    case "word_problem": {
+      const groups = md.structure?.groups;
+      const perGroup = md.structure?.itemsPerGroup;
+      if (groups && perGroup && groups >= 2 && groups <= 6 && perGroup >= 2 && perGroup <= 8 && groups * perGroup <= 30) {
+        return { fits: true, reason: `${groups} groups of ${perGroup} — grouped dot template` };
+      }
+      return { fits: false, reason: `Word problem doesn't fit simple grouping pattern` };
+    }
+
     default:
       return { fits: false, reason: `No template for type: ${md.type}` };
   }
@@ -105,11 +154,6 @@ function checkTemplateFit(md: MathData): { fits: boolean; reason: string } {
 
 const AI_ELIGIBLE_TYPES = new Set([
   "fraction_subtraction",
-  "fraction_equivalence",
-  "fraction_comparison",
-  "place_value",
-  "word_problem",
-  "comparison",
 ]);
 
 // ═════════════════════════════════════════════════════════════════════════════

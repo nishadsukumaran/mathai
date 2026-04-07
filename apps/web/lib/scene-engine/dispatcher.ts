@@ -19,27 +19,36 @@ import {
   divisionGroups,
   equationSolving,
 } from "./templates";
+import {
+  placeValueScene,
+  comparisonScene,
+  fractionComparisonScene,
+  equivalentFractionsScene,
+  wordGroupingScene,
+} from "./templates/index";
 
 // ─── Scene eligibility ───────────────────────────────────────────────────────
 
-/** MathData types that have template coverage */
+/** MathData types that have template coverage (Phase 0 + Phase 1) */
 const TEMPLATE_TYPES = new Set([
+  // Phase 0 (original)
   "multiplication",
   "subtraction",
   "addition",
   "division",
   "fraction_addition",
   "equation",
+  // Phase 1 (new deterministic templates)
+  "place_value",
+  "comparison",
+  "fraction_comparison",
+  "fraction_equivalence",
+  "word_problem",
 ]);
 
 /** MathData types eligible for AI scene generation (no template, but scene-worthy) */
 const AI_ELIGIBLE_TYPES = new Set([
   "fraction_subtraction",
-  "fraction_equivalence",
-  "fraction_comparison",
-  "place_value",
-  "word_problem",
-  "comparison",
 ]);
 
 export type SceneSource = "template" | "ai" | "none";
@@ -159,6 +168,59 @@ function tryTemplate(md: MathData, question: string): ScenePlan | null {
             return equationSolving(variable, constant, total, op);
           }
         }
+      }
+      return null;
+    }
+
+    // ── Phase 1 templates ──────────────────────────────────────────────────
+
+    case "place_value": {
+      const num = v[0] ?? extractFirstNumber(question);
+      if (num && num >= 10 && num <= 999) {
+        return placeValueScene(num);
+      }
+      return null;
+    }
+
+    case "comparison": {
+      const a = v[0] ?? extractFirstNumber(question);
+      const b = v[1] ?? extractSecondNumber(question);
+      if (a != null && b != null && a >= 1 && a <= 999 && b >= 1 && b <= 999) {
+        return comparisonScene(a, b);
+      }
+      return null;
+    }
+
+    case "fraction_comparison": {
+      const fracs = md.fractions ?? [];
+      if (fracs.length >= 2) {
+        const f1 = fracs[0]!, f2 = fracs[1]!;
+        if (f1.denominator >= 2 && f1.denominator <= 12 && f2.denominator >= 2 && f2.denominator <= 12) {
+          return fractionComparisonScene(f1.numerator, f1.denominator, f2.numerator, f2.denominator);
+        }
+      }
+      return null;
+    }
+
+    case "fraction_equivalence": {
+      const fracs = md.fractions ?? [];
+      if (fracs.length >= 2) {
+        const f1 = fracs[0]!, f2 = fracs[1]!;
+        if (f1.denominator >= 2 && f1.denominator <= 12 && f2.denominator >= 2 && f2.denominator <= 12) {
+          return equivalentFractionsScene(f1.numerator, f1.denominator, f2.numerator, f2.denominator);
+        }
+      }
+      return null;
+    }
+
+    case "word_problem": {
+      const groups = md.structure?.groups;
+      const perGroup = md.structure?.itemsPerGroup;
+      if (groups && perGroup && groups >= 2 && groups <= 6 && perGroup >= 2 && perGroup <= 8 && groups * perGroup <= 30) {
+        const wpKnown = md.wordProblem?.known ?? [];
+        const groupLbl = wpKnown[0]?.label ?? "groups";
+        const itemLbl = wpKnown[1]?.label ?? "items";
+        return wordGroupingScene(groups, perGroup, itemLbl, groupLbl);
       }
       return null;
     }
