@@ -40,7 +40,8 @@
       "Bash(find /c/AI/MathAI/mathai -name '*.ts' -exec grep -l 'prisma\\\\.__TRACKED_VAR__\\\\.' '{}' ';')",
       "Bash(find /c/AI/MathAI/mathai/ai -name \"*.ts\" -exec grep -l \"prisma\\\\..*\\\\.\" {} \\\\;)",
       "Bash(curl -s --max-time 15 https://mathai-eqwf.onrender.com/api/health)",
-      "Bash(find /c/AI/MathAI/mathai -name \"*.ts\" -type f -exec grep -l \"export.*SubmissionResult\\\\|interface SubmissionResult\" {} \\\\;)"
+      "Bash(find /c/AI/MathAI/mathai -name \"*.ts\" -type f -exec grep -l \"export.*SubmissionResult\\\\|interface SubmissionResult\" {} \\\\;)",
+      "Bash(grep -n \"interface.*DailyQuest\\\\|type.*DailyQuest\" /c/AI/MathAI/mathai/apps/web/types/*.ts /c/AI/MathAI/mathai/types/*.ts)"
     ]
   }
 }

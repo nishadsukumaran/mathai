@@ -39,6 +39,10 @@ const ResetPasswordSchema = z.object({
     .optional(),
 });
 
+const ResetPinSchema = z.object({
+  newPin: z.string().regex(/^\d{4,6}$/, "PIN must be 4-6 digits").optional(),
+});
+
 // ── GET /api/admin/dashboard ───────────────────────────────────────────────
 
 export async function getDashboard(
@@ -161,6 +165,47 @@ export async function resetPassword(
       message: "Password reset successfully",
       temporaryPassword,
     });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ── POST /api/admin/users/:id/reset-pin ───────────────────────────────────
+
+export async function resetStudentPin(
+  req:  Request,
+  res:  Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const parsed = ResetPinSchema.parse(req.body);
+
+    // Auto-generate a 4-digit PIN if none provided
+    const pin = parsed.newPin ?? adminService.generateTemporaryPin();
+
+    const newPin = await adminService.resetStudentPin(
+      req.params["id"]!,
+      pin,
+    );
+    send(res, {
+      message: "PIN reset successfully",
+      newPin,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ── POST /api/admin/users/:id/clear-pin ───────────────────────────────────
+
+export async function clearStudentPin(
+  req:  Request,
+  res:  Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    await adminService.clearStudentPin(req.params["id"]!);
+    send(res, { message: "PIN cleared — login mode set to parent_managed" });
   } catch (err) {
     next(err);
   }

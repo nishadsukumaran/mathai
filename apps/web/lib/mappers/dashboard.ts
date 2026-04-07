@@ -54,11 +54,13 @@ export function mapStreak(gamification: any): StreakStatus | null {
   };
 }
 
-/** Midnight tonight as ISO string — used as default expiresAt for quests */
+/** Midnight UTC tonight as ISO string — used as default expiresAt for quests */
 const questExpiresAt = (): string => {
-  const d = new Date();
-  d.setHours(23, 59, 59, 999);
-  return d.toISOString();
+  const now = new Date();
+  const tomorrow = new Date(Date.UTC(
+    now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1,
+  ));
+  return tomorrow.toISOString();
 };
 
 export function mapQuests(quests: any[]): DailyQuest[] {

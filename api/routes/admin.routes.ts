@@ -13,6 +13,8 @@
  *   POST /api/admin/users/:id/disable          — soft-disable
  *   POST /api/admin/users/:id/enable           — re-enable
  *   POST /api/admin/users/:id/reset-password   — generate temp password
+ *   POST /api/admin/users/:id/reset-pin        — reset student PIN
+ *   POST /api/admin/users/:id/clear-pin        — clear PIN & revert to parent_managed
  */
 
 import { Router }       from "express";
@@ -32,5 +34,7 @@ router.patch("/users/:id",                  ctrl.updateUser);
 router.post("/users/:id/disable",           ctrl.disableUser);
 router.post("/users/:id/enable",            ctrl.enableUser);
 router.post("/users/:id/reset-password",    ctrl.resetPassword);
+router.post("/users/:id/reset-pin",         ctrl.resetStudentPin);
+router.post("/users/:id/clear-pin",         ctrl.clearStudentPin);
 
 export default router;

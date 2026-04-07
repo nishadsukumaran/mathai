@@ -37,11 +37,14 @@ export interface AdminUserDetail extends AdminUserListItem {
   updatedAt:      string;
   // Student profile extras (null for non-students)
   studentProfile: {
-    totalXp:        number;
-    currentLevel:   number;
-    streakCount:    number;
-    learningPace:   string;
-    confidenceLevel: number;
+    totalXp:            number;
+    currentLevel:       number;
+    streakCount:        number;
+    learningPace:       string;
+    confidenceLevel:    number;
+    preferredLoginMode: string | null;
+    username:           string | null;
+    hasPin:             boolean;
   } | null;
   // Pet personality insight (null if student has no pet, or user is not a student)
   petInsight: {
@@ -188,11 +191,14 @@ export async function getUserById(id: string): Promise<AdminUserDetail | null> {
       _count: { select: { practiceSessions: true } },
       studentProfile: {
         select: {
-          totalXp:         true,
-          currentLevel:    true,
-          streakCount:     true,
-          learningPace:    true,
-          confidenceLevel: true,
+          totalXp:            true,
+          currentLevel:       true,
+          streakCount:        true,
+          learningPace:       true,
+          confidenceLevel:    true,
+          preferredLoginMode: true,
+          username:           true,
+          hashedPin:          true,
         },
       },
       studentPet: {
@@ -239,7 +245,16 @@ export async function getUserById(id: string): Promise<AdminUserDetail | null> {
     lastLoginAt:    user.lastLoginAt?.toISOString()  ?? null,
     disabledAt:     user.disabledAt?.toISOString()   ?? null,
     disabledReason: user.disabledReason ?? null,
-    studentProfile: user.studentProfile ?? null,
+    studentProfile: user.studentProfile ? {
+      totalXp:            user.studentProfile.totalXp,
+      currentLevel:       user.studentProfile.currentLevel,
+      streakCount:        user.studentProfile.streakCount,
+      learningPace:       user.studentProfile.learningPace,
+      confidenceLevel:    user.studentProfile.confidenceLevel,
+      preferredLoginMode: user.studentProfile.preferredLoginMode ?? null,
+      username:           user.studentProfile.username ?? null,
+      hasPin:             !!user.studentProfile.hashedPin,
+    } : null,
     petInsight,
   };
 }
@@ -356,4 +371,74 @@ function generateTemporaryPassword(): string {
   return [...fixed, ...rest]
     .sort(() => Math.random() - 0.5)
     .join("");
+}
+
+// ─── PIN management ──────────────────────────────────────────────────────────
+
+/**
+ * Reset a student's PIN for direct child login.
+ * Returns the plain-text PIN so the admin can communicate it out-of-band.
+ */
+export async function resetStudentPin(
+  userId: string,
+  newPin: string,
+): Promise<string> {
+  if (!newPin || newPin.length < 4 || !/^\d+$/.test(newPin)) {
+    throw new Error("PIN must be at least 4 digits (numbers only)");
+  }
+
+  const profile = await prisma.studentProfile.findUnique({
+    where: { userId },
+  });
+
+  if (!profile) {
+    throw new Error("Student profile not found");
+  }
+
+  if (profile.preferredLoginMode === "parent_managed") {
+    throw new Error("This student does not have PIN login enabled. Login mode is parent_managed.");
+  }
+
+  const hashed = await bcrypt.hash(newPin, 10);
+
+  await prisma.studentProfile.update({
+    where: { userId },
+    data:  { hashedPin: hashed },
+  });
+
+  return newPin;
+}
+
+/**
+ * Clear a student's PIN — disables direct child login by switching
+ * the login mode to parent_managed and removing the hashed PIN.
+ */
+export async function clearStudentPin(userId: string): Promise<void> {
+  const profile = await prisma.studentProfile.findUnique({
+    where: { userId },
+  });
+
+  if (!profile) {
+    throw new Error("Student profile not found");
+  }
+
+  await prisma.studentProfile.update({
+    where: { userId },
+    data:  {
+      hashedPin:          null,
+      preferredLoginMode: "parent_managed" as never,
+    },
+  });
+}
+
+/** Generate a random 4-digit numeric PIN */
+export function generateTemporaryPin(): string {
+  const digits = "0123456789";
+  let pin = "";
+  // Ensure first digit is not 0
+  pin += digits[Math.floor(Math.random() * 9) + 1]!;
+  for (let i = 1; i < 4; i++) {
+    pin += digits[Math.floor(Math.random() * 10)]!;
+  }
+  return pin;
 }
