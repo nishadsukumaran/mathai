@@ -1,16 +1,13 @@
-import path from "node:path";
-import type { PrismaConfig } from "prisma";
+import "dotenv/config";
+import { defineConfig, env } from "prisma/config";
 
-export default {
-  earlyAccess: true,
-  schema: path.join("database", "schema", "schema.prisma"),
-
-  migrate: {
-    async development() {
-      return {
-        url: process.env.DATABASE_URL!,
-        directUrl: process.env.DIRECT_URL,
-      };
-    },
+export default defineConfig({
+  schema: "database/schema/schema.prisma",
+  migrations: {
+    path: "database/migrations",
   },
-} satisfies PrismaConfig;
+  datasource: {
+    url: env("DATABASE_URL"),
+    directUrl: env("DIRECT_URL"),
+  },
+});
