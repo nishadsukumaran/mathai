@@ -142,8 +142,9 @@ export function ThemeProvider({ children, initialThemeId }: ThemeProviderProps) 
     } else {
       // Auto-recommend based on grade
       const recommended = getThemesByGrade(userGrade);
-      if (recommended.length > 0) {
-        setCurrentThemeId(recommended[0].id);
+      const firstRecommended = recommended[0];
+      if (firstRecommended) {
+        setCurrentThemeId(firstRecommended.id);
       }
     }
 
