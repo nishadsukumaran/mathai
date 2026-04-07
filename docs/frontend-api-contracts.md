@@ -369,6 +369,20 @@ Requires `parent` or `admin` role.
   };
   masteryMap: TopicMasteryItem[];
   recentHighlights: [{ type, icon, message, date }];
+  thisWeek: {
+    questionsAnswered: number;
+    sessionsCompleted: number;
+    topicsPracticed: number;
+    minutesActive: number;
+    daysActive: number;
+  };
+  biggestWin: { icon: string; title: string; detail: string } | null;
+  nextSteps: [{
+    topicName: string;
+    reason: string;
+    actionType: string;
+    priority: number;
+  }];
   nextRecommendation: { topicName, reason, actionType } | null;
 }
 ```
@@ -433,6 +447,60 @@ User detail including student profile and pet insight.
 
 ### `PATCH /admin/users/:id`
 Update user: `{ name?, email?, role?, gradeLevel? }`
+
+### `POST /admin/users/:id/reset-pin`
+Reset student PIN: `{ newPin?: string }` (4-6 digits; auto-generates if omitted).
+Returns `{ message, newPin }`.
+
+### `POST /admin/users/:id/clear-pin`
+Clear student PIN and revert login mode to parent_managed.
+Returns `{ message }`.
+
+---
+
+## 10. Learning Loop
+
+### `POST /learning/record-attempt`
+Record a learning interaction from non-session entry points (Ask MathAI, practice recovery).
+```typescript
+{
+  userId: string;
+  topicId: string;
+  question: string;
+  answer: string;
+  isCorrect: boolean;
+  confidence?: number;
+  source: "ask_similar" | "post_animation" | "recommendation" | "quick_practice";
+}
+```
+
+### `POST /learning/next-action`
+Get post-attempt recommendation.
+```typescript
+// Request
+{ userId: string; topicId: string; wasCorrect: boolean; confidence?: number }
+
+// Response
+{ action: "retry_similar" | "watch_visual" | "practice_topic" | "increase_difficulty" | "review_later"; reason: string; topicName?: string }
+```
+
+### `POST /tutor/generate-scene`
+AI scene plan generation for visual explanations.
+```typescript
+// Request
+{ question: string; mathData: MathData; explanation: string }
+// Response
+ScenePlan (Zod-validated)
+```
+
+### `POST /tutor/similar-problem`
+Generate a similar practice problem.
+```typescript
+// Request
+{ question: string; topic: string; grade: string }
+// Response
+{ problem: string; answer: string; steps: string[]; explanation: string }
+```
 
 ---
 

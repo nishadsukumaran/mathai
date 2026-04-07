@@ -2,6 +2,130 @@
 
 ---
 
+## v2.2 — Parent Redesign, Scene Engine, Practice Recovery, Admin Tools (April 2026)
+
+### Parent Portal Redesign
+
+Complete redesign of the parent experience — intelligent, action-oriented, supportive.
+
+**Routing fix:**
+- Parents now auto-redirect from `/dashboard` to `/parent` via middleware
+- Sign-in defaults to `/parent` callbackUrl when parent tab is active
+- No more landing on student-style views after login
+
+**New intelligence:**
+- **This Week Summary** — weekly questions, sessions, topics practised, active days
+- **Biggest Win** — single most celebration-worthy highlight (mastery > streak > confidence > improvement)
+- **Recommended Next Steps** — up to 3 prioritized action cards with direct Practice/Revision links
+- All backed by real student data (mastery, memory, confidence, adaptation)
+
+**Redesigned dashboard sections (10 sections):**
+1. Hero — score ring + status badges + "Start Practice" CTA
+2. This Week — 5-column summary (questions, sessions, topics, active days, accuracy)
+3. Biggest Win — gradient callout with icon + title + detail
+4. Needs Attention — top 2 weak topics with Practice action buttons
+5. Concept Mastery — clustered map (strong / improving / weak / revision due)
+6. How Your Child Learns — personality traits with child name
+7. Recommended Next Steps — multi-card with Start Practice / Quick Revision actions
+8. Learning Insights — AI-generated insights with TIP action hints
+9. Recent Milestones — badges, streaks, mastery events
+10. Score Breakdown + Quick Actions — horizontal bar viz + Ask MathAI + Start Practice + Switch Child
+
+### Scene Engine (Visual Explanation Animation System)
+
+Duolingo-style animated math explanations built with Framer Motion + SVG.
+
+**Core engine (`lib/scene-engine/`):**
+- 7 SVG primitives: dot, bar, numberLine, mathText, arrow, brace, group
+- 8 animation presets: fadeIn, popIn, slideLeft/Right, countUp, highlight, pulse, drawLine
+- 4 color palettes: ocean, sunset, forest, candy
+- Zod-validated `ScenePlan` schema (max 8 steps, 30s, 800x500 viewBox)
+- `ScenePlayer` component with play/pause/next/prev/progress dots/narration bar
+
+**11 deterministic templates (Phase 0 + Phase 1):**
+- Phase 0: multiplication (dot array), subtraction (number line), addition (number line), division (groups), fraction addition (bars), equation solving (whiteboard)
+- Phase 1: place value (stacked blocks), comparison (proportional bars), fraction comparison (side-by-side bars), fraction equivalence (equal bars), word problem (grouped dots)
+
+**Reliability gate (`reliabilityGate.ts`):**
+- Pre-render decision layer: high / medium / low confidence scoring
+- Template-backed types → high reliability, always shown
+- AI-eligible types → medium, softer CTA
+- Unknown types → low, hidden, steps-only fallback
+
+**3-tier fallback chain:**
+- Template match (instant, deterministic) → AI generation (12s timeout) → steps-only fallback
+- Never shows broken or blank visual states
+
+**Telemetry (`visualTelemetry.ts`):**
+- 18 event types covering full lifecycle (gate → offer → generate → validate → render → playback → fallback)
+- Event buffer (200 entries) with aggregation for success rate and gate distribution
+
+**Validator (`validator.ts`):**
+- 3-layer validation: structural (Zod) → semantic → pedagogical
+- Critical issues → immediate fallback; non-critical → degraded render
+
+### Ask MathAI — Tabbed Response UI + Practice Loop
+
+**Redesigned response layout:**
+- AnswerHero — large spring-animated answer with one-liner explanation
+- ActionTabs — Steps / Visual / Watch It (only eligible tabs shown)
+- WatchItView — reliability gate → 3-tier fallback, telemetry at every point
+
+**"Try one like this" practice loop:**
+- End card after answer → generate similar problem via AI
+- Student answers → recorded to mastery model via shared attempt recorder
+- Next-action engine recommends what to do next
+
+### Practice Visual Recovery
+
+Struggle detection + visual intervention during practice sessions.
+
+**Struggle evaluator (`struggleEvaluator.ts`):**
+- Triggers: 2+ incorrect on same question, hint level 2+, recurring misconception
+- `decideIntervention()` combines struggle signals with reliability gate
+- Produces: watch_visual / retry / continue
+
+**Recovery flow:**
+- Student gets 2nd wrong answer → struggle detected → reliability gate checked
+- "Watch It" inline intervention prompt (violet card)
+- ScenePlayer renders animation inline in practice
+- "Got it — let me try" → similar problem generated
+- Student answers → attempt recorded to mastery model → back to normal practice
+
+### Learning Loop Closure
+
+**Shared attempt recorder (`attemptRecorder.ts`):**
+- Records learning interactions from Ask MathAI, practice recovery, recommendations
+- Feeds the same mastery model regardless of entry point
+- Sources: ask_similar, post_animation, recommendation, quick_practice
+
+**Next-action engine (`nextActionService.ts`):**
+- Post-attempt recommendations: retry_similar, watch_visual, practice_topic, increase_difficulty, review_later
+- Cross-topic recommendations via Learning Brain when mastery ≥ 0.8
+
+### Daily Quest Fix
+
+- **Root cause:** `getDailyQuests()` returned empty array when no templates existed in DB
+- **Fix:** Auto-seeds 7 daily + 3 weekly default templates when DB is empty
+- All date arithmetic now uses explicit UTC (prevents server-timezone drift)
+- Frontend mapper `questExpiresAt()` also fixed to UTC midnight
+
+### Admin PIN Management
+
+- **`POST /admin/users/:id/reset-pin`** — auto-generate 4-digit PIN or set manual 4-6 digit PIN
+- **`POST /admin/users/:id/clear-pin`** — removes PIN, reverts login mode to parent_managed
+- Admin user detail now shows: login mode badge, username, PIN status (has/not set)
+- PIN management card with auto/manual toggle, confirmation dialog, clear action
+- PINs bcrypt-hashed (10 rounds), hash never exposed to frontend
+
+### Security & Premium UI
+
+- CSP, HSTS, security headers, caching headers, robots.txt
+- Premium landing page with 8 sections, tabbed auth, features page redesign
+- Floating 2.5D pet companion with layered animation
+
+---
+
 ## v2.1 — Parent Accounts, Pet Engine, UX Polish (April 2026)
 
 ### Parent-Child Account Model

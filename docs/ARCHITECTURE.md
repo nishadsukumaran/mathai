@@ -147,6 +147,50 @@ Phase 1 renderers: NumberLine, FractionBar, ArrayDiagram, BarModel, PlaceValueCh
 Phase 2 renderers: LogicFlow, GeometrySketch, ComparisonModel (built but gated)
 ```
 
+### Scene Engine (`lib/scene-engine/`)
+
+Duolingo-style animated SVG explanations with template-first routing.
+
+```
+types.ts          → ScenePlan, Element, Animation, Palette (Zod-validated)
+presets.ts        → 8 animation presets, 4 color palettes
+templates.ts      → 6 Phase 0 templates (multiplication, subtraction, etc.)
+templates/        → 5 Phase 1 templates (place value, comparison, fractions, word problem)
+dispatcher.ts     → Template-first → AI eligible → none routing
+reliabilityGate.ts → Pre-render confidence: high/medium/low
+validator.ts      → 3-layer validation: structural → semantic → pedagogical
+visualTelemetry.ts → 18 event types, 200-entry buffer
+struggleEvaluator.ts → Struggle detection + intervention decision
+
+ScenePlayer.tsx   → SVG canvas (800x500), 7 primitives, AnimatePresence transitions
+useSceneTimeline  → 100ms tick, auto-advance, play/pause/next/prev
+
+Coverage: 11 template types (92%) + 1 AI-eligible (8%)
+Fallback: template → AI (12s timeout) → steps-only
+```
+
+### Shared Attempt Recorder (`api/services/attemptRecorder.ts`)
+
+Records learning interactions from non-session entry points (Ask MathAI, practice recovery, recommendations) into the same mastery model.
+
+```
+Input:  QuestionAttempt + source tag
+Output: XP awarded, profile counters updated, misconceptions tracked, memory refreshed
+
+Sources: ask_similar, post_animation, recommendation, quick_practice
+```
+
+### Next-Action Engine (`api/services/nextActionService.ts`)
+
+Post-attempt recommendation: what should the student do after answering?
+
+```
+Input:  userId, topicId, wasCorrect, confidence
+Output: retry_similar | watch_visual | practice_topic | increase_difficulty | review_later
+
+Escalation: 3+ correct with mastery ≥ 0.8 → calls Learning Brain for cross-topic recommendation
+```
+
 ### Student Learning Memory (`ai/services/studentMemoryService.ts`)
 
 ```
@@ -249,9 +293,15 @@ Roles: student, parent, teacher, admin
 | parentDashboardService | Parent dashboard data aggregation |
 | progressService | Student progress summaries |
 | gamificationService | XP, levels, badges, streaks |
-| questService | Daily quest management |
+| questService | Daily quest management (auto-seeds templates) |
 | profileService | Student profile CRUD |
 | petService | Pet personality system |
 | curriculumService | Curriculum tree and topic data |
 | topicAssignmentService | AI-ordered topic queue |
-| adminService | Platform admin operations |
+| adminService | Platform admin ops + PIN reset/clear |
+| attemptRecorder | Shared attempt recording (non-session) |
+| nextActionService | Post-attempt recommendations |
+| sceneGeneratorService | AI scene plan generation |
+| similarProblemService | Similar problem generation for practice loops |
+| scene-engine (8 files) | Scene dispatch, templates, reliability, validation, telemetry |
+| struggleEvaluator | Practice struggle detection + visual intervention |

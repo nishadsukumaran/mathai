@@ -1,6 +1,6 @@
 # MathAI Features & User Guide
 
-**Last updated:** April 2026 (v2.1)
+**Last updated:** April 2026 (v2.2)
 
 A complete guide to every feature in MathAI, written for product teams, teachers, and parents.
 
@@ -56,22 +56,40 @@ Adaptive practice sessions with real-time intelligence and celebration animation
 - New difficulty pools generated on-demand
 - Guardrails prevent oscillation (max 2 shifts in 3 questions)
 
+**Visual recovery (struggle detection):**
+- 2+ wrong on same question → struggle detected → reliability gate checked
+- If visual is reliable → "Watch It" intervention card appears inline
+- ScenePlayer renders animated explanation inside practice view
+- "Got it — let me try" → similar problem generated → student answers → mastery recorded
+- Seamlessly returns to normal practice flow
+
 **Celebrations (Framer Motion):**
 - Correct answer → green checkmark scale-up + XP float animation
 - Session complete → card entrance animation
 - Streak milestones → flame pulse on pet companion
 - All animations < 800ms, non-blocking
 
+### Scene Engine (Visual Animations)
+
+Duolingo-style animated math explanations using Framer Motion + SVG.
+
+- **11 deterministic templates** — multiplication arrays, number lines, fraction bars, division groups, equation solving, place value blocks, comparison bars, fraction comparison, fraction equivalence, word problem grouping
+- **7 SVG primitives** — dot, bar, numberLine, mathText, arrow, brace, group
+- **8 animation presets** — fadeIn, popIn, slideLeft/Right, countUp, highlight, pulse, drawLine
+- **ScenePlayer component** — play/pause/next/prev controls, narration bar, progress dots
+- **Reliability gate** — pre-render confidence scoring (high/medium/low), only shows visual CTA when reliable
+- **3-tier fallback** — template (instant) → AI generation (12s timeout) → steps-only
+
 ### Ask MathAI (`/ask`)
 
-Freeform AI math tutor with proper LaTeX rendering:
+Freeform AI math tutor with tabbed response UI and practice loop:
 
 - Grade-based suggestion cards (Cambridge-aligned per grade)
-- Chat-style conversation with question bubbles
-- LaTeX formulas rendered beautifully via KaTeX (inline and display math)
-- Visual diagrams auto-generated when helpful
-- Worked examples with key insight
-- "Show Visual" button for on-demand concept images
+- **Tabbed response layout**: AnswerHero (large animated answer) + Steps / Visual / Watch It tabs
+- LaTeX formulas rendered via KaTeX (inline and display math)
+- **Watch It tab** — scene animation with reliability gate, 3-tier fallback
+- **"Try one like this"** — generates similar problem → student answers → recorded to mastery model
+- Next-action engine recommends what to do after answering
 
 ### Progress (`/progress`)
 
@@ -164,16 +182,31 @@ Children can log in independently (if parent enables it):
 
 ### Parent Dashboard (`/parent/dashboard`)
 
-Learning intelligence dashboard with actionable insights:
+Intelligent, action-oriented dashboard — feels supportive, not like a report card.
 
-- **Learning Score** (0-100) with color-coded ring (green/indigo/amber)
-- **Learning Status** — Excellent, On Track, Needs Attention
-- **Confidence Signal** with contextual explanation
-- **Learning Personality** — behavioral traits derived from data
-- **Actionable Insights** — each with a parent-friendly TIP
-- **Clustered Mastery Map** — topics grouped by status
-- **Ask MathAI for Parents** — CTA card linking to parent-specific AI tutor
-- **Score Breakdown** — mastery, consistency, effort, accuracy, improvement
+**Routing:**
+- Parents auto-redirect from `/dashboard` to `/parent` (middleware-enforced)
+- Sign-in defaults to `/parent` for parent tab
+- 1 child → direct to dashboard; 2+ children → child picker
+
+**Dashboard sections:**
+1. **Hero** — Learning Score ring (0-100, color-coded), child name + grade, status badges (learning status, confidence, support need, streak), "Start Practice" CTA
+2. **This Week** — 5-card grid: questions answered, sessions completed, topics practised, active days, average accuracy
+3. **Biggest Win** — single most impressive achievement this week (mastery, streak, confidence, improvement), green gradient callout
+4. **Needs Attention** — top 2 struggling topics with direct "Practice" action buttons
+5. **Concept Mastery Map** — topics clustered by status: Strong, Improving, Needs Support, Revision Due
+6. **How Your Child Learns** — 2-4 personality traits derived from behavioral data (visual learner, independent solver, careful thinker, consistent practiser, etc.)
+7. **Recommended Next Steps** — up to 3 prioritized action cards with "Start Practice" / "Quick Revision" buttons
+8. **Learning Insights** — up to 6 AI-generated insights with parent-friendly TIP action hints
+9. **Recent Milestones** — badges earned, topics mastered, streak records
+10. **Score Breakdown + Quick Actions** — horizontal bar visualization of mastery/accuracy/consistency/effort/improvement + Ask MathAI + Start Practice + Switch Child
+
+**Intelligence metrics (all from real data):**
+- Confidence trend (rising / stable / needs support) with contextual explanation
+- Support need level (low / moderate / high) computed from weak topics + misconceptions + confidence + hint rate
+- Learning personality (derived from hint usage, pace, style, recovery pattern, streak)
+- Biggest win (prioritized: mastery > streak > confidence > improving > badge)
+- Next steps (prioritized: weak topics > revision due > improving topics)
 
 ### Ask MathAI for Parents (`/parent/ask`)
 
@@ -193,6 +226,8 @@ AI tutor adjusted for parent context:
 - **Dashboard** — total users, active users, signups today/this week, by role/grade
 - **User Management** — search, filter, paginate; view student detail including pet personality
 - **User Actions** — update name/email/role/grade, disable/enable accounts, reset passwords
+- **PIN Management** — view login mode + username + PIN status; reset PIN (auto-generate or manual 4-6 digits); clear PIN (reverts to parent_managed)
+- **Daily Quests** — auto-seed if templates missing; all students always see quests
 
 ---
 
@@ -206,6 +241,8 @@ AI tutor adjusted for parent context:
 | Bar Model | Word problems, comparison, part-whole | Singapore-style proportional bars |
 | Place Value Chart | Place value, regrouping, expanded form | Column blocks (Th, H, T, O) |
 | Equation Steps | Algebra, equation solving, long division | Step-by-step cards with Framer Motion |
+
+| Scene Animation | Multiplication, division, fractions, equations, place value, comparison, word problems | Framer Motion + SVG with 7 primitives |
 
 Phase 2 (built, gated): Logic Flow, Geometry Sketch, Comparison Model
 
