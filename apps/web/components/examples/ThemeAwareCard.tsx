@@ -88,7 +88,7 @@ export function ThemeAwareCard({
           `}
           style={{ borderColor: `var(--theme-surface-border)` }}
         >
-          <span className="text-xl">{theme.character?.featured ? "✨" : "📚"}</span>
+          <span className="text-xl">{theme.character ? "✨" : "📚"}</span>
           <span style={{ color: `var(--theme-text-muted)` }}>
             Tip: You&apos;re learning with the {theme.name} theme!
           </span>
