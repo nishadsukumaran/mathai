@@ -3,23 +3,27 @@
 /**
  * @module components/parent/ParentDashboardView
  *
- * Parent portal dashboard — premium, calm, actionable intelligence.
+ * Parent portal — intelligent, action-oriented, supportive.
  *
  * Sections:
- *   1. Header (name, grade, learning score ring, learning status, confidence)
- *   2. Summary cards (activity, streak, mastery, accuracy)
- *   3. Learning Personality
- *   4. AI Insights with action hints
- *   5. Next Focus recommendation
- *   6. Clustered Mastery Map
- *   7. Recent Highlights
- *   8. Score Breakdown
+ *   1. Hero (child name, score ring, status badges)
+ *   2. This Week summary
+ *   3. Biggest Win callout
+ *   4. Needs Attention (top issues)
+ *   5. Concept Mastery Map (clustered)
+ *   6. How Your Child Learns (personality)
+ *   7. Recommended Next Steps (multi-action)
+ *   8. Learning Insights
+ *   9. Recent Milestones
+ *   10. Score Breakdown + Ask MathAI
  */
 
+import Link from "next/link";
 import type {
   ParentDashboardData,
   TopicMasteryItem,
   LearningStatus,
+  NextStep,
 } from "@/types/parent";
 
 // ─── Config maps ─────────────────────────────────────────────────────────────
@@ -40,15 +44,15 @@ const STATUS_CONFIG: Record<LearningStatus, { label: string; color: string; bg: 
 };
 
 const CONFIDENCE_CONFIG = {
-  rising:        { label: "Rising",        icon: "📈", color: "text-emerald-600", bg: "bg-emerald-50" },
-  stable:        { label: "Stable",        icon: "➡️", color: "text-slate-600",   bg: "bg-slate-50" },
-  needs_support: { label: "Needs Support", icon: "💛", color: "text-amber-600",   bg: "bg-amber-50" },
+  rising:        { label: "Confidence Rising",  icon: "📈", color: "text-emerald-600", bg: "bg-emerald-50" },
+  stable:        { label: "Confidence Stable",  icon: "➡️", color: "text-slate-600",   bg: "bg-slate-50" },
+  needs_support: { label: "Needs Encouragement", icon: "💛", color: "text-amber-600",   bg: "bg-amber-50" },
 };
 
 const SUPPORT_CONFIG = {
-  low:      { label: "On Track",        color: "text-emerald-600", bg: "bg-emerald-50", icon: "✅" },
-  moderate: { label: "Some Support",    color: "text-amber-600",   bg: "bg-amber-50",   icon: "📋" },
-  high:     { label: "Needs Attention", color: "text-rose-600",    bg: "bg-rose-50",     icon: "🤝" },
+  low:      { label: "Independent",     color: "text-emerald-600", bg: "bg-emerald-50" },
+  moderate: { label: "Some Support",    color: "text-amber-600",   bg: "bg-amber-50" },
+  high:     { label: "Needs Attention", color: "text-rose-600",    bg: "bg-rose-50" },
 };
 
 const INSIGHT_CONFIG: Record<string, { border: string; bg: string }> = {
@@ -67,7 +71,13 @@ const BAR_COLORS: Record<string, string> = {
   needs_revision: "bg-orange-400",
 };
 
-// ─── Mastery Topic Row (shared sub-component) ────────────────────────────────
+const ACTION_CONFIG: Record<string, { icon: string; label: string }> = {
+  practice: { icon: "📝", label: "Start Practice" },
+  revision: { icon: "🔄", label: "Quick Revision" },
+  explore:  { icon: "🔍", label: "Explore" },
+};
+
+// ─── Sub-components ──────────────────────────────────────────────────────────
 
 function TopicRow({ topic }: { topic: TopicMasteryItem }) {
   const st = MASTERY_STATUS[topic.status] ?? MASTERY_STATUS["learning"]!;
@@ -95,6 +105,44 @@ function TopicRow({ topic }: { topic: TopicMasteryItem }) {
   );
 }
 
+function ClusterSection({
+  title, headerBg, headerBorder, headerText, topics,
+}: {
+  title: string; headerBg: string; headerBorder: string; headerText: string;
+  topics: TopicMasteryItem[];
+}) {
+  if (topics.length === 0) return null;
+  return (
+    <div className={`bg-white rounded-2xl shadow-sm border ${headerBorder} overflow-hidden`}>
+      <div className={`px-5 py-2.5 ${headerBg} border-b ${headerBorder}`}>
+        <p className={`text-xs font-bold ${headerText} uppercase tracking-widest`}>{title}</p>
+      </div>
+      <div className="divide-y divide-slate-100">
+        {topics.map((t) => <TopicRow key={t.topicId} topic={t} />)}
+      </div>
+    </div>
+  );
+}
+
+function StepCard({ step, childId }: { step: NextStep; childId: string }) {
+  const action = ACTION_CONFIG[step.actionType] ?? ACTION_CONFIG["practice"]!;
+  return (
+    <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-start gap-3">
+      <span className="text-xl shrink-0 mt-0.5">{action.icon}</span>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-bold text-gray-800">{step.topicName}</p>
+        <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{step.reason}</p>
+      </div>
+      <Link
+        href={`/practice?childId=${childId}&topic=${encodeURIComponent(step.topicName)}`}
+        className="shrink-0 text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl hover:bg-indigo-100 transition"
+      >
+        {action.label}
+      </Link>
+    </div>
+  );
+}
+
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 interface Props {
@@ -106,83 +154,146 @@ export default function ParentDashboardView({ data }: Props) {
   const conf      = CONFIDENCE_CONFIG[data.confidenceSignal];
   const support   = SUPPORT_CONFIG[data.supportNeed];
   const clusters  = data.masteryClusters;
+  const childId   = data.childId ?? "";
 
   return (
-    <div className="max-w-5xl mx-auto p-6 space-y-8">
+    <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6">
 
-      {/* Back to child picker (useful when parent has multiple children) */}
-      <a href="/parent" className="text-xs text-gray-400 hover:text-indigo-500 transition font-medium">
-        &larr; All children
-      </a>
-
-      {/* ── 1. Header ──────────────────────────────────────────────── */}
-      <header className="flex items-center gap-6 bg-white rounded-3xl p-6 shadow-sm border border-slate-100 -mt-4">
-        {/* Learning Score Ring */}
-        <div className="relative w-20 h-20 shrink-0">
-          <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-            <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#e2e8f0" strokeWidth="3" />
-            <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={statusCfg.ring} strokeWidth="3" strokeDasharray={`${data.learningScore.overall}, 100`} strokeLinecap="round" />
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className={`text-xl font-black ${statusCfg.color}`}>{data.learningScore.overall}</span>
-            <span className="text-[9px] text-slate-400 font-semibold">SCORE</span>
+      {/* ── 1. Hero ─────────────────────────────────────────────────── */}
+      <header className="bg-white rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-100">
+        <div className="flex items-center gap-5">
+          {/* Learning Score Ring */}
+          <div className="relative w-20 h-20 shrink-0">
+            <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+              <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#e2e8f0" strokeWidth="3" />
+              <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={statusCfg.ring} strokeWidth="3" strokeDasharray={`${data.learningScore.overall}, 100`} strokeLinecap="round" />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className={`text-xl font-black ${statusCfg.color}`}>{data.learningScore.overall}</span>
+              <span className="text-[9px] text-slate-400 font-semibold">SCORE</span>
+            </div>
           </div>
-        </div>
 
-        <div className="flex-1 min-w-0">
-          <h1 className="text-2xl font-black text-gray-800 truncate">
-            {data.childName}&apos;s Learning
-          </h1>
-          <p className="text-sm text-slate-500 mt-0.5">{data.childGrade}</p>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl sm:text-2xl font-black text-gray-800 truncate">
+              {data.childName}&apos;s Learning
+            </h1>
+            <p className="text-sm text-slate-400 mt-0.5">{data.childGrade}</p>
+            {data.confidenceExplanation && (
+              <p className="text-xs text-slate-500 mt-1.5 italic leading-relaxed">{data.confidenceExplanation}</p>
+            )}
+          </div>
+
+          {/* Open child portal */}
+          <Link
+            href={`/dashboard`}
+            className="hidden sm:flex items-center gap-2 bg-indigo-600 text-white font-bold text-xs px-4 py-2.5 rounded-xl hover:bg-indigo-700 transition shrink-0"
+          >
+            Open Portal →
+          </Link>
         </div>
 
         {/* Status badges */}
-        <div className="flex flex-col sm:flex-row gap-2 shrink-0">
-          <div className={`px-3 py-1.5 rounded-xl text-xs font-bold ${statusCfg.bg} ${statusCfg.color}`}>
+        <div className="flex flex-wrap gap-2 mt-4">
+          <span className={`px-3 py-1 rounded-full text-xs font-bold ${statusCfg.bg} ${statusCfg.color}`}>
             {statusCfg.label}
-          </div>
-          <div className={`px-3 py-1.5 rounded-xl text-xs font-bold ${conf.bg} ${conf.color}`}>
+          </span>
+          <span className={`px-3 py-1 rounded-full text-xs font-bold ${conf.bg} ${conf.color}`}>
             {conf.icon} {conf.label}
-          </div>
-          <div className={`px-3 py-1.5 rounded-xl text-xs font-bold ${support.bg} ${support.color}`}>
-            {support.icon} {support.label}
-          </div>
+          </span>
+          <span className={`px-3 py-1 rounded-full text-xs font-bold ${support.bg} ${support.color}`}>
+            {support.label}
+          </span>
+          <span className="px-3 py-1 rounded-full text-xs font-bold bg-orange-50 text-orange-600">
+            🔥 {data.streak.current} day{data.streak.current !== 1 ? "s" : ""}
+          </span>
         </div>
+
+        {/* Mobile portal link */}
+        <Link
+          href={`/dashboard`}
+          className="sm:hidden flex items-center justify-center gap-2 mt-4 bg-indigo-600 text-white font-bold text-sm px-4 py-3 rounded-xl hover:bg-indigo-700 transition w-full"
+        >
+          Open {data.childName}&apos;s Portal →
+        </Link>
       </header>
 
-      {/* Confidence explanation */}
-      {data.confidenceExplanation && (
-        <p className="text-sm text-slate-500 -mt-4 px-2 italic">{data.confidenceExplanation}</p>
+      {/* ── 2. This Week Summary ────────────────────────────────────── */}
+      <section>
+        <h2 className="text-base font-black text-gray-800 mb-3">This Week</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <SummaryCard label="Questions" value={String(data.thisWeek?.questionsAnswered ?? 0)} sub="answered" />
+          <SummaryCard label="Sessions" value={String(data.thisWeek?.sessionsCompleted ?? 0)} sub="completed" />
+          <SummaryCard label="Topics" value={String(data.thisWeek?.topicsPracticed ?? 0)} sub="practised" />
+          <SummaryCard label="Active" value={`${data.thisWeek?.daysActive ?? 0}/7`} sub="days" />
+          <SummaryCard label="Accuracy" value={`${data.learningScore.accuracy}%`} sub="average" accent />
+        </div>
+      </section>
+
+      {/* ── 3. Biggest Win ──────────────────────────────────────────── */}
+      {data.biggestWin && (
+        <section className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl p-5 border border-emerald-200">
+          <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest mb-2">Biggest Win This Week</p>
+          <div className="flex items-start gap-3">
+            <span className="text-3xl shrink-0">{data.biggestWin.icon}</span>
+            <div>
+              <p className="text-base font-black text-gray-800">{data.biggestWin.title}</p>
+              <p className="text-sm text-slate-600 mt-1 leading-relaxed">{data.biggestWin.detail}</p>
+            </div>
+          </div>
+        </section>
       )}
 
-      {/* ── 2. Summary Cards ───────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Today</p>
-          <p className="text-2xl font-black text-gray-800">{data.todayActivity.questionsAnswered}</p>
-          <p className="text-xs text-slate-500">questions answered</p>
-        </div>
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Streak</p>
-          <p className="text-2xl font-black text-orange-500">🔥 {data.streak.current}</p>
-          <p className="text-xs text-slate-500">day{data.streak.current !== 1 ? "s" : ""} in a row</p>
-        </div>
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Mastery</p>
-          <p className="text-2xl font-black text-indigo-600">{data.learningScore.mastery}%</p>
-          <p className="text-xs text-slate-500">avg across topics</p>
-        </div>
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Accuracy</p>
-          <p className="text-2xl font-black text-emerald-600">{data.learningScore.accuracy}%</p>
-          <p className="text-xs text-slate-500">answer accuracy</p>
-        </div>
-      </div>
+      {/* ── 4. Needs Attention ──────────────────────────────────────── */}
+      {(clusters.weakAreas.length > 0 || data.supportNeed === "high") && (
+        <section>
+          <h2 className="text-base font-black text-gray-800 mb-3">Needs Attention</h2>
+          <div className="space-y-3">
+            {clusters.weakAreas.slice(0, 2).map((topic) => {
+              const st = MASTERY_STATUS[topic.status] ?? MASTERY_STATUS["struggling"]!;
+              return (
+                <div key={topic.topicId} className="bg-white rounded-2xl p-4 shadow-sm border border-amber-200 flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-lg shrink-0">📌</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-gray-800">{topic.topicName}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${st.bg} ${st.text}`}>{st.label}</span>
+                      <span className="text-xs text-slate-400">{topic.masteryPct}% mastery · {topic.accuracyPct}% accuracy</span>
+                    </div>
+                  </div>
+                  <Link
+                    href={`/practice?childId=${childId}&topic=${encodeURIComponent(topic.topicName)}`}
+                    className="shrink-0 text-xs font-bold text-amber-700 bg-amber-50 px-3 py-1.5 rounded-xl hover:bg-amber-100 transition border border-amber-200"
+                  >
+                    Practice
+                  </Link>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
-      {/* ── 3. Learning Personality ────────────────────────────────── */}
+      {/* ── 5. Concept Mastery Map ──────────────────────────────────── */}
+      <section>
+        <h2 className="text-base font-black text-gray-800 mb-3">Concept Mastery</h2>
+        <div className="space-y-4">
+          <ClusterSection title="Strong Areas" headerBg="bg-green-50" headerBorder="border-green-200" headerText="text-green-700" topics={clusters.strong} />
+          <ClusterSection title="Improving" headerBg="bg-indigo-50" headerBorder="border-indigo-200" headerText="text-indigo-700" topics={clusters.improving} />
+          <ClusterSection title="Needs Support" headerBg="bg-amber-50" headerBorder="border-amber-200" headerText="text-amber-700" topics={clusters.weakAreas} />
+          <ClusterSection title="Revision Due" headerBg="bg-orange-50" headerBorder="border-orange-200" headerText="text-orange-700" topics={clusters.revisionDue} />
+          {clusters.notStarted > 0 && (
+            <p className="text-xs text-slate-400 font-medium px-1">
+              + {clusters.notStarted} topic{clusters.notStarted !== 1 ? "s" : ""} not started yet
+            </p>
+          )}
+        </div>
+      </section>
+
+      {/* ── 6. How Your Child Learns ────────────────────────────────── */}
       {data.learningPersonality.length > 0 && (
         <section>
-          <h2 className="text-lg font-black text-gray-800 mb-3">Learning Style 🧩</h2>
+          <h2 className="text-base font-black text-gray-800 mb-3">How {data.childName} Learns</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {data.learningPersonality.map((trait, i) => (
               <div key={i} className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-start gap-3">
@@ -197,11 +308,34 @@ export default function ParentDashboardView({ data }: Props) {
         </section>
       )}
 
-      {/* ── 4. AI Insights with Action Hints ──────────────────────── */}
+      {/* ── 7. Recommended Next Steps ───────────────────────────────── */}
+      {((data.nextSteps ?? []).length > 0 || data.nextRecommendation) && (
+        <section>
+          <h2 className="text-base font-black text-gray-800 mb-3">Recommended Next Steps</h2>
+          <div className="space-y-3">
+            {(data.nextSteps ?? []).map((step, i) => (
+              <StepCard key={i} step={step} childId={childId} />
+            ))}
+            {(data.nextSteps ?? []).length === 0 && data.nextRecommendation && (
+              <StepCard
+                step={{
+                  topicName:  data.nextRecommendation.topicName,
+                  reason:     data.nextRecommendation.reason,
+                  actionType: data.nextRecommendation.actionType,
+                  priority:   1,
+                }}
+                childId={childId}
+              />
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* ── 8. Learning Insights ─────────────────────────────────────── */}
       {data.insights.length > 0 && (
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-black text-gray-800">Learning Insights 🧠</h2>
+            <h2 className="text-base font-black text-gray-800">Insights</h2>
             <p className="text-[10px] text-slate-400 font-medium">{data.insightBasis}</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -212,9 +346,7 @@ export default function ParentDashboardView({ data }: Props) {
                   <div className="flex items-start gap-3">
                     <span className="text-xl shrink-0">{insight.icon}</span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-700 leading-relaxed font-medium">
-                        {insight.message}
-                      </p>
+                      <p className="text-sm text-gray-700 leading-relaxed font-medium">{insight.message}</p>
                       {insight.actionHint && (
                         <p className="text-xs text-slate-500 mt-2 flex items-start gap-1.5">
                           <span className="shrink-0 font-bold text-indigo-400">TIP</span>
@@ -230,90 +362,10 @@ export default function ParentDashboardView({ data }: Props) {
         </section>
       )}
 
-      {/* ── 5. Next Focus / Recommendation ─────────────────────────── */}
-      {data.nextRecommendation && (
-        <section>
-          <h2 className="text-lg font-black text-gray-800 mb-3">MathAI Recommends Next 🎯</h2>
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-indigo-100">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xl text-white shadow-md shrink-0">📚</div>
-              <div className="flex-1 min-w-0">
-                <p className="font-black text-gray-800 text-base">{data.nextRecommendation.topicName}</p>
-                <p className="text-sm text-slate-500 mt-0.5 leading-relaxed">{data.nextRecommendation.reason}</p>
-                <span className="inline-block mt-2 text-xs font-bold text-indigo-500 bg-indigo-50 px-2.5 py-0.5 rounded-full capitalize">
-                  {data.nextRecommendation.actionType.replace(/_/g, " ")}
-                </span>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* ── 6. Clustered Mastery Map ───────────────────────────────── */}
-      <section>
-        <h2 className="text-lg font-black text-gray-800 mb-3">Concept Mastery 📊</h2>
-        <div className="space-y-4">
-
-          {/* Weak areas */}
-          {clusters.weakAreas.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-sm border border-amber-200 overflow-hidden">
-              <div className="px-5 py-2.5 bg-amber-50 border-b border-amber-200">
-                <p className="text-xs font-bold text-amber-700 uppercase tracking-widest">Needs Attention</p>
-              </div>
-              <div className="divide-y divide-slate-100">
-                {clusters.weakAreas.map((t) => <TopicRow key={t.topicId} topic={t} />)}
-              </div>
-            </div>
-          )}
-
-          {/* Improving */}
-          {clusters.improving.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-sm border border-indigo-200 overflow-hidden">
-              <div className="px-5 py-2.5 bg-indigo-50 border-b border-indigo-200">
-                <p className="text-xs font-bold text-indigo-700 uppercase tracking-widest">Improving</p>
-              </div>
-              <div className="divide-y divide-slate-100">
-                {clusters.improving.map((t) => <TopicRow key={t.topicId} topic={t} />)}
-              </div>
-            </div>
-          )}
-
-          {/* Strong */}
-          {clusters.strong.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-sm border border-green-200 overflow-hidden">
-              <div className="px-5 py-2.5 bg-green-50 border-b border-green-200">
-                <p className="text-xs font-bold text-green-700 uppercase tracking-widest">Strong Areas</p>
-              </div>
-              <div className="divide-y divide-slate-100">
-                {clusters.strong.map((t) => <TopicRow key={t.topicId} topic={t} />)}
-              </div>
-            </div>
-          )}
-
-          {/* Revision due */}
-          {clusters.revisionDue.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-sm border border-orange-200 overflow-hidden">
-              <div className="px-5 py-2.5 bg-orange-50 border-b border-orange-200">
-                <p className="text-xs font-bold text-orange-700 uppercase tracking-widest">Revision Due</p>
-              </div>
-              <div className="divide-y divide-slate-100">
-                {clusters.revisionDue.map((t) => <TopicRow key={t.topicId} topic={t} />)}
-              </div>
-            </div>
-          )}
-
-          {clusters.notStarted > 0 && (
-            <p className="text-xs text-slate-400 font-medium px-2">
-              + {clusters.notStarted} topic{clusters.notStarted !== 1 ? "s" : ""} not started yet
-            </p>
-          )}
-        </div>
-      </section>
-
-      {/* ── 7. Recent Highlights ───────────────────────────────────── */}
+      {/* ── 9. Recent Milestones ──────────────────────────────────────── */}
       {data.recentHighlights.length > 0 && (
         <section>
-          <h2 className="text-lg font-black text-gray-800 mb-3">Recent Milestones 🌟</h2>
+          <h2 className="text-base font-black text-gray-800 mb-3">Recent Milestones</h2>
           <div className="space-y-2">
             {data.recentHighlights.map((h, i) => (
               <div key={i} className="flex items-center gap-3 bg-white rounded-2xl px-5 py-3 shadow-sm border border-slate-100">
@@ -328,47 +380,76 @@ export default function ParentDashboardView({ data }: Props) {
         </section>
       )}
 
-      {/* ── Ask MathAI for Parents ──────────────────────────────────── */}
-      <section>
-        <h2 className="text-lg font-black text-gray-800 mb-3">Ask MathAI 🤖</h2>
-        <a
-          href="/parent/ask"
-          className="block bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-5 text-white hover:opacity-95 transition"
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-2xl shrink-0">
-              🤖
-            </div>
-            <div className="flex-1">
-              <p className="font-bold text-sm">Ask MathAI for Parents</p>
-              <p className="text-indigo-200 text-xs mt-0.5">
-                Get help explaining concepts, understanding your child&apos;s progress, or finding the right approach.
-              </p>
-            </div>
-            <span className="text-sm font-bold shrink-0">Ask →</span>
+      {/* ── 10. Score Breakdown + Actions ─────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Score breakdown */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Learning Score Breakdown</h2>
+          <div className="space-y-3">
+            {[
+              { label: "Mastery",     value: data.learningScore.mastery,     color: "bg-indigo-500" },
+              { label: "Accuracy",    value: data.learningScore.accuracy,    color: "bg-emerald-500" },
+              { label: "Consistency", value: data.learningScore.consistency, color: "bg-orange-400" },
+              { label: "Effort",      value: data.learningScore.effort,      color: "bg-purple-500" },
+              { label: "Improvement", value: data.learningScore.improvement, color: "bg-blue-500" },
+            ].map((item) => (
+              <div key={item.label} className="flex items-center gap-3">
+                <span className="text-xs text-slate-500 font-semibold w-20">{item.label}</span>
+                <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full ${item.color}`} style={{ width: `${item.value}%` }} />
+                </div>
+                <span className="text-xs font-bold text-gray-700 w-8 text-right">{item.value}</span>
+              </div>
+            ))}
           </div>
-        </a>
-      </section>
-
-      {/* ── 8. Score Breakdown ─────────────────────────────────────── */}
-      <section>
-        <h2 className="text-lg font-black text-gray-800 mb-3">Learning Score Breakdown</h2>
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 grid grid-cols-5 gap-4 text-center">
-          {[
-            { label: "Mastery",     value: data.learningScore.mastery,     color: "text-indigo-600" },
-            { label: "Consistency", value: data.learningScore.consistency, color: "text-orange-500" },
-            { label: "Effort",      value: data.learningScore.effort,      color: "text-purple-600" },
-            { label: "Accuracy",    value: data.learningScore.accuracy,    color: "text-emerald-600" },
-            { label: "Improvement", value: data.learningScore.improvement, color: "text-blue-600" },
-          ].map((item) => (
-            <div key={item.label}>
-              <p className={`text-xl font-black ${item.color}`}>{item.value}</p>
-              <p className="text-[10px] text-slate-400 font-semibold uppercase mt-0.5">{item.label}</p>
-            </div>
-          ))}
         </div>
-      </section>
 
+        {/* Ask MathAI */}
+        <div className="flex flex-col gap-4">
+          <Link
+            href="/parent/ask"
+            className="flex-1 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl p-5 text-white hover:opacity-95 transition flex items-center gap-4"
+          >
+            <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-2xl shrink-0">🤖</div>
+            <div className="flex-1">
+              <p className="font-bold text-sm">Ask MathAI</p>
+              <p className="text-indigo-200 text-xs mt-0.5">Get help explaining concepts or understanding progress.</p>
+            </div>
+            <span className="text-sm font-bold shrink-0">→</span>
+          </Link>
+
+          {/* Quick action buttons */}
+          <div className="grid grid-cols-2 gap-3">
+            <Link
+              href={`/practice?childId=${childId}`}
+              className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 text-center hover:border-indigo-200 transition"
+            >
+              <span className="text-xl block mb-1">📝</span>
+              <p className="text-xs font-bold text-gray-700">Start Practice</p>
+            </Link>
+            <Link
+              href="/parent"
+              className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 text-center hover:border-indigo-200 transition"
+            >
+              <span className="text-xl block mb-1">👨‍👩‍👧‍👦</span>
+              <p className="text-xs font-bold text-gray-700">Switch Child</p>
+            </Link>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
+// ─── Small helpers ──────────────────────────────────────────────────────────
+
+function SummaryCard({ label, value, sub, accent }: { label: string; value: string; sub: string; accent?: boolean }) {
+  return (
+    <div className="bg-white rounded-2xl p-3 sm:p-4 shadow-sm border border-slate-100">
+      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{label}</p>
+      <p className={`text-xl sm:text-2xl font-black ${accent ? "text-emerald-600" : "text-gray-800"}`}>{value}</p>
+      <p className="text-[10px] text-slate-400">{sub}</p>
     </div>
   );
 }

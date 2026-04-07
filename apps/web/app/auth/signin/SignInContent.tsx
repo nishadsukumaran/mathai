@@ -41,10 +41,12 @@ const tabSlide = {
 
 export default function SignInContent() {
   const searchParams = useSearchParams();
-  const callbackUrl  = searchParams.get("callbackUrl") || "/dashboard";
+  const rawCallback  = searchParams.get("callbackUrl");
+  const initialMode: AuthMode = searchParams.get("mode") === "student" ? "student" : "parent";
+  // Default parents to /parent, students to /dashboard
+  const callbackUrl  = rawCallback || (initialMode === "parent" ? "/parent" : "/dashboard");
   const error        = searchParams.get("error");
   const resetSuccess = searchParams.get("reset") === "success";
-  const initialMode  = searchParams.get("mode") === "student" ? "student" : "parent";
 
   const [mode, setMode] = useState<AuthMode>(initialMode);
 

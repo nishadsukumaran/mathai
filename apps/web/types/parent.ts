@@ -57,7 +57,29 @@ export interface RecentHighlight {
   date:    string;
 }
 
+export interface ThisWeekSummary {
+  questionsAnswered: number;
+  sessionsCompleted: number;
+  topicsPracticed:   number;
+  minutesActive:     number;
+  daysActive:        number;
+}
+
+export interface BiggestWin {
+  icon:    string;
+  title:   string;
+  detail:  string;
+}
+
+export interface NextStep {
+  topicName:  string;
+  reason:     string;
+  actionType: string;
+  priority:   number;
+}
+
 export interface ParentDashboardData {
+  childId:               string;
   childName:             string;
   childGrade:            string;
   learningScore:         LearningScore;
@@ -67,12 +89,15 @@ export interface ParentDashboardData {
   supportNeed:           SupportNeedLevel;
   currentFocus:          { topicName: string; reason: string } | null;
   todayActivity:         { questionsAnswered: number; minutesActive: number; sessionsCompleted: number };
+  thisWeek:              ThisWeekSummary;
   streak:                { current: number; longest: number };
+  biggestWin:            BiggestWin | null;
   insights:              ParentInsight[];
   insightBasis:          string;
   learningPersonality:   LearningPersonalityTrait[];
   masteryClusters:       MasteryClusters;
   masteryMap:            TopicMasteryItem[];
   recentHighlights:      RecentHighlight[];
+  nextSteps:             NextStep[];
   nextRecommendation:    { topicName: string; reason: string; actionType: string } | null;
 }

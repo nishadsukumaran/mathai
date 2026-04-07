@@ -75,7 +75,29 @@ export interface RecentHighlight {
   date:    string;
 }
 
+export interface ThisWeekSummary {
+  questionsAnswered: number;
+  sessionsCompleted: number;
+  topicsPracticed:   number;
+  minutesActive:     number;
+  daysActive:        number;
+}
+
+export interface BiggestWin {
+  icon:   string;
+  title:  string;
+  detail: string;
+}
+
+export interface NextStep {
+  topicName:  string;
+  reason:     string;
+  actionType: string;
+  priority:   number;
+}
+
 export interface ParentDashboardData {
+  childId:                string;
   childName:              string;
   childGrade:             string;
   learningScore:          LearningScore;
@@ -85,13 +107,16 @@ export interface ParentDashboardData {
   supportNeed:            SupportNeedLevel;
   currentFocus:           { topicName: string; reason: string } | null;
   todayActivity:          { questionsAnswered: number; minutesActive: number; sessionsCompleted: number };
+  thisWeek:               ThisWeekSummary;
   streak:                 { current: number; longest: number };
+  biggestWin:             BiggestWin | null;
   insights:               ParentInsight[];
   insightBasis:           string;
   learningPersonality:    LearningPersonalityTrait[];
   masteryClusters:        MasteryClusters;
   masteryMap:             TopicMasteryItem[];
   recentHighlights:       RecentHighlight[];
+  nextSteps:              NextStep[];
   nextRecommendation:     { topicName: string; reason: string; actionType: string } | null;
 }
 
@@ -590,4 +615,117 @@ export function buildRecentHighlights(data: StudentDataInput): RecentHighlight[]
   // Sort by date, most recent first
   highlights.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   return highlights.slice(0, 5);
+}
+
+// ─── Biggest Win ────────────────────────────────────────────────────────────
+
+/**
+ * Pick the single most celebration-worthy achievement to highlight.
+ * Priority: new mastery > streak milestone > confidence rising > improving topic
+ */
+export function computeBiggestWin(data: StudentDataInput): BiggestWin | null {
+  // Recently mastered topic
+  const mastered = data.topicProgress.filter(
+    (t) => t.isMastered && t.lastPracticedAt && daysSince(t.lastPracticedAt) <= 7
+  );
+  if (mastered.length > 0) {
+    const name = topicNameFromId(mastered[0]!.topicId);
+    return {
+      icon:   "🏆",
+      title:  `Mastered ${name}!`,
+      detail: `Your child reached mastery level — a real achievement built through consistent practice.`,
+    };
+  }
+
+  // Streak milestone
+  if (data.streak.currentStreak >= 7) {
+    return {
+      icon:   "🔥",
+      title:  `${data.streak.currentStreak}-day streak!`,
+      detail: "Daily practice is one of the strongest predictors of long-term learning success.",
+    };
+  }
+
+  // Confidence rising
+  if (data.memorySnapshot?.confidenceTrend === "rising") {
+    return {
+      icon:   "📈",
+      title:  "Confidence is rising",
+      detail: "Your child is feeling more sure of their maths abilities — that momentum matters.",
+    };
+  }
+
+  // Improving topic
+  const improving = data.topicProgress.filter(
+    (t) => t.masteryScore >= 0.5 && t.masteryScore < 0.8 && t.completionPercent > 0
+  );
+  if (improving.length > 0) {
+    const name = topicNameFromId(improving[0]!.topicId);
+    return {
+      icon:   "🌱",
+      title:  `${name} is coming along`,
+      detail: "Steady progress — a few more practice sessions and mastery is within reach.",
+    };
+  }
+
+  // Badge earned
+  if (data.recentBadges.length > 0) {
+    return {
+      icon:   "🎖️",
+      title:  `Earned "${data.recentBadges[0]!.name}"`,
+      detail: "Badges reward milestones in your child's learning journey.",
+    };
+  }
+
+  return null;
+}
+
+// ─── Next Steps (multiple recommendations) ──────────────────────────────────
+
+export function computeNextSteps(
+  data: StudentDataInput,
+  topicNames: Map<string, string>,
+): NextStep[] {
+  const steps: NextStep[] = [];
+
+  // Weak topics → practice
+  const weakTopics = data.memorySnapshot?.weakTopics ?? [];
+  for (const weak of weakTopics.slice(0, 2)) {
+    steps.push({
+      topicName:  weak.topicName,
+      reason:     `Needs support — focused practice will help build confidence.`,
+      actionType: "practice",
+      priority:   1,
+    });
+  }
+
+  // Revision due topics
+  const revisionDue = data.topicProgress.filter(
+    (t) => t.isMastered && daysSince(t.lastPracticedAt) > 14
+  );
+  if (revisionDue.length > 0) {
+    const name = topicNames.get(revisionDue[0]!.topicId) ?? topicNameFromId(revisionDue[0]!.topicId);
+    steps.push({
+      topicName:  name,
+      reason:     "Mastered but not practised recently — a quick review keeps it fresh.",
+      actionType: "revision",
+      priority:   2,
+    });
+  }
+
+  // Improving topics → push to mastery
+  const improving = data.topicProgress.filter(
+    (t) => t.masteryScore >= 0.5 && t.masteryScore < 0.8 && t.completionPercent > 0
+  );
+  if (improving.length > 0) {
+    const name = topicNames.get(improving[0]!.topicId) ?? topicNameFromId(improving[0]!.topicId);
+    steps.push({
+      topicName:  name,
+      reason:     "Almost at mastery — a few more sessions could push it over the line.",
+      actionType: "practice",
+      priority:   3,
+    });
+  }
+
+  return steps.sort((a, b) => a.priority - b.priority).slice(0, 3);
 }

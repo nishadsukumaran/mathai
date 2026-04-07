@@ -45,12 +45,23 @@ export async function middleware(req: NextRequest) {
     }
   }
 
+  // ── Parent auto-routing ────────────────────────────────────────────────────
+  // When a parent lands on /dashboard (the student view), redirect to /parent
+  if (pathname === "/dashboard") {
+    const token = await getToken({ req, secret: process.env["NEXTAUTH_SECRET"] });
+    if (token && (token["role"] as string | undefined) === "parent") {
+      const url = req.nextUrl.clone();
+      url.pathname = "/parent";
+      return NextResponse.redirect(url);
+    }
+  }
+
   return NextResponse.next();
 }
 
 export const config = {
   matcher: [
-    // Match /admin and everything under it
     "/admin/:path*",
+    "/dashboard",
   ],
 };

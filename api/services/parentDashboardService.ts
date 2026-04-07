@@ -25,6 +25,8 @@ import {
   buildMasteryClusters,
   generateInsights,
   buildRecentHighlights,
+  computeBiggestWin,
+  computeNextSteps,
   type ParentDashboardData,
   type StudentDataInput,
 } from "./parentInsightsService";
@@ -125,19 +127,29 @@ export async function getParentDashboard(childId: string): Promise<ParentDashboa
   const masteryClusters        = buildMasteryClusters(masteryMap);
   const recentHighlights       = buildRecentHighlights(studentData);
 
-  // ── Today's activity (from recent sessions) ─────────────────────────────
+  // ── Today's + This Week's activity ──────────────────────────────────────
   const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
+  todayStart.setUTCHours(0, 0, 0, 0);
+  const weekStart = new Date(todayStart.getTime() - 6 * 86_400_000);
 
   let sessionsToday = 0;
   let questionsToday = 0;
+  let sessionsThisWeek = 0;
+  let questionsThisWeek = 0;
+  let topicsThisWeek = 0;
+  let daysActiveThisWeek = 0;
   try {
-    const todaySessions = await prisma.practiceSession.findMany({
-      where: { userId: childId, startedAt: { gte: todayStart } },
-      select: { questionsCount: true },
+    const weekSessions = await prisma.practiceSession.findMany({
+      where: { userId: childId, startedAt: { gte: weekStart } },
+      select: { questionsCount: true, startedAt: true, topicId: true },
     });
+    const todaySessions = weekSessions.filter((s) => s.startedAt >= todayStart);
     sessionsToday = todaySessions.length;
     questionsToday = todaySessions.reduce((s, r) => s + (r.questionsCount ?? 0), 0);
+    sessionsThisWeek = weekSessions.length;
+    questionsThisWeek = weekSessions.reduce((s, r) => s + (r.questionsCount ?? 0), 0);
+    topicsThisWeek = new Set(weekSessions.map((s) => s.topicId).filter(Boolean)).size;
+    daysActiveThisWeek = new Set(weekSessions.map((s) => s.startedAt.toISOString().slice(0, 10))).size;
   } catch { /* table may not exist */ }
 
   // ── Current focus (from Learning Brain) ─────────────────────────────────
@@ -152,7 +164,12 @@ export async function getParentDashboard(childId: string): Promise<ParentDashboa
     ? { topicName: brainAction.topicName, reason: brainAction.reason, actionType: brainAction.type }
     : null;
 
+  // ── New intelligence ─────────────────────────────────────────────────────
+  const biggestWin = computeBiggestWin(studentData);
+  const nextSteps  = computeNextSteps(studentData, topicNames);
+
   return {
+    childId,
     childName:             studentData.name,
     childGrade:            grade.replace("G", "Grade "),
     learningScore,
@@ -166,13 +183,22 @@ export async function getParentDashboard(childId: string): Promise<ParentDashboa
       minutesActive:     Math.round(questionsToday * 0.5),
       sessionsCompleted: sessionsToday,
     },
+    thisWeek: {
+      questionsAnswered: questionsThisWeek,
+      sessionsCompleted: sessionsThisWeek,
+      topicsPracticed:   topicsThisWeek,
+      minutesActive:     Math.round(questionsThisWeek * 0.5),
+      daysActive:        daysActiveThisWeek,
+    },
     streak: studentData.streak,
+    biggestWin,
     insights,
     insightBasis,
     learningPersonality,
     masteryClusters,
     masteryMap,
     recentHighlights,
+    nextSteps,
     nextRecommendation,
   };
 }

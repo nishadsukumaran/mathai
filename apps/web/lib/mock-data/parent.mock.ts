@@ -7,6 +7,7 @@
 import type { ParentDashboardData } from "@/types/parent";
 
 export const MOCK_PARENT_STRUGGLING: ParentDashboardData = {
+  childId:       "mock-aisha",
   childName:     "Aisha",
   childGrade:    "Grade 4",
   learningScore: { overall: 38, mastery: 30, consistency: 25, effort: 55, accuracy: 35, improvement: 30 },
@@ -16,7 +17,9 @@ export const MOCK_PARENT_STRUGGLING: ParentDashboardData = {
   supportNeed: "high",
   currentFocus: { topicName: "Dividing Fractions", reason: "Recurring misconception with fraction inversion" },
   todayActivity: { questionsAnswered: 3, minutesActive: 5, sessionsCompleted: 1 },
+  thisWeek: { questionsAnswered: 15, sessionsCompleted: 4, topicsPracticed: 2, minutesActive: 20, daysActive: 3 },
   streak: { current: 1, longest: 4 },
+  biggestWin: null,
   insightBasis: "Based on 45 questions answered, 3 recent sessions.",
   insights: [
     { id: "i1", type: "attention",  icon: "🎯", message: "A recurring mix-up with fraction inversion in Dividing Fractions — MathAI is targeting this with focused questions.", actionHint: "Ask your child to explain fraction inversion to you — teaching is a powerful way to learn.", priority: 1 },
@@ -42,10 +45,14 @@ export const MOCK_PARENT_STRUGGLING: ParentDashboardData = {
   recentHighlights: [
     { type: "struggled", icon: "📌", message: "Struggled with Dividing Fractions", date: "2026-03-30T10:00:00Z" },
   ],
+  nextSteps: [
+    { topicName: "Dividing Fractions", reason: "Needs support — focused practice will help build confidence.", actionType: "practice", priority: 1 },
+  ],
   nextRecommendation: { topicName: "Dividing Fractions", reason: "Repeated errors suggest this topic needs focused practice.", actionType: "review_mistake" },
 };
 
 export const MOCK_PARENT_IMPROVING: ParentDashboardData = {
+  childId:       "mock-aryan",
   childName:     "Aryan",
   childGrade:    "Grade 4",
   learningScore: { overall: 62, mastery: 55, consistency: 70, effort: 75, accuracy: 60, improvement: 85 },
@@ -55,7 +62,9 @@ export const MOCK_PARENT_IMPROVING: ParentDashboardData = {
   supportNeed: "low",
   currentFocus: { topicName: "Decimal Addition", reason: "Improving well — nearly ready for mastery" },
   todayActivity: { questionsAnswered: 12, minutesActive: 8, sessionsCompleted: 2 },
+  thisWeek: { questionsAnswered: 55, sessionsCompleted: 8, topicsPracticed: 4, minutesActive: 40, daysActive: 6 },
   streak: { current: 7, longest: 12 },
+  biggestWin: { icon: "🔥", title: "7-day streak!", detail: "Daily practice is one of the strongest predictors of long-term learning success." },
   insightBasis: "Based on 120 questions answered, 5 recent sessions, 7-day streak.",
   insights: [
     { id: "i1", type: "celebration", icon: "📈", message: "Confidence is rising! Your child is feeling more sure of themselves.", actionHint: "Keep the positive momentum going with a quick \"well done\" at dinner.", priority: 4 },
@@ -92,10 +101,15 @@ export const MOCK_PARENT_IMPROVING: ParentDashboardData = {
     { type: "mastered_topic", icon: "🏆", message: "Mastered Multiplication!",    date: "2026-03-28T14:00:00Z" },
     { type: "badge_earned",   icon: "🎖️", message: "Earned \"Fraction Fighter\"", date: "2026-03-27T12:00:00Z" },
   ],
+  nextSteps: [
+    { topicName: "Decimal Addition", reason: "Almost at mastery — a few more sessions could push it over the line.", actionType: "practice", priority: 1 },
+    { topicName: "Fractions Basics", reason: "Needs support — focused practice will help build confidence.", actionType: "practice", priority: 2 },
+  ],
   nextRecommendation: { topicName: "Decimal Addition", reason: "You're making real progress — keep going to master this topic!", actionType: "continue_path" },
 };
 
 export const MOCK_PARENT_STRONG: ParentDashboardData = {
+  childId:       "mock-zara",
   childName:     "Zara",
   childGrade:    "Grade 5",
   learningScore: { overall: 88, mastery: 90, consistency: 85, effort: 90, accuracy: 92, improvement: 75 },
@@ -105,7 +119,9 @@ export const MOCK_PARENT_STRONG: ParentDashboardData = {
   supportNeed: "low",
   currentFocus: { topicName: "Introduction to Algebra", reason: "Ready for a challenge beyond current grade" },
   todayActivity: { questionsAnswered: 20, minutesActive: 15, sessionsCompleted: 3 },
+  thisWeek: { questionsAnswered: 85, sessionsCompleted: 12, topicsPracticed: 3, minutesActive: 60, daysActive: 7 },
   streak: { current: 14, longest: 14 },
+  biggestWin: { icon: "🔥", title: "14-day streak!", detail: "Daily practice is one of the strongest predictors of long-term learning success." },
   insightBasis: "Based on 280 questions answered, 5 recent sessions, 14-day streak.",
   insights: [
     { id: "i1", type: "strength",    icon: "💪", message: "Your child is doing really well in Fractions and Geometry. Great foundation!", actionHint: "Celebrate this with them — recognition builds motivation.", priority: 5 },
@@ -138,10 +154,15 @@ export const MOCK_PARENT_STRONG: ParentDashboardData = {
     { type: "mastered_topic", icon: "🏆", message: "Mastered Geometry!",      date: "2026-03-29T10:00:00Z" },
     { type: "difficulty_up",  icon: "🚀", message: "Moved to harder questions", date: "2026-03-28T15:00:00Z" },
   ],
+  nextSteps: [
+    { topicName: "Decimal Subtraction", reason: "Mastered but not practised recently — a quick review keeps it fresh.", actionType: "revision", priority: 1 },
+    { topicName: "Introduction to Algebra", reason: "Almost at mastery — a few more sessions could push it over the line.", actionType: "practice", priority: 2 },
+  ],
   nextRecommendation: { topicName: "Introduction to Algebra", reason: "Ready to push yourself with a challenge?", actionType: "challenge" },
 };
 
 export const MOCK_PARENT_REVISION: ParentDashboardData = {
+  childId:       "mock-omar",
   childName:     "Omar",
   childGrade:    "Grade 3",
   learningScore: { overall: 55, mastery: 65, consistency: 30, effort: 40, accuracy: 70, improvement: 50 },
@@ -151,7 +172,9 @@ export const MOCK_PARENT_REVISION: ParentDashboardData = {
   supportNeed: "moderate",
   currentFocus: { topicName: "Multi-digit Multiplication", reason: "Needs revision to retain progress" },
   todayActivity: { questionsAnswered: 0, minutesActive: 0, sessionsCompleted: 0 },
+  thisWeek: { questionsAnswered: 10, sessionsCompleted: 2, topicsPracticed: 1, minutesActive: 8, daysActive: 2 },
   streak: { current: 0, longest: 8 },
+  biggestWin: { icon: "🏆", title: "Mastered Addition!", detail: "Your child reached mastery level — a real achievement built through consistent practice." },
   insightBasis: "Based on 80 questions answered, 2 recent sessions.",
   insights: [
     { id: "i1", type: "suggestion", icon: "🔄", message: "Multi-digit Multiplication was mastered but hasn't been practised recently. A quick revision would help keep it fresh.", actionHint: "Suggest a 5-minute multi-digit multiplication refresher this weekend.", priority: 3 },
@@ -176,6 +199,10 @@ export const MOCK_PARENT_REVISION: ParentDashboardData = {
   recentHighlights: [
     { type: "mastered_topic", icon: "🏆", message: "Mastered Addition!",       date: "2026-03-23T12:00:00Z" },
     { type: "badge_earned",   icon: "🎖️", message: "Earned \"Streak Shield\"", date: "2026-03-20T10:00:00Z" },
+  ],
+  nextSteps: [
+    { topicName: "Subtraction", reason: "Needs support — focused practice will help build confidence.", actionType: "practice", priority: 1 },
+    { topicName: "Multi-digit Multiplication", reason: "Mastered but not practised recently — a quick review keeps it fresh.", actionType: "revision", priority: 2 },
   ],
   nextRecommendation: { topicName: "Multi-digit Multiplication", reason: "It's been a while — a quick revision will keep it fresh.", actionType: "revise" },
 };
