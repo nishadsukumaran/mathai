@@ -18,8 +18,6 @@
  */
 
 import { PrismaClient } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { Pool } from "pg";
 import type {
   Grade,
   Difficulty,
@@ -32,14 +30,7 @@ import type {
 // Strand is defined in @/types, not yet in the generated Prisma client
 import type { Strand } from "@/types";
 
-const connectionString = process.env.DATABASE_URL;
-if (!connectionString) {
-  throw new Error("DATABASE_URL environment variable is not set");
-}
-
-const pool = new Pool({ connectionString });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
+const prisma = new PrismaClient();
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
