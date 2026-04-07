@@ -186,10 +186,10 @@ export default function ParentDashboardView({ data }: Props) {
 
           {/* Open child portal */}
           <Link
-            href={`/dashboard`}
+            href={`/practice?childId=${childId}`}
             className="hidden sm:flex items-center gap-2 bg-indigo-600 text-white font-bold text-xs px-4 py-2.5 rounded-xl hover:bg-indigo-700 transition shrink-0"
           >
-            Open Portal →
+            Start Practice →
           </Link>
         </div>
 
@@ -211,10 +211,10 @@ export default function ParentDashboardView({ data }: Props) {
 
         {/* Mobile portal link */}
         <Link
-          href={`/dashboard`}
+          href={`/practice?childId=${childId}`}
           className="sm:hidden flex items-center justify-center gap-2 mt-4 bg-indigo-600 text-white font-bold text-sm px-4 py-3 rounded-xl hover:bg-indigo-700 transition w-full"
         >
-          Open {data.childName}&apos;s Portal →
+          Start {data.childName}&apos;s Practice →
         </Link>
       </header>
 
