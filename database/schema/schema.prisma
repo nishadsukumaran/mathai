@@ -35,9 +35,7 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -446,7 +444,7 @@ model Streak {
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CURRICULUM
-// ═══════════════════════════════════════════════════════════════════════════════
+// ══════��════════════════════════════════════════════════════════════════════════
 
 /// Top-level grouping of topics by mathematical strand.
 /// Strands correspond to national curriculum domains
