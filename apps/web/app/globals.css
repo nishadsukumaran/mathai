@@ -2,9 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* MathAI Theme System */
-@import "../lib/theme/theme.css";
-
 /* ─── CSS Custom Properties ─────────────────────────────────────────────── */
 :root {
   /* MathAI Brand Colors */
@@ -323,4 +320,325 @@
 
 .mastery-ring-purple {
   background: conic-gradient(#8B5CF6 var(--progress, 0%), #EDE9FE 0%);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MathAI Theme System CSS
+   Theme-aware CSS variables and utility classes for dynamic theming.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Theme CSS Variables (defaults) ─────────────────────────────────────── */
+:root {
+  --theme-primary: #6366f1;
+  --theme-secondary: #8b5cf6;
+  --theme-background: #f8fafc;
+  --theme-surface: #ffffff;
+  --theme-surface-border: #e2e8f0;
+  --theme-text: #1e293b;
+  --theme-text-muted: #64748b;
+  --theme-success: #10b981;
+  --theme-xp: #22c55e;
+  --theme-streak: #f59e0b;
+  --theme-radius: 0.75rem;
+  --theme-heading-weight: 700;
+  --theme-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  --theme-glass: none;
+  --theme-glass-bg: transparent;
+}
+
+/* ─── Theme-aware Background ─────────────────────────────────────────────── */
+.theme-bg {
+  background: var(--theme-background);
+}
+
+.theme-surface {
+  background: var(--theme-surface);
+  border-color: var(--theme-surface-border);
+}
+
+/* ─── Theme-aware Text ───────────────────────────────────────────────────── */
+.theme-text {
+  color: var(--theme-text);
+}
+
+.theme-text-muted {
+  color: var(--theme-text-muted);
+}
+
+.theme-text-primary {
+  color: var(--theme-primary);
+}
+
+.theme-text-secondary {
+  color: var(--theme-secondary);
+}
+
+.theme-text-success {
+  color: var(--theme-success);
+}
+
+.theme-text-xp {
+  color: var(--theme-xp);
+}
+
+.theme-text-streak {
+  color: var(--theme-streak);
+}
+
+/* ─── Theme-aware Backgrounds ────────────────────────────────────────────── */
+.theme-bg-primary {
+  background-color: var(--theme-primary);
+}
+
+.theme-bg-secondary {
+  background-color: var(--theme-secondary);
+}
+
+.theme-bg-success {
+  background-color: var(--theme-success);
+}
+
+.theme-bg-xp {
+  background-color: var(--theme-xp);
+}
+
+.theme-bg-streak {
+  background-color: var(--theme-streak);
+}
+
+/* ─── Theme-aware Borders ────────────────────────────────────────────────── */
+.theme-border {
+  border-color: var(--theme-surface-border);
+}
+
+.theme-border-primary {
+  border-color: var(--theme-primary);
+}
+
+/* ─── Theme-aware Cards ──────────────────────────────────────────────────── */
+.theme-card {
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-surface-border);
+  border-radius: var(--theme-radius);
+  box-shadow: var(--theme-shadow);
+}
+
+.theme-card-glass {
+  background: var(--theme-glass-bg);
+  backdrop-filter: var(--theme-glass);
+  -webkit-backdrop-filter: var(--theme-glass);
+  border: 1px solid var(--theme-surface-border);
+  border-radius: var(--theme-radius);
+}
+
+/* ─── Theme-aware Buttons ────────────────────────────────────────────────── */
+.theme-btn-primary {
+  background-color: var(--theme-primary);
+  color: white;
+  border-radius: var(--theme-radius);
+  font-weight: var(--theme-heading-weight);
+  transition: all 0.2s ease;
+}
+
+.theme-btn-primary:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.theme-btn-secondary {
+  background-color: transparent;
+  color: var(--theme-primary);
+  border: 2px solid var(--theme-primary);
+  border-radius: var(--theme-radius);
+  font-weight: var(--theme-heading-weight);
+  transition: all 0.2s ease;
+}
+
+.theme-btn-secondary:hover {
+  background-color: var(--theme-primary);
+  color: white;
+}
+
+/* ─── Theme-aware Progress Bars ──────────────────────────────────────────── */
+.theme-progress {
+  background-color: var(--theme-surface-border);
+  border-radius: var(--theme-radius);
+  overflow: hidden;
+}
+
+.theme-progress-fill {
+  background: linear-gradient(90deg, var(--theme-primary), var(--theme-secondary));
+  height: 100%;
+  border-radius: var(--theme-radius);
+  transition: width 0.5s ease;
+}
+
+.theme-progress-xp {
+  background: linear-gradient(90deg, var(--theme-xp), var(--theme-primary));
+}
+
+/* ─── Animation Level Controls ───────────────────────────────────────────── */
+[data-animation-level="minimal"] .theme-animate {
+  animation: none !important;
+  transition: none !important;
+}
+
+[data-animation-level="minimal"] .theme-float {
+  animation: none !important;
+}
+
+[data-animation-level="standard"] .theme-animate {
+  animation-duration: 0.3s;
+}
+
+[data-animation-level="playful"] .theme-animate {
+  animation-duration: 0.5s;
+}
+
+/* ─── Floating Elements (for playful themes) ─────────────────────────────── */
+@keyframes theme-float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(2deg);
+  }
+}
+
+@keyframes theme-float-slow {
+  0%, 100% {
+    transform: translateY(0px);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateY(-20px);
+    opacity: 0.8;
+  }
+}
+
+@keyframes theme-sparkle {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes theme-pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 20px 10px rgba(99, 102, 241, 0);
+  }
+}
+
+@keyframes theme-bounce-soft {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes theme-celebrate {
+  0% {
+    transform: scale(1) rotate(0deg);
+  }
+  25% {
+    transform: scale(1.1) rotate(-5deg);
+  }
+  50% {
+    transform: scale(1.2) rotate(5deg);
+  }
+  75% {
+    transform: scale(1.1) rotate(-3deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+.theme-float {
+  animation: theme-float 3s ease-in-out infinite;
+}
+
+.theme-float-slow {
+  animation: theme-float-slow 6s ease-in-out infinite;
+}
+
+.theme-sparkle {
+  animation: theme-sparkle 2s ease-in-out infinite;
+}
+
+.theme-pulse-glow {
+  animation: theme-pulse-glow 2s ease-in-out infinite;
+}
+
+.theme-bounce-soft {
+  animation: theme-bounce-soft 1s ease-in-out infinite;
+}
+
+.theme-celebrate {
+  animation: theme-celebrate 0.6s ease-in-out;
+}
+
+/* ─── Theme-specific Enhancements ────────────────────────────────────────── */
+[data-theme-group="elementary"] .theme-heading {
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+[data-theme-group="middle"] .theme-heading {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* ─── Reward Burst Effects ───────────────────────────────────────────────── */
+@keyframes reward-burst {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.5);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.theme-reward-burst {
+  animation: reward-burst 0.8s ease-out forwards;
+}
+
+/* ─── Grade-specific Refinements ─────────────────────────────────────────── */
+[data-theme-group="elementary"] {
+  --theme-card-padding: 1.25rem;
+  --theme-gap: 1rem;
+}
+
+[data-theme-group="middle"] {
+  --theme-card-padding: 1rem;
+  --theme-gap: 0.75rem;
+}
+
+/* ─── Disable animations for reduced motion preference ───────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .theme-float,
+  .theme-float-slow,
+  .theme-sparkle,
+  .theme-pulse-glow,
+  .theme-bounce-soft,
+  .theme-celebrate,
+  .theme-reward-burst,
+  .theme-animate {
+    animation: none !important;
+  }
 }
