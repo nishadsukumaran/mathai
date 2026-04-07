@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* MathAI Theme System */
+@import "../lib/theme/theme.css";
+
 /* ─── CSS Custom Properties ─────────────────────────────────────────────── */
 :root {
   /* MathAI Brand Colors */

@@ -14,6 +14,7 @@ import { useQueryClient }       from "@tanstack/react-query";
 import { cn }                   from "@/lib/utils";
 import { useProfile }           from "@/hooks/use-profile";
 import { PetShowcase, PetCollection } from "@/components/mathai/pet";
+import { ThemeSelector }        from "@/components/mathai/theme";
 import { queryKeys }            from "@/lib/query-keys";
 import type {
   LearningPace,
@@ -300,6 +301,17 @@ export default function ProfilePageContent() {
         >
           {saving ? "Saving…" : saved ? "✓ Saved!" : "Save Changes"}
         </button>
+
+        {/* ── My Theme ──────────────────────────────────────────────────── */}
+        <section id="theme" className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 space-y-4">
+          <div>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">My Learning Theme</p>
+            <p className="text-sm text-gray-500 mt-0.5">
+              Choose a visual style that matches your personality and helps you stay focused.
+            </p>
+          </div>
+          <ThemeSelector />
+        </section>
 
         {/* ── My Pet ───────────────────────────────────────────────────── */}
         <section id="pet" className="space-y-4">
