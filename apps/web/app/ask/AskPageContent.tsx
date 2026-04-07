@@ -15,11 +15,12 @@ import { useProfile }        from "@/hooks/use-profile";
 import { VisualRenderer }    from "@/components/mathai/visual";
 import { ScenePlayer }       from "@/components/scene-engine";
 import { MathText }          from "@/components/shared/MathText";
-import { dispatchScene, isSceneEligible }  from "@/lib/scene-engine/dispatcher";
-import { validateScenePlan }               from "@/lib/scene-engine/validator";
-import { useSceneTelemetry }               from "@/hooks/useSceneTelemetry";
-import type { ScenePlan }                  from "@/lib/scene-engine/types";
-import type { AskMathAIResponse }          from "@/types";
+import { dispatchScene }     from "@/lib/scene-engine/dispatcher";
+import { validateScenePlan } from "@/lib/scene-engine/validator";
+import { evaluateVisualReliability, getVisualCTALabel, getStepsFallbackMessage, visualTelemetry } from "@/lib/scene-engine";
+import type { ScenePlan }    from "@/lib/scene-engine/types";
+import type { GateResult }   from "@/lib/scene-engine/reliabilityGate";
+import type { AskMathAIResponse } from "@/types";
 
 // ─── Grade-based suggestions aligned to Cambridge Primary/Lower Secondary ────
 // Each grade maps to Cambridge stage topics so students see relevant questions.
@@ -383,13 +384,27 @@ function ResponseCard({ response }: { response: AskMathAIResponse }) {
     visualPlan.diagramType !== "none" &&
     visualPlan.diagramType !== "concept_image";
 
-  const sceneEligible = isSceneEligible(response.mathData);
+  // ── Reliability gate ─────────────────────────────────────────────────────
+  const gate = evaluateVisualReliability(response.mathData, response.question);
+  const showWatchTab = gate.eligible && gate.reliability !== "low";
+  const watchLabel = getVisualCTALabel(gate.reliability);
+
+  // Fire gate telemetry once
+  useEffect(() => {
+    visualTelemetry.gateResult({
+      mathType: response.mathData?.type,
+      reliability: gate.reliability,
+      source: gate.source,
+      eligible: gate.eligible,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Tabs ───────────────────────────────────────────────────────────────────
   const tabs: { id: TabId; label: string; show: boolean; primary?: boolean }[] = [
     { id: "steps",  label: "Steps",   show: hasSteps },
     { id: "visual", label: "Visual",  show: hasVisual },
-    { id: "watch",  label: "Watch It", show: sceneEligible, primary: true },
+    { id: "watch",  label: watchLabel, show: showWatchTab, primary: gate.reliability === "high" },
   ];
   const visibleTabs = tabs.filter((t) => t.show);
 
@@ -431,9 +446,9 @@ function ResponseCard({ response }: { response: AskMathAIResponse }) {
               <VisualView plan={visualPlan!} />
             </TabPanel>
           )}
-          {activeTab === "watch" && sceneEligible && (
+          {activeTab === "watch" && showWatchTab && (
             <TabPanel key="watch">
-              <WatchItView question={response.question} mathData={response.mathData} />
+              <WatchItView question={response.question} mathData={response.mathData} gate={gate} />
             </TabPanel>
           )}
         </AnimatePresence>
@@ -586,68 +601,93 @@ function VisualView({ plan }: { plan: NonNullable<AskMathAIResponse["visualPlan"
   );
 }
 
-// ─── Watch It view (animated scenes) ─────────────────────────────────────────
+// ─── Watch It view (animated scenes) with reliability gate ───────────────────
+
+const SCENE_TIMEOUT_MS = 12_000; // 12s max for AI generation
 
 function WatchItView({
   question,
   mathData,
+  gate,
 }: {
   question: string;
   mathData: AskMathAIResponse["mathData"];
+  gate: GateResult;
 }) {
-  const topic = mathData?.type ?? "unknown";
-  const telemetry = useSceneTelemetry(question, topic);
+  const mathType = mathData?.type ?? "unknown";
+  const ctx = { mathType, reliability: gate.reliability, source: gate.source };
 
-  const [state, setState]    = useState<"idle" | "loading" | "playing" | "done">("idle");
+  const [state, setState]    = useState<"idle" | "loading" | "playing" | "steps_fallback">("idle");
   const [plan, setPlan]      = useState<ScenePlan | null>(null);
   const [source, setSource]  = useState<"template" | "ai" | "fallback">("template");
 
-  const loadScene = useCallback(async () => {
-    telemetry.buttonClicked();
-    setState("loading");
+  // Fire CTA shown telemetry on mount
+  useEffect(() => { visualTelemetry.ctaShown(ctx); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // 1. Try template
+  const loadScene = useCallback(async () => {
+    visualTelemetry.ctaClicked(ctx);
+    setState("loading");
+    const genStart = Date.now();
+
+    // ── Tier 1: Template (instant, deterministic) ────────────────────────
     const dispatch = dispatchScene(mathData, question);
     if (dispatch.plan) {
       const v = validateScenePlan(dispatch.plan, question);
       if (v.valid) {
+        visualTelemetry.sourceSelected({ ...ctx, source: "template" });
+        visualTelemetry.generationSucceeded({ ...ctx, source: "template", durationMs: Date.now() - genStart });
+        visualTelemetry.validationPassed(ctx);
+        visualTelemetry.renderStarted(ctx);
         setPlan(v.plan);
         setSource("template");
         setState("playing");
-        telemetry.planLoaded("template");
         return;
       }
-      telemetry.validationFailed(v.issues);
+      visualTelemetry.validationFailed({ ...ctx, issues: v.issues });
     }
 
-    // 2. Try AI
-    if (dispatch.eligible) {
+    // ── Tier 2: AI generation (with timeout) ─────────────────────────────
+    if (dispatch.eligible || gate.source === "ai") {
+      visualTelemetry.generationStarted({ ...ctx, source: "ai" });
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), SCENE_TIMEOUT_MS);
+
       try {
         const aiPlan = await clientPost<ScenePlan>("/tutor/generate-scene", {
           question, mathData,
-        });
+        }, { signal: controller.signal });
+        clearTimeout(timeout);
+
         if (aiPlan) {
           const v = validateScenePlan(aiPlan, question);
-          setPlan(v.plan);
-          setSource(v.valid ? "ai" : "fallback");
-          setState("playing");
-          telemetry.planLoaded(v.valid ? "ai" : "fallback");
-          if (!v.valid) telemetry.validationFailed(v.issues);
-          return;
+          if (v.severity !== "failed") {
+            visualTelemetry.generationSucceeded({ ...ctx, source: "ai", durationMs: Date.now() - genStart });
+            if (v.issues.length > 0) visualTelemetry.validationFailed({ ...ctx, issues: v.issues });
+            else visualTelemetry.validationPassed(ctx);
+            visualTelemetry.renderStarted(ctx);
+            setPlan(v.plan);
+            setSource(v.severity === "pass" ? "ai" : "fallback");
+            setState("playing");
+            return;
+          }
+          // Critical validation failure
+          visualTelemetry.validationFailed({ ...ctx, issues: v.issues });
         }
-      } catch { /* fall through */ }
+      } catch (err) {
+        clearTimeout(timeout);
+        const isTimeout = err instanceof Error && err.name === "AbortError";
+        if (isTimeout) {
+          visualTelemetry.generationTimeout(ctx);
+        } else {
+          visualTelemetry.generationFailed({ ...ctx, source: "ai", reason: String(err) });
+        }
+      }
     }
 
-    // 3. Fallback
-    const { plan: fb } = validateScenePlan(null, question);
-    setPlan(fb);
-    setSource("fallback");
-    setState("playing");
-    telemetry.planLoaded("fallback");
-  }, [mathData, question, telemetry]);
-
-  // Fire button_shown on mount
-  useEffect(() => { telemetry.buttonShown(); }, [telemetry]);
+    // ── Tier 3: Steps fallback (never blank) ─────────────────────────────
+    visualTelemetry.fallbackUsed({ ...ctx, reason: "All visual paths exhausted" });
+    setState("steps_fallback");
+  }, [mathData, question, gate, ctx]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="pt-2">
@@ -655,15 +695,26 @@ function WatchItView({
         {/* ── Idle: CTA ──────────────────────────────────────────── */}
         {state === "idle" && (
           <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <p className="text-center text-xs text-gray-400 mb-3">
-              Want to see this visually?
-            </p>
+            {gate.reliability === "high" ? (
+              <p className="text-center text-xs text-gray-400 mb-3">
+                Want to see this visually?
+              </p>
+            ) : (
+              <p className="text-center text-xs text-gray-400 mb-3">
+                See if this can be shown visually
+              </p>
+            )}
             <button
               onClick={loadScene}
-              className="w-full py-4 rounded-2xl bg-gradient-to-r from-violet-500 to-indigo-600 text-white font-bold text-sm shadow-md shadow-indigo-200/50 hover:shadow-lg hover:-translate-y-0.5 transition-all active:scale-[0.97] flex items-center justify-center gap-2.5"
+              className={cn(
+                "w-full py-4 rounded-2xl font-bold text-sm shadow-md transition-all active:scale-[0.97] flex items-center justify-center gap-2.5",
+                gate.reliability === "high"
+                  ? "bg-gradient-to-r from-violet-500 to-indigo-600 text-white shadow-indigo-200/50 hover:shadow-lg hover:-translate-y-0.5"
+                  : "bg-white border-2 border-violet-200 text-violet-600 hover:bg-violet-50 hover:border-violet-300",
+              )}
             >
               <span className="text-lg">▶</span>
-              Watch It
+              {getVisualCTALabel(gate.reliability)}
             </button>
           </motion.div>
         )}
@@ -677,7 +728,6 @@ function WatchItView({
             exit={{ opacity: 0 }}
             className="py-10 flex flex-col items-center gap-4"
           >
-            {/* Shimmer skeleton */}
             <div className="w-full max-w-sm space-y-3">
               <div className="h-3 bg-gray-100 rounded-full animate-pulse" />
               <div className="h-40 bg-gradient-to-br from-violet-50 to-indigo-50 rounded-2xl animate-pulse" />
@@ -687,8 +737,25 @@ function WatchItView({
           </motion.div>
         )}
 
+        {/* ── Steps fallback (graceful, not an error) ────────────── */}
+        {state === "steps_fallback" && (
+          <motion.div
+            key="fallback"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-gray-50 rounded-2xl p-5 text-center space-y-2"
+          >
+            <p className="text-sm text-gray-600 font-medium">
+              {getStepsFallbackMessage()}
+            </p>
+            <p className="text-xs text-gray-400">
+              The step-by-step explanation above has you covered.
+            </p>
+          </motion.div>
+        )}
+
         {/* ── Playing ────────────────────────────────────────────── */}
-        {(state === "playing" || state === "done") && plan && (
+        {state === "playing" && plan && (
           <motion.div
             key="player"
             initial={{ opacity: 0, y: 10 }}
@@ -705,7 +772,7 @@ function WatchItView({
               answer={String(mathData?.result ?? "")}
               topicId={mathData?.type ?? "unknown"}
               onReplay={() => {
-                telemetry.replay();
+                visualTelemetry.replayClicked(ctx);
                 setState("idle");
                 setPlan(null);
               }}
