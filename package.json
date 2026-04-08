@@ -8,7 +8,7 @@
     "packages/*"
   ],
   "scripts": {
-    "postinstall": "npx prisma generate --schema=database/schema/schema.prisma || echo 'prisma generate skipped (will run in render:build)'",
+    "postinstall": "npx prisma generate --schema=database/schema/schema.prisma || echo 'prisma generate skipped'",
     "dev": "turbo run dev",
     "dev:api": "npx tsx --watch api/server.ts",
     "build": "turbo run build",
@@ -42,11 +42,11 @@
     "postcss": "^8.4.0",
     "postcss-nested": "^6.0.0",
     "postcss-selector-parser": "^6.0.0",
-    "prisma": "^6.19.2",
+    "prisma": "7.6.0",
     "ts-jest": "^29.1.0",
     "ts-node": "^10.9.0",
     "tsconfig-paths": "^4.2.0",
-    "turbo": "^1.12.0",
+    "turbo": "^2.9.5",
     "typescript": "^5.3.0"
   },
   "dependencies": {
@@ -54,7 +54,7 @@
     "@ai-sdk/gateway": "^3.0.66",
     "@panva/hkdf": "^1.1.0",
     "@paralleldrive/cuid2": "^3.3.0",
-    "@prisma/client": "^6.19.2",
+    "@prisma/client": "7.6.0",
     "ai": "^6.0.116",
     "bcryptjs": "^2.4.3",
     "compression": "^1.8.1",
