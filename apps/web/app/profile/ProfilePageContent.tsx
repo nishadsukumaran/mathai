@@ -15,7 +15,7 @@ import { cn }                   from "@/lib/utils";
 import { useProfile }           from "@/hooks/use-profile";
 import { PetShowcase, PetCollection } from "@/components/mathai/pet";
 import { queryKeys }            from "@/lib/query-keys";
-import { useTheme, THEMES, themeForGrade, type ThemeId } from "@/lib/theme";
+import { useTheme, THEMES, themeForGrade, recommendedThemeForGrade } from "@/lib/theme";
 import type {
   LearningPace,
   ExplanationStyle,
@@ -244,32 +244,40 @@ export default function ProfilePageContent() {
             </button>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            {THEMES.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => { setAutoTheme(false); setTheme(t.id); }}
-                className={cn(
-                  "flex items-start gap-3 p-3 rounded-2xl border-2 text-left transition",
-                  theme === t.id
-                    ? "border-current shadow-sm"
-                    : "border-gray-100 hover:border-gray-200",
-                )}
-                style={theme === t.id ? { borderColor: t.accent } : undefined}
-              >
-                <span className="text-2xl shrink-0">{t.icon}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-bold text-gray-800">{t.name}</p>
-                    <span
-                      className="w-3 h-3 rounded-full shrink-0"
-                      style={{ background: t.accent }}
-                    />
+            {THEMES.map((t) => {
+              const isRecommended = t.id === recommendedThemeForGrade(grade);
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => { setAutoTheme(false); setTheme(t.id); }}
+                  className={cn(
+                    "relative flex items-start gap-3 p-3 rounded-2xl border-2 text-left transition",
+                    theme === t.id
+                      ? "border-current shadow-sm"
+                      : "border-gray-100 hover:border-gray-200",
+                  )}
+                  style={theme === t.id ? { borderColor: t.accent } : undefined}
+                >
+                  {isRecommended && (
+                    <span className="absolute -top-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-600 border border-emerald-200 leading-none">
+                      Recommended
+                    </span>
+                  )}
+                  <span className="text-2xl shrink-0">{t.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-bold text-gray-800">{t.name}</p>
+                      <span
+                        className="w-3 h-3 rounded-full shrink-0"
+                        style={{ background: t.accent }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-400 mt-0.5">{t.description}</p>
+                    <p className="text-[10px] text-gray-300 mt-1">{t.grades}</p>
                   </div>
-                  <p className="text-xs text-gray-400 mt-0.5">{t.description}</p>
-                  <p className="text-[10px] text-gray-300 mt-1">{t.grades}</p>
-                </div>
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
         </section>
 

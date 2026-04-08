@@ -98,63 +98,109 @@
 /* Components inherit these — no Tailwind changes needed.                    */
 
 :root {
-  --theme-bg-from:     #eef2ff;   /* indigo-50 */
-  --theme-bg-to:       #f5f3ff;   /* purple-50 */
-  --theme-accent:      #6366f1;   /* indigo-600 */
-  --theme-accent-hover:#4f46e5;   /* indigo-700 */
-  --theme-accent-soft: #e0e7ff;   /* indigo-100 */
-  --theme-card-border: #f1f5f9;   /* slate-100 */
-  --theme-card-bg:     #ffffff;
-  --theme-glow:        rgba(99, 102, 241, 0.15);
-  --theme-reward-glow: rgba(34, 197, 94, 0.25);
+  --theme-bg-from:      #eef2ff;   /* indigo-50 */
+  --theme-bg-to:        #f5f3ff;   /* purple-50 */
+  --theme-accent:       #6366f1;   /* indigo-600 */
+  --theme-accent-hover: #4f46e5;   /* indigo-700 */
+  --theme-accent-soft:  #e0e7ff;   /* indigo-100 */
+  --theme-card-border:  #f1f5f9;   /* slate-100 */
+  --theme-card-bg:      #ffffff;
+  --theme-glow:         rgba(99, 102, 241, 0.15);
+  --theme-reward-glow:  rgba(34, 197, 94, 0.25);
+  /* Extended tokens */
+  --theme-progress:     #6366f1;   /* progress bar fill */
+  --theme-progress-bg:  #e2e8f0;   /* progress bar track */
+  --theme-nav-active:   #6366f1;   /* active nav item */
+  --theme-nav-active-bg:#eef2ff;   /* active nav bg wash */
+  --theme-xp:           #22c55e;   /* XP text/badge */
+  --theme-streak:       #f97316;   /* streak accent */
+  --theme-empty-icon:   #a5b4fc;   /* empty-state illustration tint */
+  --theme-deco-opacity: 0.03;      /* decorative pattern intensity */
+  --theme-deco-color:   #6366f1;   /* decorative pattern tint */
 }
 
 [data-theme="magic-garden"] {
-  --theme-bg-from:     #fdf2f8;   /* pink-50 */
-  --theme-bg-to:       #fef9c3;   /* yellow-50 */
-  --theme-accent:      #ec4899;   /* pink-500 */
-  --theme-accent-hover:#db2777;   /* pink-600 */
-  --theme-accent-soft: #fce7f3;   /* pink-100 */
-  --theme-card-border: #fce7f3;
-  --theme-card-bg:     #fffbfe;
-  --theme-glow:        rgba(236, 72, 153, 0.12);
-  --theme-reward-glow: rgba(250, 204, 21, 0.3);
+  --theme-bg-from:      #fdf2f8;
+  --theme-bg-to:        #fefce8;
+  --theme-accent:       #ec4899;
+  --theme-accent-hover: #db2777;
+  --theme-accent-soft:  #fce7f3;
+  --theme-card-border:  #fce7f3;
+  --theme-card-bg:      #fffbfe;
+  --theme-glow:         rgba(236, 72, 153, 0.12);
+  --theme-reward-glow:  rgba(250, 204, 21, 0.3);
+  --theme-progress:     #ec4899;
+  --theme-progress-bg:  #fce7f3;
+  --theme-nav-active:   #ec4899;
+  --theme-nav-active-bg:#fdf2f8;
+  --theme-xp:           #16a34a;
+  --theme-streak:       #f59e0b;
+  --theme-empty-icon:   #f9a8d4;
+  --theme-deco-opacity: 0.04;
+  --theme-deco-color:   #ec4899;
 }
 
 [data-theme="space-buddy"] {
-  --theme-bg-from:     #eef2ff;   /* indigo-50 */
-  --theme-bg-to:       #ede9fe;   /* violet-50 */
-  --theme-accent:      #6366f1;   /* indigo-600 */
-  --theme-accent-hover:#4f46e5;   /* indigo-700 */
-  --theme-accent-soft: #e0e7ff;   /* indigo-100 */
-  --theme-card-border: #e0e7ff;
-  --theme-card-bg:     #ffffff;
-  --theme-glow:        rgba(99, 102, 241, 0.15);
-  --theme-reward-glow: rgba(34, 197, 94, 0.25);
+  --theme-bg-from:      #eef2ff;
+  --theme-bg-to:        #ede9fe;
+  --theme-accent:       #6366f1;
+  --theme-accent-hover: #4f46e5;
+  --theme-accent-soft:  #e0e7ff;
+  --theme-card-border:  #e0e7ff;
+  --theme-card-bg:      #ffffff;
+  --theme-glow:         rgba(99, 102, 241, 0.15);
+  --theme-reward-glow:  rgba(34, 197, 94, 0.25);
+  --theme-progress:     #6366f1;
+  --theme-progress-bg:  #e0e7ff;
+  --theme-nav-active:   #6366f1;
+  --theme-nav-active-bg:#eef2ff;
+  --theme-xp:           #22c55e;
+  --theme-streak:       #f97316;
+  --theme-empty-icon:   #a5b4fc;
+  --theme-deco-opacity: 0.03;
+  --theme-deco-color:   #818cf8;
 }
 
 [data-theme="neo-scholar"] {
-  --theme-bg-from:     #f0fdfa;   /* teal-50 */
-  --theme-bg-to:       #f8fafc;   /* slate-50 */
-  --theme-accent:      #14b8a6;   /* teal-500 */
-  --theme-accent-hover:#0d9488;   /* teal-600 */
-  --theme-accent-soft: #ccfbf1;   /* teal-100 */
-  --theme-card-border: #e2e8f0;   /* slate-200 */
-  --theme-card-bg:     #ffffff;
-  --theme-glow:        rgba(20, 184, 166, 0.12);
-  --theme-reward-glow: rgba(20, 184, 166, 0.2);
+  --theme-bg-from:      #f0fdfa;
+  --theme-bg-to:        #f8fafc;
+  --theme-accent:       #14b8a6;
+  --theme-accent-hover: #0d9488;
+  --theme-accent-soft:  #ccfbf1;
+  --theme-card-border:  #e2e8f0;
+  --theme-card-bg:      #ffffff;
+  --theme-glow:         rgba(20, 184, 166, 0.12);
+  --theme-reward-glow:  rgba(20, 184, 166, 0.2);
+  --theme-progress:     #14b8a6;
+  --theme-progress-bg:  #ccfbf1;
+  --theme-nav-active:   #0d9488;
+  --theme-nav-active-bg:#f0fdfa;
+  --theme-xp:           #059669;
+  --theme-streak:       #ea580c;
+  --theme-empty-icon:   #5eead4;
+  --theme-deco-opacity: 0.02;
+  --theme-deco-color:   #14b8a6;
 }
 
 [data-theme="focus-mode"] {
-  --theme-bg-from:     #f8fafc;   /* slate-50 */
-  --theme-bg-to:       #f1f5f9;   /* slate-100 */
-  --theme-accent:      #475569;   /* slate-600 */
-  --theme-accent-hover:#334155;   /* slate-700 */
-  --theme-accent-soft: #e2e8f0;   /* slate-200 */
-  --theme-card-border: #e2e8f0;
-  --theme-card-bg:     #ffffff;
-  --theme-glow:        rgba(71, 85, 105, 0.08);
-  --theme-reward-glow: rgba(71, 85, 105, 0.12);
+  --theme-bg-from:      #f8fafc;
+  --theme-bg-to:        #f1f5f9;
+  --theme-accent:       #475569;
+  --theme-accent-hover: #334155;
+  --theme-accent-soft:  #e2e8f0;
+  --theme-card-border:  #e2e8f0;
+  --theme-card-bg:      #ffffff;
+  --theme-glow:         rgba(71, 85, 105, 0.08);
+  --theme-reward-glow:  rgba(71, 85, 105, 0.12);
+  --theme-progress:     #475569;
+  --theme-progress-bg:  #e2e8f0;
+  --theme-nav-active:   #334155;
+  --theme-nav-active-bg:#f1f5f9;
+  --theme-xp:           #16a34a;
+  --theme-streak:       #9ca3af;
+  --theme-empty-icon:   #94a3b8;
+  --theme-deco-opacity: 0.015;
+  --theme-deco-color:   #64748b;
 }
 
 /* ─── Theme utility classes ──────────────────────────────────────────────── */
@@ -173,6 +219,47 @@
 }
 .theme-accent-btn:hover {
   background: var(--theme-accent-hover);
+}
+
+/* Extended theme utility classes */
+.theme-progress-bar {
+  background: var(--theme-progress);
+}
+.theme-progress-track {
+  background: var(--theme-progress-bg);
+}
+.theme-nav-active {
+  background: var(--theme-nav-active-bg);
+  color: var(--theme-nav-active);
+}
+.theme-nav-active-dot {
+  background: var(--theme-nav-active);
+}
+.theme-xp-text {
+  color: var(--theme-xp);
+}
+.theme-streak-text {
+  color: var(--theme-streak);
+}
+.theme-empty-icon {
+  color: var(--theme-empty-icon);
+}
+
+/* Subtle decorative background — radial dot pattern at very low opacity */
+.theme-bg::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: var(--theme-deco-opacity);
+  background-image: radial-gradient(var(--theme-deco-color) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+/* Ensure page content sits above the decorative layer */
+.theme-bg > * {
+  position: relative;
+  z-index: 1;
 }
 
 /* Subtle glow on XP/streak/reward events */

@@ -74,7 +74,7 @@ export function AppNav() {
     <>
       {/* ── Mobile: thin top header ──────────────────────────────────────── */}
       <header className="md:hidden fixed top-0 inset-x-0 z-30 bg-white border-b border-gray-100 shadow-sm h-11 flex items-center justify-between px-4">
-        <span className="font-black text-indigo-600 text-base tracking-tight">MathAI</span>
+        <span className="font-black text-base tracking-tight" style={{ color: "var(--theme-accent)" }}>MathAI</span>
         <button
           onClick={() => void handleSignOut()}
           disabled={signingOut}
@@ -96,8 +96,8 @@ export function AppNav() {
                 className={cn(
                   "flex-1 flex flex-col items-center justify-center gap-0.5 text-center transition-colors",
                   active
-                    ? "text-indigo-600"
-                    : "text-gray-400 hover:text-indigo-400",
+                    ? "[color:var(--theme-nav-active)]"
+                    : "text-gray-400 hover:[color:var(--theme-nav-active,#818cf8)]",
                 )}
               >
                 <span className={cn("text-lg leading-none", active && "scale-110 transition-transform")}>
@@ -105,12 +105,12 @@ export function AppNav() {
                 </span>
                 <span className={cn(
                   "text-[9px] font-bold leading-none",
-                  active ? "text-indigo-600" : "text-gray-400",
+                  active ? "[color:var(--theme-nav-active)]" : "text-gray-400",
                 )}>
                   {item.label}
                 </span>
                 {active && (
-                  <span className="w-1 h-1 rounded-full bg-indigo-600 mt-0.5" />
+                  <span className="w-1 h-1 rounded-full theme-nav-active-dot mt-0.5" />
                 )}
               </Link>
             );
@@ -144,13 +144,14 @@ export function AppNav() {
                 className={cn(
                   "flex items-center gap-3 px-3 py-3 rounded-2xl font-bold text-sm transition-all",
                   active
-                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-200"
+                    ? "text-white shadow-md"
                     : isAdminLink
                       ? "text-amber-600 hover:bg-amber-50 hover:text-amber-700 border border-amber-200"
                       : isParentLink
                         ? "text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 border border-emerald-200"
-                        : "text-gray-500 hover:bg-indigo-50 hover:text-indigo-600",
+                        : "text-gray-500 hover:text-gray-700",
                 )}
+                style={active ? { background: "var(--theme-accent)" } : undefined}
               >
                 <span className="text-xl shrink-0">{item.icon}</span>
                 <span className="hidden xl:block">{item.label}</span>

@@ -70,7 +70,7 @@ export default function DashboardView({ data }: Props) {
             )}
             {/* Streak */}
             <div className="bg-white rounded-2xl p-3 border border-gray-100 text-center">
-              <p className="text-lg font-bold text-orange-500">
+              <p className="text-lg font-bold theme-streak-text">
                 {streak?.currentStreak ?? 0}
               </p>
               <p className="text-[10px] text-gray-400 font-medium uppercase">Day Streak</p>
@@ -78,7 +78,7 @@ export default function DashboardView({ data }: Props) {
             {/* XP */}
             {xp && (
               <div className="bg-white rounded-2xl p-3 border border-gray-100 text-center">
-                <p className="text-lg font-bold text-purple-600">{xp.totalXP}</p>
+                <p className="text-lg font-bold theme-xp-text">{xp.totalXP}</p>
                 <p className="text-[10px] text-gray-400 font-medium uppercase">Total XP</p>
               </div>
             )}
@@ -111,7 +111,7 @@ export default function DashboardView({ data }: Props) {
         {continueLearning && (
           <Link
             href={`/practice?topicId=${continueLearning.topicId}`}
-            className="block bg-indigo-600 hover:bg-indigo-700 rounded-2xl p-5 text-white shadow-md transition-colors"
+            className="block theme-accent-btn rounded-2xl p-5 shadow-md transition-colors"
           >
             <div className="flex items-center gap-4">
               <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-2xl shrink-0">
@@ -183,9 +183,9 @@ export default function DashboardView({ data }: Props) {
               ))}
             </div>
           ) : (
-            <Link href="/practice" className="block bg-white border border-dashed border-indigo-200 rounded-xl p-6 text-center hover:border-indigo-400 transition">
-              <p className="text-2xl mb-1">🚀</p>
-              <p className="font-semibold text-indigo-600 text-sm">Start your first practice session</p>
+            <Link href="/practice" className="block bg-white border border-dashed rounded-xl p-6 text-center transition" style={{ borderColor: "var(--theme-accent-soft)" }}>
+              <p className="text-2xl mb-1 theme-empty-icon">🚀</p>
+              <p className="font-semibold text-sm" style={{ color: "var(--theme-accent)" }}>Start your first practice session</p>
             </Link>
           )}
         </section>
@@ -226,9 +226,9 @@ export default function DashboardView({ data }: Props) {
                   {progressSummary.totalXP.toLocaleString()} XP · {progressSummary.masteredTopics}/{progressSummary.totalTopics} mastered
                 </p>
                 {progressSummary.totalTopics > 0 && (
-                  <div className="mt-1.5 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="mt-1.5 h-1.5 theme-progress-track rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-indigo-500 to-emerald-500 rounded-full transition-all"
+                      className="h-full theme-progress-bar rounded-full transition-all"
                       style={{ width: `${Math.round((progressSummary.masteredTopics / progressSummary.totalTopics) * 100)}%` }}
                     />
                   </div>

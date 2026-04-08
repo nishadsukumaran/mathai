@@ -43,7 +43,7 @@ export const THEMES: ThemeMeta[] = [
     name:        "Magic Garden",
     icon:        "🌸",
     description: "Playful and warm — flowers, sunshine, and gentle colors",
-    grades:      "Grades 1-5",
+    grades:      "Best for Grades 1-2",
     accent:      "#ec4899",
   },
   {
@@ -51,7 +51,7 @@ export const THEMES: ThemeMeta[] = [
     name:        "Space Buddy",
     icon:        "🚀",
     description: "Cool and adventurous — stars, planets, and deep blues",
-    grades:      "Grades 1-5",
+    grades:      "Best for Grades 3-5",
     accent:      "#6366f1",
   },
   {
@@ -59,7 +59,7 @@ export const THEMES: ThemeMeta[] = [
     name:        "Neo Scholar",
     icon:        "📐",
     description: "Clean and focused — teal accents, calm tones",
-    grades:      "Grades 6-8",
+    grades:      "Best for Grades 6-7",
     accent:      "#14b8a6",
   },
   {
@@ -67,17 +67,31 @@ export const THEMES: ThemeMeta[] = [
     name:        "Focus Mode",
     icon:        "🎯",
     description: "Minimal distractions — neutral palette, sharp typography",
-    grades:      "Grades 6-8",
+    grades:      "Best for Grade 8+",
     accent:      "#64748b",
   },
 ];
 
 // ─── Grade-based auto-selection ──────────────────────────────────────────────
 
+/**
+ * Maps grade to the most appropriate default theme.
+ *   G1-G2 → magic-garden  (most playful — warm colors, inviting)
+ *   G3-G5 → space-buddy   (playful but calmer — cool adventure vibe)
+ *   G6-G7 → neo-scholar   (clean, professional — teal accents)
+ *   G8+   → focus-mode    (minimal, mature — neutral palette)
+ */
 export function themeForGrade(grade: string): ThemeId {
   const num = parseInt(grade.replace(/\D/g, ""), 10);
-  if (isNaN(num) || num <= 5) return "space-buddy";
-  return "neo-scholar";
+  if (isNaN(num) || num <= 2) return "magic-garden";
+  if (num <= 5)               return "space-buddy";
+  if (num <= 7)               return "neo-scholar";
+  return "focus-mode";
+}
+
+/** Returns the recommended ThemeId for a grade (used for "Recommended" badge in picker) */
+export function recommendedThemeForGrade(grade: string): ThemeId {
+  return themeForGrade(grade);
 }
 
 // ─── LocalStorage key ────────────────────────────────────────────────────────

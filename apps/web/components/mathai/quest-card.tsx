@@ -68,7 +68,10 @@ export function QuestCard({ quest, className }: QuestCardProps) {
       {/* Progress bar */}
       <div className="mt-3 space-y-1">
         <div
-          className="h-2 w-full overflow-hidden rounded-full bg-slate-200"
+          className={cn(
+            "h-2 w-full overflow-hidden rounded-full",
+            isComplete ? "bg-emerald-100" : "theme-progress-track",
+          )}
           role="progressbar"
           aria-valuenow={currentCount}
           aria-valuemin={0}
@@ -78,7 +81,7 @@ export function QuestCard({ quest, className }: QuestCardProps) {
           <div
             className={cn(
               "h-full rounded-full transition-all duration-500 ease-out",
-              isComplete ? "bg-emerald-500" : "bg-indigo-500"
+              isComplete ? "bg-emerald-500" : "theme-progress-bar",
             )}
             style={{ width: `${progressPct}%` }}
           />
