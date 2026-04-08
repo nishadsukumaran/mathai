@@ -11,7 +11,9 @@
       "Bash(cd \"C:/Users/NishadSukumaran/.claude/projects/MathAI\" && npx tsc --noEmit --project apps/web/tsconfig.json 2>&1 | head -10)",
       "Bash(npx vitest:*)",
       "Bash(ls vitest*)",
-      "Bash(ls tsconfig*.json)"
+      "Bash(ls tsconfig*.json)",
+      "Bash(DATABASE_URL=\"postgresql://placeholder:placeholder@localhost:5432/placeholder\" npx prisma:*)",
+      "Bash(DATABASE_URL=\"postgresql://placeholder:placeholder@localhost:5432/placeholder\" npx next build)"
     ]
   }
 }
