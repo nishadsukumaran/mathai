@@ -45,7 +45,7 @@ export default function DashboardView({ data }: Props) {
           <div className="flex items-center gap-4">
             <button
               onClick={() => setProfileOpen(true)}
-              className="relative w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xl font-black text-white shadow-md hover:scale-105 transition-transform shrink-0"
+              className="relative w-12 h-12 rounded-full theme-hero-gradient flex items-center justify-center text-xl font-black text-white shadow-md hover:scale-105 transition-transform shrink-0"
               aria-label="Open profile"
             >
               {student.name?.[0]?.toUpperCase() ?? "S"}
@@ -64,13 +64,13 @@ export default function DashboardView({ data }: Props) {
           <div className="grid grid-cols-3 gap-3">
             {/* Level */}
             {progressSummary && (
-              <div className="bg-white rounded-2xl p-3 border border-gray-100 text-center">
-                <p className="text-lg font-bold text-indigo-600">{progressSummary.level}</p>
+              <div className="bg-white rounded-2xl p-3 border theme-stat-border text-center">
+                <p className="text-lg font-bold" style={{ color: "var(--theme-stat-accent)" }}>{progressSummary.level}</p>
                 <p className="text-[10px] text-gray-400 font-medium uppercase">Level</p>
               </div>
             )}
             {/* Streak */}
-            <div className="bg-white rounded-2xl p-3 border border-gray-100 text-center">
+            <div className="bg-white rounded-2xl p-3 border theme-stat-border text-center">
               <p className="text-lg font-bold theme-streak-text">
                 {streak?.currentStreak ?? 0}
               </p>
@@ -78,7 +78,7 @@ export default function DashboardView({ data }: Props) {
             </div>
             {/* XP */}
             {xp && (
-              <div className="bg-white rounded-2xl p-3 border border-gray-100 text-center">
+              <div className="bg-white rounded-2xl p-3 border theme-stat-border text-center">
                 <p className="text-lg font-bold theme-xp-text">{xp.totalXP}</p>
                 <p className="text-[10px] text-gray-400 font-medium uppercase">Total XP</p>
               </div>
@@ -93,7 +93,7 @@ export default function DashboardView({ data }: Props) {
 
         {/* ── Getting Started (0 XP) ──────────────────────────────────── */}
         {progressSummary && progressSummary.totalXP === 0 && (
-          <section className="bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl p-5 text-white">
+          <section className="theme-hero-gradient rounded-2xl p-5 text-white">
             <h2 className="font-bold text-base mb-1">Welcome to MathAI!</h2>
             <p className="text-indigo-200 text-xs mb-3">Pick your first action to get started.</p>
             <div className="grid grid-cols-3 gap-2">
@@ -212,7 +212,8 @@ export default function DashboardView({ data }: Props) {
               ))}
             </div>
           ) : (
-            <div className="bg-white border border-gray-100 rounded-xl p-5 text-center">
+            <div className="bg-white border rounded-xl p-5 text-center theme-stat-border">
+              <p className="theme-empty-icon text-2xl mb-1">✨</p>
               <p className="text-gray-400 text-sm">No active quests — check back tomorrow!</p>
             </div>
           )}
@@ -222,7 +223,7 @@ export default function DashboardView({ data }: Props) {
         {progressSummary && (
           <Link href="/progress" className="block bg-white rounded-xl p-4 border border-gray-100 hover:border-indigo-200 transition-all">
             <div className="flex items-center gap-4">
-              <div className="shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex flex-col items-center justify-center text-white">
+              <div className="shrink-0 w-12 h-12 rounded-xl theme-hero-gradient flex flex-col items-center justify-center text-white">
                 <span className="text-[10px] font-semibold opacity-80">Lvl</span>
                 <span className="text-lg font-bold leading-none">{progressSummary.level}</span>
               </div>

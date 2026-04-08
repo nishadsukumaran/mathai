@@ -16,6 +16,7 @@ import { SessionProvider, useSession } from "next-auth/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { ThemeProvider } from "@/lib/theme";
+import { ThemeAtmosphere } from "@/components/mathai/ThemeAtmosphere";
 
 /**
  * Inner wrapper that reads the session grade for auto-theme selection.
@@ -24,7 +25,12 @@ import { ThemeProvider } from "@/lib/theme";
 function ThemeWithSession({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
   const grade = (session?.user as { grade?: string } | undefined)?.grade;
-  return <ThemeProvider defaultGrade={grade}>{children}</ThemeProvider>;
+  return (
+    <ThemeProvider defaultGrade={grade}>
+      <ThemeAtmosphere />
+      {children}
+    </ThemeProvider>
+  );
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {

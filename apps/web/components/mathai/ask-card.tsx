@@ -81,24 +81,35 @@ export function AskCard({ grade, className }: AskCardProps) {
     <>
       <div
         className={cn(
-          "bg-gradient-to-r from-indigo-500 to-purple-600",
+          "theme-ask-gradient relative overflow-hidden",
           "rounded-3xl shadow-lg p-5 text-white",
           className,
         )}
       >
+        {/* Decorative corner motif — theme-aware sparkle */}
+        <div className="absolute top-2 right-3 pointer-events-none opacity-[0.15]" aria-hidden="true">
+          <svg width="36" height="36" viewBox="0 0 36 36">
+            <path d="M18 0 L20 14 L36 18 L20 20 L18 36 L16 20 L0 18 L16 14 Z" fill="white" />
+          </svg>
+        </div>
+        <div className="absolute bottom-1 left-3 pointer-events-none opacity-[0.08]" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 20 20">
+            <path d="M10 0 L12 8 L20 10 L12 12 L10 20 L8 12 L0 10 L8 8 Z" fill="white" />
+          </svg>
+        </div>
         {/* Header */}
-        <div className="flex items-center gap-2 mb-3">
+        <div className="relative flex items-center gap-2 mb-3">
           <span className="text-2xl">🤖</span>
           <div>
             <p className="font-black text-base leading-tight">Ask MathAI</p>
-            <p className="text-indigo-200 text-xs leading-tight">
+            <p className="text-white/60 text-xs leading-tight">
               Got a maths question? Just ask!
             </p>
           </div>
         </div>
 
         {/* Input row */}
-        <div className="flex gap-2">
+        <div className="relative flex gap-2">
           <input
             ref={inputRef}
             type="text"
@@ -127,7 +138,7 @@ export function AskCard({ grade, className }: AskCardProps) {
         </div>
 
         {/* Quick-ask chips */}
-        <div className="flex gap-2 mt-3 overflow-x-auto scrollbar-none">
+        <div className="relative flex gap-2 mt-3 overflow-x-auto scrollbar-none">
           {["What is…?", "How do I…?", "Why does…?"].map((chip) => (
             <button
               key={chip}

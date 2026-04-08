@@ -98,25 +98,30 @@
 /* Components inherit these — no Tailwind changes needed.                    */
 
 :root {
-  --theme-bg-from:      #eef2ff;   /* indigo-50 */
-  --theme-bg-to:        #f5f3ff;   /* purple-50 */
-  --theme-accent:       #6366f1;   /* indigo-600 */
-  --theme-accent-hover: #4f46e5;   /* indigo-700 */
-  --theme-accent-soft:  #e0e7ff;   /* indigo-100 */
-  --theme-card-border:  #f1f5f9;   /* slate-100 */
+  --theme-bg-from:      #eef2ff;
+  --theme-bg-to:        #f5f3ff;
+  --theme-accent:       #6366f1;
+  --theme-accent-hover: #4f46e5;
+  --theme-accent-soft:  #e0e7ff;
+  --theme-card-border:  #f1f5f9;
   --theme-card-bg:      #ffffff;
   --theme-glow:         rgba(99, 102, 241, 0.15);
   --theme-reward-glow:  rgba(34, 197, 94, 0.25);
-  /* Extended tokens */
-  --theme-progress:     #6366f1;   /* progress bar fill */
-  --theme-progress-bg:  #e2e8f0;   /* progress bar track */
-  --theme-nav-active:   #6366f1;   /* active nav item */
-  --theme-nav-active-bg:#eef2ff;   /* active nav bg wash */
-  --theme-xp:           #22c55e;   /* XP text/badge */
-  --theme-streak:       #f97316;   /* streak accent */
-  --theme-empty-icon:   #a5b4fc;   /* empty-state illustration tint */
-  --theme-deco-opacity: 0.03;      /* decorative pattern intensity */
-  --theme-deco-color:   #6366f1;   /* decorative pattern tint */
+  --theme-progress:     #6366f1;
+  --theme-progress-bg:  #e2e8f0;
+  --theme-nav-active:   #6366f1;
+  --theme-nav-active-bg:#eef2ff;
+  --theme-xp:           #22c55e;
+  --theme-streak:       #f97316;
+  --theme-empty-icon:   #a5b4fc;
+  --theme-deco-opacity: 0.03;
+  --theme-deco-color:   #6366f1;
+  /* Surface gradients */
+  --theme-hero-from:    #6366f1;
+  --theme-hero-to:      #8b5cf6;
+  --theme-ask-from:     #6366f1;
+  --theme-ask-to:       #7c3aed;
+  --theme-stat-accent:  #6366f1;
 }
 
 [data-theme="magic-garden"] {
@@ -138,6 +143,11 @@
   --theme-empty-icon:   #f9a8d4;
   --theme-deco-opacity: 0.04;
   --theme-deco-color:   #ec4899;
+  --theme-hero-from:    #ec4899;
+  --theme-hero-to:      #f472b6;
+  --theme-ask-from:     #db2777;
+  --theme-ask-to:       #e879a8;
+  --theme-stat-accent:  #ec4899;
 }
 
 [data-theme="space-buddy"] {
@@ -159,6 +169,11 @@
   --theme-empty-icon:   #a5b4fc;
   --theme-deco-opacity: 0.03;
   --theme-deco-color:   #818cf8;
+  --theme-hero-from:    #6366f1;
+  --theme-hero-to:      #8b5cf6;
+  --theme-ask-from:     #4f46e5;
+  --theme-ask-to:       #7c3aed;
+  --theme-stat-accent:  #6366f1;
 }
 
 [data-theme="neo-scholar"] {
@@ -180,6 +195,11 @@
   --theme-empty-icon:   #5eead4;
   --theme-deco-opacity: 0.02;
   --theme-deco-color:   #14b8a6;
+  --theme-hero-from:    #0d9488;
+  --theme-hero-to:      #14b8a6;
+  --theme-ask-from:     #0f766e;
+  --theme-ask-to:       #14b8a6;
+  --theme-stat-accent:  #14b8a6;
 }
 
 [data-theme="focus-mode"] {
@@ -201,6 +221,11 @@
   --theme-empty-icon:   #94a3b8;
   --theme-deco-opacity: 0.015;
   --theme-deco-color:   #64748b;
+  --theme-hero-from:    #334155;
+  --theme-hero-to:      #475569;
+  --theme-ask-from:     #1e293b;
+  --theme-ask-to:       #334155;
+  --theme-stat-accent:  #475569;
 }
 
 /* ─── Theme utility classes ──────────────────────────────────────────────── */
@@ -245,6 +270,17 @@
   color: var(--theme-empty-icon);
 }
 
+/* Themed surface classes */
+.theme-hero-gradient {
+  background: linear-gradient(135deg, var(--theme-hero-from), var(--theme-hero-to));
+}
+.theme-ask-gradient {
+  background: linear-gradient(135deg, var(--theme-ask-from), var(--theme-ask-to));
+}
+.theme-stat-border {
+  border-color: color-mix(in srgb, var(--theme-stat-accent) 20%, transparent);
+}
+
 /* Subtle decorative background — radial dot pattern at very low opacity.
    Uses position:fixed so it never affects document flow or layout. */
 .theme-bg::before {
@@ -256,6 +292,25 @@
   opacity: var(--theme-deco-opacity);
   background-image: radial-gradient(var(--theme-deco-color) 1px, transparent 1px);
   background-size: 24px 24px;
+}
+
+/* ─── Theme atmosphere animations ────────────────────────────────────────── */
+@keyframes theme-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%      { transform: translateY(-12px) rotate(3deg); }
+}
+@keyframes theme-drift {
+  0%, 100% { transform: translateX(0) translateY(0); }
+  33%      { transform: translateX(6px) translateY(-8px); }
+  66%      { transform: translateX(-4px) translateY(-4px); }
+}
+@keyframes theme-twinkle {
+  0%, 100% { opacity: 0.15; transform: scale(1); }
+  50%      { opacity: 0.4;  transform: scale(1.15); }
+}
+@keyframes theme-pulse-soft {
+  0%, 100% { opacity: 0.06; }
+  50%      { opacity: 0.12; }
 }
 
 /* Subtle glow on XP/streak/reward events */
