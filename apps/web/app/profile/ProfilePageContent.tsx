@@ -15,7 +15,7 @@ import { cn }                   from "@/lib/utils";
 import { useProfile }           from "@/hooks/use-profile";
 import { PetShowcase, PetCollection } from "@/components/mathai/pet";
 import { queryKeys }            from "@/lib/query-keys";
-import { useTheme, THEMES, themeForGrade, recommendedThemeForGrade } from "@/lib/theme";
+import { ThemePicker }           from "@/components/mathai/ThemePicker";
 import type {
   LearningPace,
   ExplanationStyle,
@@ -70,11 +70,6 @@ export default function ProfilePageContent() {
   const [pwSuccess,     setPwSuccess]     = useState(false);
   const [showPwSection, setShowPwSection] = useState(false);
   const [signOutLoading, setSignOutLoading] = useState(false);
-  const { theme, setTheme } = useTheme();
-  const [autoTheme, setAutoTheme] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return !localStorage.getItem("mathai-theme");
-  });
 
   // Populate from loaded profile
   useEffect(() => {
@@ -90,10 +85,6 @@ export default function ProfilePageContent() {
     }
   }, [profile]);
 
-  // Auto-switch theme when grade changes (if auto mode is on)
-  useEffect(() => {
-    if (autoTheme) setTheme(themeForGrade(grade));
-  }, [grade, autoTheme, setTheme]);
 
   async function handleChangePassword() {
     setPwError(null);
@@ -152,23 +143,27 @@ export default function ProfilePageContent() {
     );
   }
 
-  // Profile failed to load — show error and block the form so the user
-  // can't accidentally overwrite their real data with empty defaults.
+  // Profile failed to load — show error but still render theme picker
+  // so the user can change their theme even without a loaded profile.
   if (profileError && !profile) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-        <div className="text-center max-w-sm p-8 bg-white rounded-3xl shadow-md border border-red-100">
-          <p className="text-4xl mb-4">⚠️</p>
-          <h2 className="text-xl font-black text-gray-800 mb-2">Could not load your profile</h2>
-          <p className="text-gray-500 text-sm mb-6">
-            Please check your connection and try again. Your existing settings are safe.
-          </p>
-          <a
-            href="/profile"
-            className="inline-block bg-indigo-600 text-white font-bold px-6 py-3 rounded-2xl hover:bg-indigo-700 transition"
-          >
-            Retry
-          </a>
+      <div className="min-h-screen theme-bg">
+        <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
+          <div className="text-center max-w-sm mx-auto p-8 bg-white rounded-3xl shadow-md border border-red-100">
+            <p className="text-4xl mb-4">⚠️</p>
+            <h2 className="text-xl font-black text-gray-800 mb-2">Could not load your profile</h2>
+            <p className="text-gray-500 text-sm mb-6">
+              Please check your connection and try again. Your existing settings are safe.
+            </p>
+            <a
+              href="/profile"
+              className="inline-block bg-indigo-600 text-white font-bold px-6 py-3 rounded-2xl hover:bg-indigo-700 transition"
+            >
+              Retry
+            </a>
+          </div>
+          {/* Theme picker always accessible — no backend dependency */}
+          <ThemePicker grade={grade} />
         </div>
       </div>
     );
@@ -218,68 +213,7 @@ export default function ProfilePageContent() {
         </section>
 
         {/* Theme */}
-        <section className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Theme</p>
-              <p className="text-xs text-slate-400 mt-0.5">Personalise how MathAI looks</p>
-            </div>
-            <button
-              onClick={() => {
-                const next = !autoTheme;
-                setAutoTheme(next);
-                if (next) {
-                  localStorage.removeItem("mathai-theme");
-                  setTheme(themeForGrade(grade));
-                }
-              }}
-              className={cn(
-                "text-xs font-bold px-3 py-1.5 rounded-full border-2 transition",
-                autoTheme
-                  ? "border-emerald-400 bg-emerald-50 text-emerald-600"
-                  : "border-gray-200 text-gray-400 hover:border-gray-300",
-              )}
-            >
-              {autoTheme ? "Auto (by grade)" : "Manual"}
-            </button>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {THEMES.map((t) => {
-              const isRecommended = t.id === recommendedThemeForGrade(grade);
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => { setAutoTheme(false); setTheme(t.id); }}
-                  className={cn(
-                    "relative flex items-start gap-3 p-3 rounded-2xl border-2 text-left transition",
-                    theme === t.id
-                      ? "border-current shadow-sm"
-                      : "border-gray-100 hover:border-gray-200",
-                  )}
-                  style={theme === t.id ? { borderColor: t.accent } : undefined}
-                >
-                  {isRecommended && (
-                    <span className="absolute -top-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-600 border border-emerald-200 leading-none">
-                      Recommended
-                    </span>
-                  )}
-                  <span className="text-2xl shrink-0">{t.icon}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-bold text-gray-800">{t.name}</p>
-                      <span
-                        className="w-3 h-3 rounded-full shrink-0"
-                        style={{ background: t.accent }}
-                      />
-                    </div>
-                    <p className="text-xs text-gray-400 mt-0.5">{t.description}</p>
-                    <p className="text-[10px] text-gray-300 mt-1">{t.grades}</p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </section>
+        <ThemePicker grade={grade} />
 
         {/* Learning pace */}
         <section className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 space-y-3">

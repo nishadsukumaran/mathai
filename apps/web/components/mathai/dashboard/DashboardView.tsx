@@ -18,6 +18,7 @@ import { PetCompanion }    from "@/components/mathai/pet/PetCompanion";
 import { usePetEngine }    from "@/hooks/use-pet-engine";
 import { usePet }          from "@/hooks/use-pet";
 
+import { ThemePicker }             from "@/components/mathai/ThemePicker";
 import type { DashboardViewData } from "@/types/contracts";
 import type { Grade }             from "@/types";
 
@@ -82,6 +83,11 @@ export default function DashboardView({ data }: Props) {
                 <p className="text-[10px] text-gray-400 font-medium uppercase">Total XP</p>
               </div>
             )}
+          </div>
+          {/* Compact theme switcher */}
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Theme</p>
+            <ThemePicker grade={gradeEnum} variant="compact" />
           </div>
         </header>
 
