@@ -37,7 +37,7 @@ export default function DashboardView({ data }: Props) {
   const recommendedItems = (menu?.sections ?? []).flatMap((s) => s.items).slice(0, 3);
 
   return (
-    <div className="min-h-screen bg-slate-50/50">
+    <div className="min-h-screen">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-6">
 
         {/* ── Header: Greeting + Stats ────────────────────────────────── */}

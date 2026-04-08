@@ -245,21 +245,17 @@
   color: var(--theme-empty-icon);
 }
 
-/* Subtle decorative background — radial dot pattern at very low opacity */
+/* Subtle decorative background — radial dot pattern at very low opacity.
+   Uses position:fixed so it never affects document flow or layout. */
 .theme-bg::before {
   content: "";
   position: fixed;
   inset: 0;
-  z-index: 0;
+  z-index: -1;
   pointer-events: none;
   opacity: var(--theme-deco-opacity);
   background-image: radial-gradient(var(--theme-deco-color) 1px, transparent 1px);
   background-size: 24px 24px;
-}
-/* Ensure page content sits above the decorative layer */
-.theme-bg > * {
-  position: relative;
-  z-index: 1;
 }
 
 /* Subtle glow on XP/streak/reward events */
