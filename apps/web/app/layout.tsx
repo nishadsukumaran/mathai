@@ -55,7 +55,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${nunito.variable} ${inter.variable}`}>
-      <body className="font-nunito bg-gradient-to-br from-indigo-50 to-purple-50 min-h-screen">
+      <body className="font-nunito theme-bg min-h-screen">
         <Providers>
           {/* Nav: fixed bottom bar (mobile) + fixed left sidebar (desktop) */}
           <ScrollToTop />

@@ -15,6 +15,7 @@ import { cn }                   from "@/lib/utils";
 import { useProfile }           from "@/hooks/use-profile";
 import { PetShowcase, PetCollection } from "@/components/mathai/pet";
 import { queryKeys }            from "@/lib/query-keys";
+import { useTheme, THEMES, themeForGrade, type ThemeId } from "@/lib/theme";
 import type {
   LearningPace,
   ExplanationStyle,
@@ -69,6 +70,11 @@ export default function ProfilePageContent() {
   const [pwSuccess,     setPwSuccess]     = useState(false);
   const [showPwSection, setShowPwSection] = useState(false);
   const [signOutLoading, setSignOutLoading] = useState(false);
+  const { theme, setTheme } = useTheme();
+  const [autoTheme, setAutoTheme] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !localStorage.getItem("mathai-theme");
+  });
 
   // Populate from loaded profile
   useEffect(() => {
@@ -83,6 +89,11 @@ export default function ProfilePageContent() {
       setConfidence(Math.max(1, Math.min(5, Math.round(raw / 20))));
     }
   }, [profile]);
+
+  // Auto-switch theme when grade changes (if auto mode is on)
+  useEffect(() => {
+    if (autoTheme) setTheme(themeForGrade(grade));
+  }, [grade, autoTheme, setTheme]);
 
   async function handleChangePassword() {
     setPwError(null);
@@ -201,6 +212,62 @@ export default function ProfilePageContent() {
                 )}
               >
                 {g.label}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* Theme */}
+        <section className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Theme</p>
+              <p className="text-xs text-slate-400 mt-0.5">Personalise how MathAI looks</p>
+            </div>
+            <button
+              onClick={() => {
+                const next = !autoTheme;
+                setAutoTheme(next);
+                if (next) {
+                  localStorage.removeItem("mathai-theme");
+                  setTheme(themeForGrade(grade));
+                }
+              }}
+              className={cn(
+                "text-xs font-bold px-3 py-1.5 rounded-full border-2 transition",
+                autoTheme
+                  ? "border-emerald-400 bg-emerald-50 text-emerald-600"
+                  : "border-gray-200 text-gray-400 hover:border-gray-300",
+              )}
+            >
+              {autoTheme ? "Auto (by grade)" : "Manual"}
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {THEMES.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => { setAutoTheme(false); setTheme(t.id); }}
+                className={cn(
+                  "flex items-start gap-3 p-3 rounded-2xl border-2 text-left transition",
+                  theme === t.id
+                    ? "border-current shadow-sm"
+                    : "border-gray-100 hover:border-gray-200",
+                )}
+                style={theme === t.id ? { borderColor: t.accent } : undefined}
+              >
+                <span className="text-2xl shrink-0">{t.icon}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-bold text-gray-800">{t.name}</p>
+                    <span
+                      className="w-3 h-3 rounded-full shrink-0"
+                      style={{ background: t.accent }}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-400 mt-0.5">{t.description}</p>
+                  <p className="text-[10px] text-gray-300 mt-1">{t.grades}</p>
+                </div>
               </button>
             ))}
           </div>

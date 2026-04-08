@@ -93,6 +93,98 @@
   --sidebar-ring: oklch(0.439 0 0);
 }
 
+/* ─── Theme Layer ────────────────────────────────────────────────────────── */
+/* Applied via data-theme attribute on <body>.                               */
+/* Components inherit these — no Tailwind changes needed.                    */
+
+:root {
+  --theme-bg-from:     #eef2ff;   /* indigo-50 */
+  --theme-bg-to:       #f5f3ff;   /* purple-50 */
+  --theme-accent:      #6366f1;   /* indigo-600 */
+  --theme-accent-hover:#4f46e5;   /* indigo-700 */
+  --theme-accent-soft: #e0e7ff;   /* indigo-100 */
+  --theme-card-border: #f1f5f9;   /* slate-100 */
+  --theme-card-bg:     #ffffff;
+  --theme-glow:        rgba(99, 102, 241, 0.15);
+  --theme-reward-glow: rgba(34, 197, 94, 0.25);
+}
+
+[data-theme="magic-garden"] {
+  --theme-bg-from:     #fdf2f8;   /* pink-50 */
+  --theme-bg-to:       #fef9c3;   /* yellow-50 */
+  --theme-accent:      #ec4899;   /* pink-500 */
+  --theme-accent-hover:#db2777;   /* pink-600 */
+  --theme-accent-soft: #fce7f3;   /* pink-100 */
+  --theme-card-border: #fce7f3;
+  --theme-card-bg:     #fffbfe;
+  --theme-glow:        rgba(236, 72, 153, 0.12);
+  --theme-reward-glow: rgba(250, 204, 21, 0.3);
+}
+
+[data-theme="space-buddy"] {
+  --theme-bg-from:     #eef2ff;   /* indigo-50 */
+  --theme-bg-to:       #ede9fe;   /* violet-50 */
+  --theme-accent:      #6366f1;   /* indigo-600 */
+  --theme-accent-hover:#4f46e5;   /* indigo-700 */
+  --theme-accent-soft: #e0e7ff;   /* indigo-100 */
+  --theme-card-border: #e0e7ff;
+  --theme-card-bg:     #ffffff;
+  --theme-glow:        rgba(99, 102, 241, 0.15);
+  --theme-reward-glow: rgba(34, 197, 94, 0.25);
+}
+
+[data-theme="neo-scholar"] {
+  --theme-bg-from:     #f0fdfa;   /* teal-50 */
+  --theme-bg-to:       #f8fafc;   /* slate-50 */
+  --theme-accent:      #14b8a6;   /* teal-500 */
+  --theme-accent-hover:#0d9488;   /* teal-600 */
+  --theme-accent-soft: #ccfbf1;   /* teal-100 */
+  --theme-card-border: #e2e8f0;   /* slate-200 */
+  --theme-card-bg:     #ffffff;
+  --theme-glow:        rgba(20, 184, 166, 0.12);
+  --theme-reward-glow: rgba(20, 184, 166, 0.2);
+}
+
+[data-theme="focus-mode"] {
+  --theme-bg-from:     #f8fafc;   /* slate-50 */
+  --theme-bg-to:       #f1f5f9;   /* slate-100 */
+  --theme-accent:      #475569;   /* slate-600 */
+  --theme-accent-hover:#334155;   /* slate-700 */
+  --theme-accent-soft: #e2e8f0;   /* slate-200 */
+  --theme-card-border: #e2e8f0;
+  --theme-card-bg:     #ffffff;
+  --theme-glow:        rgba(71, 85, 105, 0.08);
+  --theme-reward-glow: rgba(71, 85, 105, 0.12);
+}
+
+/* ─── Theme utility classes ──────────────────────────────────────────────── */
+.theme-bg {
+  background: linear-gradient(135deg, var(--theme-bg-from), var(--theme-bg-to));
+}
+
+.theme-card {
+  background: var(--theme-card-bg);
+  border-color: var(--theme-card-border);
+}
+
+.theme-accent-btn {
+  background: var(--theme-accent);
+  color: white;
+}
+.theme-accent-btn:hover {
+  background: var(--theme-accent-hover);
+}
+
+/* Subtle glow on XP/streak/reward events */
+@keyframes reward-glow {
+  0%   { box-shadow: 0 0 0 0 var(--theme-reward-glow); }
+  50%  { box-shadow: 0 0 16px 4px var(--theme-reward-glow); }
+  100% { box-shadow: 0 0 0 0 var(--theme-reward-glow); }
+}
+.animate-reward-glow {
+  animation: reward-glow 1.2s ease-in-out;
+}
+
 /* ─── Base resets ─────────────────────────────────────────────────────────── */
 @layer base {
   *,
