@@ -5,9 +5,6 @@
  * in development (hot-reloading) and gives the entire API a single
  * database connection pool.
  *
- * Prisma 7+ requires passing the database URL via the datasourceUrl
- * constructor option since url/directUrl are no longer supported in schema.prisma.
- *
  * Usage:
  *   import { prisma } from "@/api/lib/prisma";
  */
@@ -21,7 +18,6 @@ const globalForPrisma = globalThis as unknown as {
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
-    datasourceUrl: process.env.DATABASE_URL,
     log:
       process.env.NODE_ENV === "development"
         ? ["query", "warn", "error"]
