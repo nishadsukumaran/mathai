@@ -15,6 +15,7 @@ import { cn }                   from "@/lib/utils";
 import { useProfile }           from "@/hooks/use-profile";
 import { PetShowcase, PetCollection } from "@/components/mathai/pet";
 import { queryKeys }            from "@/lib/query-keys";
+import { ThemePicker }           from "@/components/mathai/ThemePicker";
 import type {
   LearningPace,
   ExplanationStyle,
@@ -84,6 +85,7 @@ export default function ProfilePageContent() {
     }
   }, [profile]);
 
+
   async function handleChangePassword() {
     setPwError(null);
     if (newPw !== confirmNewPw) { setPwError("Passwords don't match."); return; }
@@ -141,23 +143,27 @@ export default function ProfilePageContent() {
     );
   }
 
-  // Profile failed to load — show error and block the form so the user
-  // can't accidentally overwrite their real data with empty defaults.
+  // Profile failed to load — show error but still render theme picker
+  // so the user can change their theme even without a loaded profile.
   if (profileError && !profile) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-        <div className="text-center max-w-sm p-8 bg-white rounded-3xl shadow-md border border-red-100">
-          <p className="text-4xl mb-4">⚠️</p>
-          <h2 className="text-xl font-black text-gray-800 mb-2">Could not load your profile</h2>
-          <p className="text-gray-500 text-sm mb-6">
-            Please check your connection and try again. Your existing settings are safe.
-          </p>
-          <a
-            href="/profile"
-            className="inline-block bg-indigo-600 text-white font-bold px-6 py-3 rounded-2xl hover:bg-indigo-700 transition"
-          >
-            Retry
-          </a>
+      <div className="min-h-screen theme-bg">
+        <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
+          <div className="text-center max-w-sm mx-auto p-8 bg-white rounded-3xl shadow-md border border-red-100">
+            <p className="text-4xl mb-4">⚠️</p>
+            <h2 className="text-xl font-black text-gray-800 mb-2">Could not load your profile</h2>
+            <p className="text-gray-500 text-sm mb-6">
+              Please check your connection and try again. Your existing settings are safe.
+            </p>
+            <a
+              href="/profile"
+              className="inline-block bg-indigo-600 text-white font-bold px-6 py-3 rounded-2xl hover:bg-indigo-700 transition"
+            >
+              Retry
+            </a>
+          </div>
+          {/* Theme picker always accessible — no backend dependency */}
+          <ThemePicker grade={grade} />
         </div>
       </div>
     );
@@ -205,6 +211,9 @@ export default function ProfilePageContent() {
             ))}
           </div>
         </section>
+
+        {/* Theme */}
+        <ThemePicker grade={grade} />
 
         {/* Learning pace */}
         <section className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 space-y-3">

@@ -21,7 +21,7 @@ export function CorrectBurst({ show }: { show: boolean }) {
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 1.5, opacity: 0 }}
           transition={{ duration: 0.4, ease: "easeOut" }}
-          className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 text-lg"
+          className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 text-lg animate-reward-glow"
         >
           ✓
         </motion.div>
@@ -43,7 +43,7 @@ export function XPFloat({ amount, show }: { amount: number; show: boolean }) {
           transition={{ duration: 0.8, ease: "easeOut" }}
           className="fixed bottom-28 left-1/2 -translate-x-1/2 z-50 pointer-events-none"
         >
-          <span className="text-lg font-bold text-emerald-500 bg-emerald-50 px-3 py-1 rounded-full shadow-sm">
+          <span className="text-lg font-bold text-emerald-500 bg-emerald-50 px-3 py-1 rounded-full shadow-sm animate-reward-glow">
             +{amount} XP
           </span>
         </motion.div>
@@ -79,7 +79,7 @@ export function StreakPulse({ streak }: { streak: number }) {
       initial={{ scale: 1 }}
       animate={{ scale: [1, 1.3, 1] }}
       transition={{ duration: 0.6, ease: "easeInOut" }}
-      className="inline-block"
+      className="inline-block animate-reward-glow rounded-full"
     >
       🔥
     </motion.span>
