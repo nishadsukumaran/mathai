@@ -9,6 +9,7 @@ import { getStudentWithProfile } from "../services/studentService";
 import { getGamificationDashboard } from "../services/gamificationService";
 import { getDailyQuests } from "../services/questService";
 import { trackQuestProgress } from "../services/questProgressService";
+import { touchStreak } from "../services/streakService";
 import { getProgressSummary } from "../services/progressService";
 import { send } from "../lib/response";
 import { prisma } from "../lib/prisma";
@@ -23,7 +24,13 @@ export async function getDashboard(req: Request, res: Response, next: NextFuncti
       throw new ForbiddenError("Cannot access another student's dashboard");
     }
 
-    // ── 1. Fetch all shared data in a single parallel round-trip ────────────
+    // ── 1. Touch the streak BEFORE fetching so the response reflects today's
+    //      updated value. touchStreak is idempotent within the same calendar
+    //      day (returns early without DB write), so this is cheap on repeat
+    //      visits. Awaited so the following streak.findUnique sees fresh data.
+    await touchStreak(studentId);
+
+    // ── 2. Fetch all shared data in a single parallel round-trip ────────────
     // Each service used to independently fetch profile/streak/topicProgress.
     // We do it once here and pass it down — eliminates 3× upsert duplicates
     // and 3× streak/topicProgress duplicate reads per request.

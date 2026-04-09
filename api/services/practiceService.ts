@@ -34,6 +34,7 @@ import { studentMemoryService }    from "../../ai/services/studentMemoryService"
 import { appendAfterCompletion }      from "./topicAssignmentService";
 import { getMasteredTopicNamesForGrade } from "./curriculumService";
 import { trackQuestProgress, trackMultiple } from "./questProgressService";
+import { touchStreak }                   from "./streakService";
 import { learningMetrics }             from "../../services/analytics/learning_metrics";
 import { NotFoundError, ValidationError } from "../middlewares/error.middleware";
 import { evaluateAndUpdatePersonality, getPetForUser, createFirstPet, findPetForUser } from "./petService";
@@ -592,6 +593,9 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
         }
         await trackMultiple(session.userId, events);
       })(),
+      // Daily streak: completing a practice session counts as meaningful
+      // activity. touchStreak is idempotent within the same calendar day.
+      touchStreak(session.userId),
     ]).then((results) => {
       const labels = [
         "markLessonProgress",
@@ -602,6 +606,7 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
         "createFirstPet",
         "evaluateAndUpdatePersonality",
         "questProgress",
+        "touchStreak",
       ];
       for (let i = 0; i < results.length; i++) {
         const r = results[i];
