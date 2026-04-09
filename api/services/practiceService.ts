@@ -33,6 +33,7 @@ import { questionGeneratorService } from "../../ai/services/questionGeneratorSer
 import { studentMemoryService }    from "../../ai/services/studentMemoryService";
 import { appendAfterCompletion }      from "./topicAssignmentService";
 import { getMasteredTopicNamesForGrade } from "./curriculumService";
+import { trackQuestProgress, trackMultiple } from "./questProgressService";
 import { learningMetrics }             from "../../services/analytics/learning_metrics";
 import { NotFoundError, ValidationError } from "../middlewares/error.middleware";
 import { evaluateAndUpdatePersonality, getPetForUser, createFirstPet, findPetForUser } from "./petService";
@@ -252,6 +253,18 @@ export async function startSession(
       .catch((err) => console.error("[practiceService] markLessonStarted failed:", err));
   }
 
+  // Quest progress: check if this topic is new for the user (fire-and-forget).
+  // If no TopicProgress row exists yet, it's a new topic attempt.
+  void (async () => {
+    const existing = await prisma.topicProgress.findFirst({
+      where: { userId, topicId },
+      select: { id: true },
+    }).catch(() => null);
+    if (!existing) {
+      void trackQuestProgress(userId, "new_topics_attempted", 1);
+    }
+  })();
+
   const firstQuestion = questions[0];
   if (!firstQuestion) throw new ValidationError("Practice set has no questions for this topic");
 
@@ -378,6 +391,20 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
         ...(levelUp && { currentLevel: levelUp.level }),
       },
     }).catch((err) => console.error("[practiceService] XP persist failed:", err));
+  }
+
+  // 6d. Quest progress: track correct answer + correct streak (fire-and-forget)
+  if (isCorrect) {
+    // Count consecutive correct answers from the end of the responses array
+    let streak = 0;
+    for (let i = session.responses.length - 1; i >= 0; i--) {
+      if (session.responses[i]?.isCorrect) streak++;
+      else break;
+    }
+    void trackMultiple(session.userId, [
+      { key: "correct_answers", amount: 1 },
+      { key: "correct_streak",  amount: streak, maxValue: true },
+    ]);
   }
 
   // 6c. Pet unlock on level-up
@@ -547,6 +574,24 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
       // Pet personality re-evaluation — runs every 50 questions answered.
       evaluateAndUpdatePersonality(session.userId)
         .catch((err) => console.error("[practiceService] Pet personality eval failed:", (err as Error).message)),
+      // Quest progress on session complete: sessions_completed, minutes_practiced,
+      // hintless_sessions, topics_attempted, topics_mastered (if newly mastered)
+      (async () => {
+        const minutesPracticed = Math.max(
+          1,
+          Math.round((Date.now() - new Date(session.startedAt).getTime()) / 60000),
+        );
+        const events: Array<{ key: import("./questProgressService").TrackingKey; amount?: number }> = [
+          { key: "sessions_completed", amount: 1 },
+          { key: "minutes_practiced",  amount: minutesPracticed },
+          { key: "topics_attempted",   amount: 1 },
+        ];
+        if (totalHints === 0) events.push({ key: "hintless_sessions", amount: 1 });
+        if (newIsMastered && !topicProgress?.isMastered) {
+          events.push({ key: "topics_mastered", amount: 1 });
+        }
+        await trackMultiple(session.userId, events);
+      })(),
     ]).then((results) => {
       const labels = [
         "markLessonProgress",
@@ -556,6 +601,7 @@ export async function submitAnswer(params: SubmitAnswerParams): Promise<Submissi
         "inferExplanationStyle",
         "createFirstPet",
         "evaluateAndUpdatePersonality",
+        "questProgress",
       ];
       for (let i = 0; i < results.length; i++) {
         const r = results[i];

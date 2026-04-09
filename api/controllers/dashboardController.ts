@@ -8,6 +8,7 @@ import { StudentIdParamSchema } from "../validators/shared.validators";
 import { getStudentWithProfile } from "../services/studentService";
 import { getGamificationDashboard } from "../services/gamificationService";
 import { getDailyQuests } from "../services/questService";
+import { trackQuestProgress } from "../services/questProgressService";
 import { getProgressSummary } from "../services/progressService";
 import { send } from "../lib/response";
 import { prisma } from "../lib/prisma";
@@ -38,6 +39,11 @@ export async function getDashboard(req: Request, res: Response, next: NextFuncti
     ]);
 
     if (!user) throw new NotFoundError("Student", studentId);
+
+    // Quest: track daily_login (fire-and-forget, idempotent via quest tracking
+    // — the quest only completes once per day because progressValue is capped
+    // at targetValue and quests expire at UTC midnight).
+    void trackQuestProgress(studentId, "daily_login", 1);
 
     const ctx = { user, profile, topicProgressRows, streak };
 

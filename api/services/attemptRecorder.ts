@@ -19,6 +19,7 @@
 import { prisma }                from "../lib/prisma";
 import { xpEngine }              from "../../services/gamification/xp_engine";
 import { studentMemoryService }  from "../../ai/services/studentMemoryService";
+import { trackQuestProgress }    from "./questProgressService";
 import { createId }              from "@paralleldrive/cuid2";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -160,6 +161,11 @@ export async function recordAttempt(req: RecordAttemptRequest): Promise<RecordAt
   // 5. Refresh memory snapshot (async, don't block response)
   studentMemoryService.refreshSnapshot(userId)
     .catch((err) => console.error("[attemptRecorder] snapshot refresh failed:", err));
+
+  // 6. Quest progress: track correct answer (fire-and-forget)
+  if (isCorrect) {
+    void trackQuestProgress(userId, "correct_answers", 1);
+  }
 
   return {
     isCorrect,
