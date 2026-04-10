@@ -219,14 +219,18 @@ function friendlySTTError(error: string): string {
     case "permission-denied":
       return "I need permission to use the microphone. Please allow it and try again.";
     case "no-speech":
-      return "I didn't hear anything. Try speaking a bit louder.";
+      return "I didn't hear anything. Try speaking a bit closer to the microphone.";
     case "audio-capture":
       return "I can't find a microphone. Is one connected?";
     case "network":
       return "I need the internet to listen. Check your connection and try again.";
     case "aborted":
       return ""; // user cancelled — no error to show
+    case "service-not-allowed":
+      return "Voice input isn't working right now. You can type your answer instead.";
+    case "language-not-supported":
+      return "I can only understand English right now. Try typing your answer.";
     default:
-      return "Something went wrong. Let's try again.";
+      return "I didn't quite catch that. Let's try again — speak slowly and clearly.";
   }
 }

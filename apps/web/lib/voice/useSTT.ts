@@ -90,8 +90,31 @@ export function useSTT(options: UseSTTOptions): UseSTTReturn {
         setState("processing");
         setRaw(transcript);
 
+        // ── Guard: very short or empty speech ──
+        const trimmed = transcript.trim();
+        if (!trimmed || trimmed.length < 2) {
+          setError("I heard something very short. Could you say that again, a little more clearly?");
+          setState("error");
+          return;
+        }
+
+        // ── Guard: gibberish detection (no letters or digits) ──
+        if (!/[a-zA-Z0-9]/.test(trimmed)) {
+          setError("I couldn't quite understand that. Try saying it slowly and clearly.");
+          setState("error");
+          return;
+        }
+
         // Normalize (or pass through)
-        const result = normalize ? normalizeMath(transcript) : transcript;
+        const result = normalize ? normalizeMath(trimmed) : trimmed;
+
+        // ── Guard: normalization produced nothing useful ──
+        if (!result.trim()) {
+          setError("I couldn't understand that as a math answer. Let's try again.");
+          setState("error");
+          return;
+        }
+
         setNorm(result);
 
         // Short delay to show "processing" state, then move to confirming

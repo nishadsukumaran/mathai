@@ -9,6 +9,7 @@
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import type { PracticeQuestionItem, SubmitResultView } from "@/types/contracts";
 import type { VisualPlan, SessionNextStep } from "@mathai/shared-types";
 import type { ScenePlan }    from "@/lib/scene-engine/types";
@@ -63,6 +64,9 @@ export default function PracticeView(props: Props) {
     onStartVisualRecovery, onRecoveryAnimationDone, onRecoveryAnswer, onEndRecovery,
   } = props;
   const router   = useRouter();
+  const { data: authSession } = useSession();
+  const gradeNum = parseInt(((authSession?.user as { grade?: string } | undefined)?.grade ?? "G4").replace(/\D/g, ""), 10);
+  const isJunior = !isNaN(gradeNum) && gradeNum <= 5;
   const totalQ   = session?.questions.length ?? 5;
   const idx      = session?.currentIndex ?? 0;
   const progress = totalQ > 0 ? Math.round((idx / totalQ) * 100) : 0;
@@ -168,7 +172,7 @@ export default function PracticeView(props: Props) {
                   <h2 className="text-lg font-bold text-gray-900 leading-relaxed flex-1">
                     <MathText text={currentQuestion.prompt} />
                   </h2>
-                  <SpeakerButton text={currentQuestion.prompt} label="Read question aloud" className="shrink-0 mt-0.5" />
+                  <SpeakerButton text={currentQuestion.prompt} label="Read question aloud" autoRead={isJunior} className="shrink-0 mt-0.5" />
                 </div>
 
                 {/* Confidence (pre-answer only, hide during retry) */}

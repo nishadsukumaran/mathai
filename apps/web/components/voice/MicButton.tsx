@@ -40,7 +40,27 @@ export function MicButton({
 }: Props) {
   const stt = useSTT({ onResult, normalize });
 
-  if (!stt.available) return null;
+  // ─── Unsupported browser: show a disabled mic with gentle tooltip ────────
+  if (!stt.available) {
+    return (
+      <div className={`relative ${className}`}>
+        <button
+          type="button"
+          disabled
+          title="Voice input isn't supported in this browser. Try Chrome or Edge — or just type!"
+          aria-label="Voice input not available"
+          className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-slate-50 text-slate-300 cursor-not-allowed"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="9" y="2" width="6" height="11" rx="3" />
+            <path d="M5 10a7 7 0 0 0 14 0" />
+            <line x1="12" y1="19" x2="12" y2="22" />
+            <line x1="2" y1="2" x2="22" y2="22" />
+          </svg>
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className={`relative ${className}`}>
