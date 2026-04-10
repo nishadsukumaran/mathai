@@ -107,6 +107,7 @@ export default function AdminDashboardView({ stats }: Props) {
             <ActionLink href="/admin/users?role=parent" icon="👨‍👩‍👧" label="Parent Accounts" desc="View linked families" />
             <ActionLink href="/admin/users?isActive=false" icon="🚫" label="Disabled Accounts" desc={`${stats.disabledUsers} disabled`} />
             <ActionLink href="/admin/users?role=student" icon="🎓" label="All Students" desc="View student roster" />
+            <ActionLink href="/admin/voice" icon="🔊" label="Voice Settings" desc="TTS engine & AI voice" />
           </div>
         </Card>
 
