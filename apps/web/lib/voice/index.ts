@@ -20,3 +20,13 @@ export {
   startListening,
   selectBestVoice,
 } from "./provider";
+
+export {
+  loadVoiceConfig,
+  saveVoiceConfigOverride,
+  resolveEngine,
+  getCharUsage,
+  DEFAULT_VOICE_CONFIG,
+  STYLE_VOICE_MAP,
+} from "./voice-config";
+export type { VoiceConfig, VoiceEngine, VoiceStyle, VoiceScope } from "./voice-config";

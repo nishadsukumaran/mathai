@@ -1,141 +1,241 @@
 /**
  * @module lib/voice/provider
  *
- * Voice provider abstraction layer.
+ * Dual voice engine — dispatches TTS requests to browser or AI backend.
  *
- * Phase 1 uses the browser's Web Speech API:
- *   - SpeechSynthesis (TTS) — zero latency, works offline, good child voices
- *   - SpeechRecognition (STT) — Chrome/Edge use server-side recognition
+ * ─── Architecture ──────────────────────────────────────────────────────────
  *
- * The abstraction exists so Phase 2 can swap in cloud providers (Whisper,
- * ElevenLabs, OpenAI TTS) without changing any UI code.
+ * speak() is the single entry point. It reads VoiceConfig to decide:
+ *   "browser" → SpeechSynthesis API (free, instant, offline)
+ *   "ai"      → POST /api/voice/tts → ElevenLabs → Audio element playback
+ *   "hybrid"  → AI for scope-matched content, browser for the rest
  *
- * ─── Voice persona direction ─────────────────────────────────────────────
- * The voice should sound like a patient primary-school math teacher:
- *   - warm, clear, calm
- *   - slightly slower than default speech rate
- *   - never robotic, corporate, or overly excited
- *   - English female voice preferred (research shows children respond well
- *     to clear female voices in educational contexts)
+ * AI audio is cached in IndexedDB (via audio-cache.ts). The same text+voice
+ * combination never generates a second API call. On cache hit, the blob is
+ * replayed directly — faster than both browser TTS and a new API call.
  *
- * The selectBestVoice() function ranks available browser voices by name
- * keywords that indicate child-friendly quality (e.g. "Google UK English
- * Female", "Samantha", "Karen"). This heuristic works across Chrome, Edge,
- * Safari, and Firefox.
+ * If AI TTS fails for any reason (network, API key missing, budget exhausted),
+ * it falls back to browser TTS silently. The student never sees a broken state.
+ *
+ * STT (Speech-to-Text) is unchanged — still browser-only via SpeechRecognition.
  */
 
-// ─── TTS (Text-to-Speech) ───────────────────────────────────────────────────
+import {
+  loadVoiceConfig, resolveEngine, trackCharUsage,
+  STYLE_VOICE_MAP,
+  type VoiceConfig,
+} from "./voice-config";
+import {
+  audioCacheKey, getCachedAudio, setCachedAudio, hasCachedAudio,
+} from "./audio-cache";
+
+// ─── TTS types ──────────────────────────────────────────────────────────────
 
 export interface TTSOptions {
-  text:   string;
-  rate?:  number;   // 0.1–10, default 0.88 (slightly slow for kids)
-  pitch?: number;   // 0–2, default 1.05 (slightly warm)
-  onEnd?: () => void;
+  text:    string;
+  /** Which content type this is — controls hybrid routing. */
+  context?: "question" | "explanation" | "raw";
+  rate?:   number;
+  pitch?:  number;
+  onEnd?:  () => void;
   onError?: (error: string) => void;
 }
 
-/** Check if TTS is available in this browser. */
+// ─── Availability checks ────────────────────────────────────────────────────
+
 export function isTTSAvailable(): boolean {
   return typeof window !== "undefined" && "speechSynthesis" in window;
 }
 
+export function isSTTAvailable(): boolean {
+  if (typeof window === "undefined") return false;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return !!(window as any).SpeechRecognition || !!(window as any).webkitSpeechRecognition;
+}
+
+// ─── Main TTS dispatcher ────────────────────────────────────────────────────
+
 /**
- * Rank available voices and return the best one for a child-friendly
- * teaching experience. Prefers:
- *   1. Google UK English Female (Chrome — natural, clear)
- *   2. Google US English (Chrome — clear, common)
- *   3. Samantha (Safari/macOS — warm, very natural)
- *   4. Microsoft Aria (Edge — designed for education)
- *   5. Any English female voice
- *   6. First English voice available
- *   7. Default voice
+ * Speak text using the configured engine. Returns a cancel function.
+ *
+ * Routing:
+ *   1. Load config → resolveEngine()
+ *   2. If "ai" → check cache → call API or replay blob → fallback to browser
+ *   3. If "browser" → SpeechSynthesis directly
  */
+export function speak(options: TTSOptions): () => void {
+  const config = loadVoiceConfig();
+  const context = options.context ?? "raw";
+  const engine = resolveEngine(config, context, options.text.length);
+
+  if (engine === "ai") {
+    return speakAI(options, config);
+  }
+
+  return speakBrowser(options);
+}
+
+/** Stop any current playback (both browser and AI audio). */
+export function stopSpeaking(): void {
+  // Stop browser TTS
+  if (isTTSAvailable()) {
+    window.speechSynthesis.cancel();
+  }
+  // Stop AI audio
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio.src = "";
+    currentAudio = null;
+  }
+}
+
+// ─── Browser TTS ────────────────────────────────────────────────────────────
+
 export function selectBestVoice(): SpeechSynthesisVoice | null {
   if (!isTTSAvailable()) return null;
-
   const voices = window.speechSynthesis.getVoices();
   if (voices.length === 0) return null;
 
-  const englishVoices = voices.filter((v) =>
-    v.lang.startsWith("en"),
-  );
-
-  // Priority keywords — ordered from most to least preferred
+  const englishVoices = voices.filter((v) => v.lang.startsWith("en"));
   const preferred = [
-    "google uk english female",
-    "google us english",
-    "samantha",
-    "aria",
-    "zira",
-    "karen",
-    "moira",
-    "fiona",
-    "google uk english",
+    "google uk english female", "google us english", "samantha",
+    "aria", "zira", "karen", "moira", "fiona", "google uk english",
   ];
 
   for (const keyword of preferred) {
-    const match = englishVoices.find((v) =>
-      v.name.toLowerCase().includes(keyword),
-    );
+    const match = englishVoices.find((v) => v.name.toLowerCase().includes(keyword));
     if (match) return match;
   }
 
-  // Fallback: any English female-sounding voice
-  const femaleVoice = englishVoices.find((v) =>
-    /female|woman/i.test(v.name),
-  );
+  const femaleVoice = englishVoices.find((v) => /female|woman/i.test(v.name));
   if (femaleVoice) return femaleVoice;
-
-  // Fallback: first English voice
   if (englishVoices.length > 0) return englishVoices[0]!;
-
-  // Absolute fallback: default voice
   return voices[0] ?? null;
 }
 
-/**
- * Speak text aloud using the browser's SpeechSynthesis API.
- * Returns a cancel function.
- */
-export function speak(options: TTSOptions): () => void {
+function speakBrowser(options: TTSOptions): () => void {
   if (!isTTSAvailable()) {
     options.onError?.("Speech is not available in this browser.");
     return () => {};
   }
 
-  // Cancel any current speech
   window.speechSynthesis.cancel();
 
   const utterance = new SpeechSynthesisUtterance(options.text);
-
   const voice = selectBestVoice();
   if (voice) utterance.voice = voice;
 
-  utterance.rate  = options.rate  ?? 0.88;   // slightly slow for kids
-  utterance.pitch = options.pitch ?? 1.05;   // slightly warm
+  utterance.rate   = options.rate  ?? 0.88;
+  utterance.pitch  = options.pitch ?? 1.05;
   utterance.volume = 1;
 
   utterance.onend   = () => options.onEnd?.();
   utterance.onerror = (e) => options.onError?.(e.error ?? "Speech failed");
 
   window.speechSynthesis.speak(utterance);
-
   return () => window.speechSynthesis.cancel();
 }
 
-/** Stop any current TTS playback. */
-export function stopSpeaking(): void {
-  if (isTTSAvailable()) {
-    window.speechSynthesis.cancel();
-  }
+// ─── AI TTS (ElevenLabs via /api/voice/tts) ─────────────────────────────────
+
+let currentAudio: HTMLAudioElement | null = null;
+
+function speakAI(options: TTSOptions, config: VoiceConfig): () => void {
+  const voiceId = config.aiVoiceId || STYLE_VOICE_MAP[config.style]?.voiceId || STYLE_VOICE_MAP.teacher.voiceId;
+  const cacheKey = audioCacheKey(options.text, voiceId);
+
+  let cancelled = false;
+
+  // Fire-and-forget async
+  void (async () => {
+    try {
+      // 1. Check cache first
+      const cached = await getCachedAudio(cacheKey);
+      if (cached && !cancelled) {
+        playBlob(cached, options);
+        return;
+      }
+
+      // 2. Call the API
+      const response = await fetch("/api/voice/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: options.text,
+          style: config.style,
+          voiceId: config.aiVoiceId || undefined,
+        }),
+      });
+
+      if (cancelled) return;
+
+      if (!response.ok || !response.body) {
+        // Fallback to browser TTS
+        speakBrowser(options);
+        return;
+      }
+
+      const contentType = response.headers.get("content-type") ?? "";
+      if (!contentType.includes("audio")) {
+        // API returned JSON error — fallback
+        speakBrowser(options);
+        return;
+      }
+
+      // 3. Read the audio blob
+      const blob = await response.blob();
+      if (cancelled) return;
+
+      // 4. Cache it
+      trackCharUsage(options.text.length);
+      void setCachedAudio(cacheKey, blob);
+
+      // 5. Play it
+      playBlob(blob, options);
+    } catch {
+      // Any failure → silent fallback to browser
+      if (!cancelled) speakBrowser(options);
+    }
+  })();
+
+  return () => {
+    cancelled = true;
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio.src = "";
+      currentAudio = null;
+    }
+  };
 }
 
-// ─── STT (Speech-to-Text) ───────────────────────────────────────────────────
+function playBlob(blob: Blob, options: TTSOptions): void {
+  const url = URL.createObjectURL(blob);
+  const audio = new Audio(url);
+  currentAudio = audio;
+
+  audio.onended = () => {
+    URL.revokeObjectURL(url);
+    currentAudio = null;
+    options.onEnd?.();
+  };
+
+  audio.onerror = () => {
+    URL.revokeObjectURL(url);
+    currentAudio = null;
+    // Fallback to browser on playback error
+    speakBrowser(options);
+  };
+
+  audio.play().catch(() => {
+    // Autoplay blocked — fallback
+    speakBrowser(options);
+  });
+}
+
+// ─── STT (unchanged from Phase 1) ──────────────────────────────────────────
 
 export interface STTOptions {
-  /** Language code (default "en-US"). */
   lang?: string;
-  /** Max recording duration in seconds (default 15). */
   maxDuration?: number;
   onResult:  (transcript: string) => void;
   onError:   (error: string) => void;
@@ -143,16 +243,6 @@ export interface STTOptions {
   onEnd?:    () => void;
 }
 
-/** Check if STT is available in this browser. */
-export function isSTTAvailable(): boolean {
-  if (typeof window === "undefined") return false;
-  return "SpeechRecognition" in window || "webkitSpeechRecognition" in window;
-}
-
-/**
- * Start speech recognition. Returns a stop function.
- * Recognition automatically stops after maxDuration seconds or on silence.
- */
 export function startListening(options: STTOptions): () => void {
   if (!isSTTAvailable()) {
     options.onError("Speech recognition is not available in this browser.");
@@ -161,7 +251,6 @@ export function startListening(options: STTOptions): () => void {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const SR = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
-
   if (!SR) {
     options.onError("Speech recognition is not available.");
     return () => {};
@@ -194,15 +283,13 @@ export function startListening(options: STTOptions): () => void {
 
   recognition.onend = () => {
     if (!settled) {
-      options.onError("I couldn't hear anything. Try speaking a bit louder.");
+      options.onError("I couldn't hear anything. Try speaking a bit closer to the microphone.");
     }
     options.onEnd?.();
   };
 
   const maxMs = (options.maxDuration ?? 15) * 1000;
-  const timer = setTimeout(() => {
-    recognition.stop();
-  }, maxMs);
+  const timer = setTimeout(() => recognition.stop(), maxMs);
 
   recognition.start();
 
@@ -212,7 +299,6 @@ export function startListening(options: STTOptions): () => void {
   };
 }
 
-/** Map browser STT error codes to child-friendly messages. */
 function friendlySTTError(error: string): string {
   switch (error) {
     case "not-allowed":
@@ -225,7 +311,7 @@ function friendlySTTError(error: string): string {
     case "network":
       return "I need the internet to listen. Check your connection and try again.";
     case "aborted":
-      return ""; // user cancelled — no error to show
+      return "";
     case "service-not-allowed":
       return "Voice input isn't working right now. You can type your answer instead.";
     case "language-not-supported":

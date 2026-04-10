@@ -143,6 +143,7 @@ export function useTTS(options: UseTTSOptions = {}): UseTTSReturn {
   const [available]         = useState(() => isTTSAvailable());
   const cancelRef           = useRef<(() => void) | null>(null);
   const lastAutoReadRef     = useRef<string>("");
+  const contextRef          = useRef<"question" | "explanation" | "raw">("raw");
 
   useEffect(() => {
     return () => {
@@ -170,6 +171,7 @@ export function useTTS(options: UseTTSOptions = {}): UseTTSReturn {
 
     cancelRef.current = speak({
       text,
+      context: contextRef.current,
       onEnd: () => {
         setState("idle");
         markCached(text);
@@ -185,12 +187,14 @@ export function useTTS(options: UseTTSOptions = {}): UseTTSReturn {
 
   /** Speak with teacher phrasing (for questions). */
   const say = useCallback((text: string) => {
+    contextRef.current = "question";
     const phrased = teacherPhrase(text, "question");
     speakText(phrased);
   }, [speakText]);
 
   /** Speak raw cleaned text (for explanations, answers). */
   const sayRaw = useCallback((text: string) => {
+    contextRef.current = "explanation";
     const cleaned = cleanForSpeech(text);
     speakText(cleaned);
   }, [speakText]);
