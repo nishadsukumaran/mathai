@@ -8,7 +8,7 @@ const securityHeaders = [
   // Control referrer information sent with requests
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   // Opt out of Google FLoC / Topics API tracking
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=()" },
   // XSS protection (legacy browsers)
   { key: "X-XSS-Protection", value: "1; mode=block" },
   // Force HTTPS (Vercel handles this, but belt-and-suspenders)

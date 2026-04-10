@@ -11,6 +11,7 @@ import { useState, useRef }  from "react";
 import { cn }                from "@/lib/utils";
 import { AskPanel }          from "./ask-panel";
 import { clientPost }        from "@/lib/clientApi";
+import { MicButton }         from "@/components/voice/MicButton";
 import type { Grade, AskMathAIResponse } from "@/types";
 
 interface AskCardProps {
@@ -122,6 +123,12 @@ export function AskCard({ grade, className }: AskCardProps) {
               "rounded-2xl px-4 py-2.5 text-sm font-medium outline-none",
               "border border-white/30 focus:border-white/70 transition",
             )}
+          />
+          <MicButton
+            onResult={(text) => { setQuestion(text); inputRef.current?.focus(); }}
+            normalize={false}
+            context="your question"
+            className="shrink-0"
           />
           <button
             onClick={() => void handleSubmit()}

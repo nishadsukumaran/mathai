@@ -15,6 +15,8 @@ import { useProfile }        from "@/hooks/use-profile";
 import { VisualRenderer }    from "@/components/mathai/visual";
 import { ScenePlayer }       from "@/components/scene-engine";
 import { MathText }          from "@/components/shared/MathText";
+import { MicButton }         from "@/components/voice/MicButton";
+import { SpeakerButton }     from "@/components/voice/SpeakerButton";
 import { dispatchScene }     from "@/lib/scene-engine/dispatcher";
 import { validateScenePlan } from "@/lib/scene-engine/validator";
 import { evaluateVisualReliability, getVisualCTALabel, getStepsFallbackMessage, visualTelemetry } from "@/lib/scene-engine";
@@ -346,6 +348,12 @@ export default function AskPageContent({ initialQuestion = "" }: AskPageContentP
                 "bg-white shadow-sm max-h-32 overflow-y-auto",
               )}
             />
+            <MicButton
+              onResult={(text) => { setQuestion(text); inputRef.current?.focus(); }}
+              normalize={false}
+              context="your question"
+              className="shrink-0"
+            />
             <button
               onClick={() => void handleSubmit()}
               disabled={!question.trim()}
@@ -503,15 +511,18 @@ function AnswerHero({ answer, explanation }: { answer: string; explanation: stri
         </motion.div>
       )}
 
-      {/* One-line explanation */}
-      <motion.p
+      {/* One-line explanation + read aloud */}
+      <motion.div
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.25, duration: 0.3 }}
-        className="text-sm text-gray-500 leading-relaxed max-w-md mx-auto"
+        className="flex items-center justify-center gap-2"
       >
-        <MathText text={oneLiner} />
-      </motion.p>
+        <p className="text-sm text-gray-500 leading-relaxed max-w-md">
+          <MathText text={oneLiner} />
+        </p>
+        <SpeakerButton text={`The answer is ${answer}. ${explanation}`} label="Read explanation aloud" />
+      </motion.div>
     </div>
   );
 }

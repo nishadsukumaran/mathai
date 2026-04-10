@@ -17,6 +17,8 @@ import { VisualRenderer } from "@/components/mathai/visual/VisualRenderer";
 import { ScenePlayer }   from "@/components/scene-engine";
 import { MathText }       from "@/components/shared/MathText";
 import { XPFloat, SessionCompleteEntrance, CorrectBurst } from "@/components/shared/Celebrations";
+import { SpeakerButton } from "@/components/voice/SpeakerButton";
+import { MicButton }     from "@/components/voice/MicButton";
 
 interface SessionState {
   id: string; questions: PracticeQuestionItem[]; currentIndex: number; xpEarned: number;
@@ -162,9 +164,12 @@ export default function PracticeView(props: Props) {
                   <span className="text-[10px] text-gray-300 font-medium">{currentQuestion.xpReward} XP</span>
                 </div>
 
-                <h2 className="text-lg font-bold text-gray-900 leading-relaxed mb-5">
-                  <MathText text={currentQuestion.prompt} />
-                </h2>
+                <div className="flex items-start gap-2 mb-5">
+                  <h2 className="text-lg font-bold text-gray-900 leading-relaxed flex-1">
+                    <MathText text={currentQuestion.prompt} />
+                  </h2>
+                  <SpeakerButton text={currentQuestion.prompt} label="Read question aloud" className="shrink-0 mt-0.5" />
+                </div>
 
                 {/* Confidence (pre-answer only, hide during retry) */}
                 {!result && !isRetryState && (
@@ -218,12 +223,20 @@ export default function PracticeView(props: Props) {
                     })}
                   </div>
                 ) : (
-                  <input type="text" value={answer}
-                    onChange={(e) => { if (!isRevealed) onAnswerChange(e.target.value); }}
-                    onKeyDown={(e) => { if (e.key === "Enter" && !isRevealed) onSubmit(); }}
-                    placeholder={isRetryState ? "Try again..." : "Type your answer..."}
-                    disabled={!!isRevealed}
-                    className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-indigo-400 outline-none transition mb-4" />
+                  <div className="flex items-center gap-2 mb-4">
+                    <input type="text" value={answer}
+                      onChange={(e) => { if (!isRevealed) onAnswerChange(e.target.value); }}
+                      onKeyDown={(e) => { if (e.key === "Enter" && !isRevealed) onSubmit(); }}
+                      placeholder={isRetryState ? "Try again..." : "Type your answer..."}
+                      disabled={!!isRevealed}
+                      className="flex-1 border-2 border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-indigo-400 outline-none transition" />
+                    <MicButton
+                      onResult={(text) => onAnswerChange(text)}
+                      disabled={!!isRevealed}
+                      context="your answer"
+                      className="shrink-0"
+                    />
+                  </div>
                 )}
 
                 {/* Hint */}
