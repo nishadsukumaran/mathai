@@ -70,9 +70,13 @@ export async function POST(req: NextRequest) {
           text,
           model_id: "eleven_turbo_v2_5",
           voice_settings: {
-            stability: 0.6,
-            similarity_boost: 0.8,
-            style: 0.15,
+            // High stability = consistent, calm delivery (teacher-like)
+            // Low stability = more expressive but less predictable
+            stability: 0.75,
+            // High similarity = stays close to the base voice character
+            similarity_boost: 0.85,
+            // Low style = more neutral/calm (avoids dramatic readings)
+            style: 0.08,
             use_speaker_boost: true,
           },
         }),

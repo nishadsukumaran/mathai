@@ -64,24 +64,61 @@ function isCached(key: string): boolean {
 }
 
 // ─── Teacher phrasing ───────────────────────────────────────────────────────
+//
+// A teacher doesn't read "27 plus 15" like a screen reader.
+// A teacher says: "Okay... let's work out... 27... plus... 15."
+//
+// The pauses (represented by "..." in the text sent to TTS) make the AI voice
+// sound like it's thinking, guiding, and giving the student time to follow.
+// Without them, even the best AI voice sounds like a text reader.
+//
+// The transformation rules:
+//   1. Strip LaTeX into speakable words
+//   2. Add a warm, varied intro
+//   3. Insert pauses around operators and key math terms
+//   4. Slow down numbers by spacing digits for multi-digit numbers
+//   5. Add a gentle closing
 
 const QUESTION_INTROS = [
-  "Let's work out",
-  "Here's the question.",
-  "Okay, let's try this.",
-  "Let's see.",
-  "Here we go.",
+  "Okay... let's work this out.",
+  "Alright... here's the question.",
+  "Let's try this one together.",
+  "Okay... let's see.",
+  "Right... here we go.",
 ];
 
 const ANSWER_INTROS = [
-  "The answer is",
-  "Great question! The answer is",
-  "So the answer is",
+  "So... the answer is...",
+  "Great question! ... The answer is...",
+  "Alright... so the answer is...",
 ];
 
+const CORRECT_RESPONSES = [
+  "That's right! Well done.",
+  "Yes! Good job.",
+  "Exactly right. Nice work.",
+  "That's correct! You got it.",
+];
+
+const ENCOURAGEMENT = [
+  "Take your time.",
+  "You can do this.",
+  "Give it a try.",
+  "Think about it step by step.",
+];
+
+function pick<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)]!;
+}
+
 /**
- * Wrap a math question in teacher-like phrasing.
- * "27 + 15" → "Let's work out, 27 plus 15."
+ * Transform text into teacher-like spoken script.
+ *
+ * "27 + 15" → "Okay... let's work this out. ... 27... plus... 15. ... Take your time."
+ *
+ * The "..." pauses are natural breath points that any good TTS voice will
+ * render as brief hesitations. This is what makes it sound like teaching
+ * rather than reading.
  */
 export function teacherPhrase(text: string, mode: "question" | "answer" | "raw" = "question"): string {
   const cleaned = cleanForSpeech(text);
@@ -90,24 +127,46 @@ export function teacherPhrase(text: string, mode: "question" | "answer" | "raw" 
   if (mode === "raw") return cleaned;
 
   if (mode === "answer") {
-    const intro = ANSWER_INTROS[Math.floor(Math.random() * ANSWER_INTROS.length)]!;
-    return `${intro} ${cleaned}.`;
+    const intro = pick(ANSWER_INTROS);
+    return `${intro} ${addMathPauses(cleaned)}.`;
   }
 
-  // Question mode: add a warm intro
-  const intro = QUESTION_INTROS[Math.floor(Math.random() * QUESTION_INTROS.length)]!;
+  // Question mode
+  const intro = pick(QUESTION_INTROS);
 
-  // If it's a bare math expression (e.g. "27 + 15"), wrap it
-  if (/^[\d\s+\-×÷=.*/%()]+$/.test(cleaned)) {
-    return `${intro} ${cleaned}.`;
+  // Bare math expression (e.g. "27 plus 15")
+  if (/^[\d\s\w+\-×÷=.*/%()]+$/.test(cleaned) && /\d/.test(cleaned)) {
+    const mathWithPauses = addMathPauses(cleaned);
+    const closing = pick(ENCOURAGEMENT);
+    return `${intro} ... ${mathWithPauses}. ... ${closing}`;
   }
 
-  // If it already reads as a sentence, just add the intro
-  if (/^(what|how|why|find|solve|calculate|which|if)/i.test(cleaned)) {
-    return `${intro} ${cleaned}`;
+  // Full sentence question (e.g. "What is 3 times 4?")
+  if (/^(what|how|why|find|solve|calculate|which|if|a |the )/i.test(cleaned)) {
+    const withPauses = addMathPauses(cleaned);
+    return `${intro} ... ${withPauses}`;
   }
 
-  return `${intro} ${cleaned}`;
+  return `${intro} ... ${addMathPauses(cleaned)}`;
+}
+
+/**
+ * Insert natural pauses around math operators and between key terms.
+ * "27 plus 15" → "27... plus... 15"
+ * "3 times 4 equals 12" → "3... times 4... equals... 12"
+ */
+function addMathPauses(text: string): string {
+  return text
+    // Pause before and after operators
+    .replace(/\s+(plus|minus|times|divided by|equals|over)\s+/gi, "... $1... ")
+    // Pause before "is" when used as equals
+    .replace(/\s+is\s+/gi, "... is... ")
+    // Pause after question words for emphasis
+    .replace(/^(what|how much|how many|find|solve|calculate)/gi, "$1...")
+    // Clean up multiple dots
+    .replace(/\.{4,}/g, "...")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 /** Strip LaTeX and convert math symbols to speakable words. */
@@ -122,7 +181,6 @@ function cleanForSpeech(text: string): string {
     .replace(/\\pm/g, " plus or minus ")
     .replace(/\\cdot/g, " times ")
     .replace(/[\\{}]/g, "")
-    // Make math symbols speakable
     .replace(/×/g, " times ")
     .replace(/÷/g, " divided by ")
     .replace(/−/g, " minus ")
@@ -132,6 +190,8 @@ function cleanForSpeech(text: string): string {
     .replace(/\s+/g, " ")
     .trim();
 }
+
+export { CORRECT_RESPONSES, ENCOURAGEMENT };
 
 // ─── Hook ───────────────────────────────────────────────────────────────────
 
